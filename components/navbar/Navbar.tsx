@@ -10,8 +10,11 @@ import {
   Layers,
   Menu,
   X,
-  Lock,
-  ArrowRight,
+  User,
+  Shield,
+  Zap,
+  Sparkles,
+  Command,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -26,69 +29,60 @@ export const Navbar: React.FC = () => {
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [searchFocused, setSearchFocused] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const totalCartPrice = cart.reduce(
-    (acc, item) => acc + (item.selectedPlan?.price || 0) * item.quantity,
-    0
-  );
 
   const navLinks = [
     { label: 'Catalog', href: '/' },
-    { label: 'My Vault', href: '/dashboard' },
-    { label: 'Admin Command', href: '/admin' },
+    { label: 'Dashboard', href: '/dashboard' },
+    { label: 'Admin', href: '/admin' },
   ];
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 px-3 sm:px-6 pt-3 transition-all duration-300 pointer-events-none">
+    <header className="sticky top-0 sm:top-3 z-50 w-full transition-all duration-300 px-0 sm:px-4 lg:px-8">
       <div
-        className={`max-w-7xl mx-auto rounded-2xl transition-all duration-300 pointer-events-auto ${
-          isScrolled
-            ? 'bg-zinc-950/90 border border-white/15 backdrop-blur-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] py-2.5 px-4 sm:px-6'
-            : 'bg-zinc-950/60 border border-white/10 backdrop-blur-xl shadow-xl py-3 px-4 sm:px-6'
+        className={`max-w-7xl mx-auto transition-all duration-300 ${
+          scrolled
+            ? 'bg-zinc-950/85 sm:rounded-2xl border-b sm:border border-white/10 backdrop-blur-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)]'
+            : 'bg-zinc-950/60 sm:rounded-2xl border-b sm:border border-white/[0.08] backdrop-blur-xl'
         }`}
       >
-        <div className="flex items-center justify-between gap-4">
+        <div className="px-4 sm:px-6 flex items-center justify-between h-16 gap-4">
           
-          {/* Brand Logo with Glow Badge */}
-          <Link href="/" className="flex items-center gap-3 shrink-0 group select-none">
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-md group-hover:shadow-[0_0_20px_rgba(6,182,212,0.6)] transition-all group-hover:scale-105">
+          {/* Brand Logo with Glowing Glyph */}
+          <Link href="/" className="flex items-center gap-3 shrink-0 group">
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform">
               <Layers className="h-5 w-5 text-white" />
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500" />
-              </span>
             </div>
-            <div className="flex flex-col text-left">
-              <span className="text-base font-black tracking-wider text-white uppercase font-sans leading-none">
+            <div className="flex flex-col">
+              <span className="text-base font-black tracking-widest text-white uppercase font-mono leading-none">
                 Sub<span className="text-cyan-400">Nexus</span>
               </span>
-              <span className="text-[9px] font-mono font-bold tracking-widest text-zinc-400 uppercase leading-none mt-1">
-                Vault Platform
+              <span className="text-[9px] font-mono tracking-widest text-zinc-400 uppercase leading-tight mt-0.5">
+                Subscription Vault
               </span>
             </div>
           </Link>
 
-          {/* Interactive Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-zinc-900/60 p-1 rounded-full border border-white/5">
+          {/* Centered Desktop Navigation Tabs */}
+          <nav className="hidden md:flex items-center gap-1 bg-zinc-900/60 border border-white/10 rounded-full p-1 backdrop-blur-md">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href;
+              const active = pathname === link.href;
               return (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-                    isActive
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${
+                    active
                       ? 'bg-white text-zinc-950 shadow-md font-black'
                       : 'text-zinc-400 hover:text-white hover:bg-white/5'
                   }`}
@@ -99,40 +93,39 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right Interactive Action Group */}
+          {/* Right Action Bar */}
           <div className="flex items-center gap-2.5 sm:gap-3">
             
-            {/* Interactive Search Bar */}
-            <div
-              className={`relative hidden lg:flex items-center transition-all duration-300 ${
-                searchFocused ? 'w-60' : 'w-44'
-              }`}
-            >
+            {/* Interactive Search Bar with Shortcut Badge */}
+            <div className="relative hidden lg:flex items-center">
               <Search className="absolute left-3 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
               <input
                 type="text"
                 value={activeSearchQuery}
-                onFocus={() => setSearchFocused(true)}
-                onBlur={() => setSearchFocused(false)}
                 onChange={(e) => setActiveSearchQuery(e.target.value)}
-                placeholder="Quick search..."
-                className="w-full pl-8 pr-8 py-1.5 bg-zinc-900/80 border border-white/10 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all font-mono"
+                placeholder="Search subscriptions..."
+                className="w-56 pl-9 pr-8 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all font-mono"
               />
-              {activeSearchQuery && (
+              {activeSearchQuery ? (
                 <button
                   onClick={() => setActiveSearchQuery('')}
                   className="absolute right-2.5 text-zinc-400 hover:text-white text-xs"
                 >
-                  ✕
+                  <X className="h-3 w-3" />
                 </button>
+              ) : (
+                <div className="absolute right-2.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700/60 text-[9px] font-mono text-zinc-400 pointer-events-none">
+                  <Command className="h-2.5 w-2.5" />
+                  <span>K</span>
+                </div>
               )}
             </div>
 
             {/* Role Switcher Pill */}
             <button
               onClick={toggleUserRole}
-              title="Click to toggle between Customer & Admin view"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-zinc-900/80 hover:bg-zinc-850 text-[11px] font-mono font-semibold text-zinc-300 hover:text-white transition-all hover:scale-105 shadow-sm"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-zinc-900/80 hover:bg-zinc-800 text-[11px] font-mono text-zinc-300 transition-colors shadow-sm"
+              title="Click to toggle between Customer Vault and Admin Command Portal"
             >
               <span
                 className={`h-2 w-2 rounded-full ${
@@ -141,83 +134,108 @@ export const Navbar: React.FC = () => {
                     : 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
                 }`}
               />
-              <span className="capitalize">{user.role}</span>
+              <span className="capitalize font-bold">{user.role}</span>
             </button>
 
-            {/* Interactive Cart Button with Total Preview */}
+            {/* Interactive Cart Button */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/80 border border-white/10 hover:border-cyan-500/40 text-zinc-200 hover:text-white transition-all hover:scale-105 shadow-sm"
+              className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-zinc-900 border border-white/10 hover:border-cyan-500/40 text-zinc-300 hover:text-white transition-all hover:scale-105 shadow-sm"
               aria-label="Cart"
             >
-              <ShoppingBag className="h-4 w-4 text-cyan-400" />
+              <ShoppingBag className="h-4 w-4" />
               {totalCartCount > 0 && (
-                <div className="flex items-center gap-1.5">
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-black text-white px-1">
-                    {totalCartCount}
-                  </span>
-                  <span className="hidden sm:inline text-xs font-mono font-bold text-emerald-400">
-                    ${totalCartPrice.toFixed(2)}
-                  </span>
-                </div>
+                <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-[10px] font-black text-white px-1 shadow-[0_0_10px_rgba(6,182,212,0.8)] animate-pulse">
+                  {totalCartCount}
+                </span>
               )}
             </button>
 
-            {/* Login / Vault Button */}
+            {/* Glowing Blue Pill Login / Profile Button */}
             <Link
               href={user.role === 'admin' ? '/admin' : '/dashboard'}
-              className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:scale-105"
+              className="flex items-center gap-2 px-4 sm:px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all hover:scale-105"
             >
-              <Lock className="h-3.5 w-3.5" />
-              <span>Vault</span>
+              <User className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Vault Login</span>
+              <span className="sm:hidden">Login</span>
             </Link>
 
-            {/* Mobile Menu Toggle */}
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex items-center justify-center h-8 w-8 rounded-full bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white"
+              className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white"
             >
               {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
 
           </div>
+        </div>
+      </div>
+
+      {/* Interactive Mobile Glass Drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden mt-2 mx-4 p-4 rounded-2xl bg-zinc-950/95 border border-white/10 backdrop-blur-2xl space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+          
+          {/* Mobile Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+            <input
+              type="text"
+              value={activeSearchQuery}
+              onChange={(e) => setActiveSearchQuery(e.target.value)}
+              placeholder="Search subscriptions..."
+              className="w-full pl-9 pr-4 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none"
+            />
+          </div>
+
+          {/* Navigation Links */}
+          <div className="space-y-1 text-xs font-bold uppercase tracking-wider font-mono">
+            <Link
+              href="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-4 py-2.5 rounded-xl transition-colors ${
+                pathname === '/' ? 'bg-white text-zinc-950 font-black' : 'text-zinc-300 hover:bg-white/5'
+              }`}
+            >
+              Catalog
+            </Link>
+            <Link
+              href="/dashboard"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-4 py-2.5 rounded-xl transition-colors ${
+                pathname === '/dashboard' ? 'bg-cyan-500 text-black font-black' : 'text-cyan-400 hover:bg-white/5'
+              }`}
+            >
+              Customer Vault
+            </Link>
+            <Link
+              href="/admin"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`block px-4 py-2.5 rounded-xl transition-colors ${
+                pathname === '/admin' ? 'bg-indigo-500 text-white font-black' : 'text-indigo-400 hover:bg-white/5'
+              }`}
+            >
+              Admin Command Portal
+            </Link>
+          </div>
+
+          {/* Role Switcher in Mobile Drawer */}
+          <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-zinc-400">
+              <span className={`h-2 w-2 rounded-full ${user.role === 'admin' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+              <span className="capitalize font-mono">Active Role: <strong className="text-white">{user.role}</strong></span>
+            </div>
+            <button
+              onClick={toggleUserRole}
+              className="px-3 py-1 rounded-lg bg-zinc-900 border border-white/10 text-xs font-bold text-cyan-400 hover:bg-zinc-800"
+            >
+              Switch Role
+            </button>
+          </div>
 
         </div>
-
-        {/* Mobile Interactive Drawer */}
-        {mobileMenuOpen && (
-          <div className="md:hidden mt-3 pt-3 border-t border-white/10 space-y-2 text-xs font-bold uppercase tracking-wider">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2 rounded-xl transition-colors ${
-                  pathname === link.href
-                    ? 'bg-white text-zinc-950 font-black'
-                    : 'text-zinc-300 hover:bg-white/5'
-                }`}
-              >
-                <span>{link.label}</span>
-                <ArrowRight className="h-3.5 w-3.5 opacity-60" />
-              </Link>
-            ))}
-
-            <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-              <span className="text-[11px] font-mono text-zinc-400 lowercase">
-                current role: <strong className="text-white uppercase">{user.role}</strong>
-              </span>
-              <button
-                onClick={toggleUserRole}
-                className="text-xs text-cyan-400 font-bold uppercase"
-              >
-                Switch Role
-              </button>
-            </div>
-          </div>
-        )}
-
-      </div>
+      )}
     </header>
   );
 };
