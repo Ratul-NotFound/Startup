@@ -2,16 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
-import {
-  ArrowRight,
-  Zap,
-  Sparkles,
-  Film,
-  Code,
-  Palette,
-  Shield,
-  Layers,
-} from 'lucide-react';
+import { ArrowRight, Zap } from 'lucide-react';
 import { SubscriptionCategory } from '@/types';
 
 export const HeroBanner: React.FC = () => {
@@ -45,43 +36,36 @@ export const HeroBanner: React.FC = () => {
   const categories: {
     id: SubscriptionCategory;
     label: string;
-    icon: React.ReactNode;
     count: number;
   }[] = [
     {
       id: 'all',
       label: 'All Vaults',
-      icon: <Layers className="h-3.5 w-3.5" />,
       count: products.length,
     },
     {
       id: 'ai',
       label: 'AI Models',
-      icon: <Sparkles className="h-3.5 w-3.5 text-cyan-400" />,
       count: products.filter((p) => p.category === 'ai').length,
     },
     {
       id: 'streaming',
       label: 'Cinema 4K',
-      icon: <Film className="h-3.5 w-3.5 text-red-400" />,
       count: products.filter((p) => p.category === 'streaming').length,
     },
     {
       id: 'dev',
-      label: 'Dev Tools',
-      icon: <Code className="h-3.5 w-3.5 text-emerald-400" />,
+      label: 'Developer',
       count: products.filter((p) => p.category === 'dev').length,
     },
     {
       id: 'productivity',
       label: 'Design & Pro',
-      icon: <Palette className="h-3.5 w-3.5 text-amber-400" />,
       count: products.filter((p) => p.category === 'productivity').length,
     },
     {
       id: 'vpn_security',
       label: 'VPN Privacy',
-      icon: <Shield className="h-3.5 w-3.5 text-blue-400" />,
       count: products.filter((p) => p.category === 'vpn_security').length,
     },
   ];
@@ -114,20 +98,8 @@ export const HeroBanner: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-black/60 to-black/80" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/65 to-zinc-950" />
         
-        {/* Subtle Animated Light Grid Rays */}
+        {/* Subtle Light Grid Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
-      </div>
-
-      {/* Futuristic HUD Scanning Reticle */}
-      <div className="absolute top-1/3 left-8 sm:left-16 hidden md:flex items-center gap-3 pointer-events-none z-10 select-none opacity-80">
-        <div className="relative h-10 w-10 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-cyan-500/30 animate-spin" style={{ animationDuration: '9s' }} />
-          <div className="h-2 w-2 rounded-full bg-cyan-400 animate-ping" />
-        </div>
-        <div className="text-[10px] font-mono tracking-widest text-zinc-300 uppercase">
-          <p className="text-cyan-400 font-bold">● DISPATCH ONLINE</p>
-          <p className="text-zinc-400">LATENCY &lt; 20MS</p>
-        </div>
       </div>
 
       {/* Main Centered Content */}
@@ -192,7 +164,7 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Bottom Slider Dots Indicator & Category Pills */}
+      {/* Bottom Slider Dots Indicator & Clean Category Pills */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-6">
         
         {/* Slider Dots */}
@@ -209,25 +181,26 @@ export const HeroBanner: React.FC = () => {
           ))}
         </div>
 
-        {/* Category Pills Strip with Icons */}
-        <div className="pt-4 border-t border-white/10 flex items-center justify-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
+        {/* Clean Minimalist Category Pills (No AI Cliché Icons) */}
+        <div className="pt-4 border-t border-white/10 flex items-center justify-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {categories.map((cat) => {
             const active = activeCategoryFilter === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategoryFilter(cat.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wide uppercase transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-2 ${
                   active
                     ? 'bg-white text-zinc-950 font-black shadow-lg scale-105'
                     : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border border-white/10 backdrop-blur-md'
                 }`}
               >
-                <span>{cat.icon}</span>
                 <span>{cat.label}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                  active ? 'bg-zinc-200 text-zinc-950 font-black' : 'bg-white/10 text-zinc-400'
-                }`}>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                    active ? 'bg-zinc-200 text-zinc-950 font-black' : 'bg-white/10 text-zinc-400 font-mono'
+                  }`}
+                >
                   {cat.count}
                 </span>
               </button>
