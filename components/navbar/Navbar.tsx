@@ -38,7 +38,10 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const totalCartPrice = cart.reduce((acc, item) => acc + (item.tier?.price || 0) * item.quantity, 0);
+  const totalCartPrice = cart.reduce(
+    (acc, item) => acc + (item.selectedPlan?.price || 0) * item.quantity,
+    0
+  );
 
   const navLinks = [
     { label: 'Catalog', href: '/' },
