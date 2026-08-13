@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { ChevronDown, HelpCircle, MessageSquare } from 'lucide-react';
 
 interface FaqItem {
@@ -43,8 +44,14 @@ export const TrustAndFaq: React.FC = () => {
   return (
     <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pt-8 pb-12">
       
-      {/* Header */}
-      <div className="text-center space-y-2">
+      {/* Header with Scroll Reveal */}
+      <motion.div
+        initial={{ opacity: 0, y: 25 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-50px' }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="text-center space-y-2"
+      >
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-xs font-semibold backdrop-blur-md">
           <HelpCircle className="h-3.5 w-3.5 text-cyan-400" />
           <span>HELP & SUPPORT</span>
@@ -60,15 +67,19 @@ export const TrustAndFaq: React.FC = () => {
         <p className="text-xs text-zinc-400 max-w-md mx-auto">
           Everything you need to know about instant delivery, warranties, and how your subscription works.
         </p>
-      </div>
+      </motion.div>
 
-      {/* FAQ Accordion */}
+      {/* FAQ Accordion with Staggered Scroll Reveal */}
       <div className="space-y-3">
         {faqs.map((faq, idx) => {
           const isOpen = openFaq === idx;
           return (
-            <div
+            <motion.div
               key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-40px' }}
+              transition={{ duration: 0.4, delay: idx * 0.08, ease: 'easeOut' }}
               className={`rounded-2xl transition-all duration-300 backdrop-blur-xl border ${
                 isOpen
                   ? 'bg-zinc-900/90 border-cyan-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.8)]'
@@ -102,13 +113,19 @@ export const TrustAndFaq: React.FC = () => {
                   {faq.a}
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>
 
-      {/* 24/7 Live Support Callout Pill */}
-      <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-zinc-900/60 to-cyan-950/40 border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+      {/* 24/7 Live Support Callout Pill with Scroll Reveal */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, margin: '-40px' }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+        className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-zinc-900/60 to-cyan-950/40 border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left"
+      >
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-cyan-400 shrink-0">
             <MessageSquare className="h-5 w-5" />
@@ -125,7 +142,7 @@ export const TrustAndFaq: React.FC = () => {
         >
           Contact Support
         </a>
-      </div>
+      </motion.div>
 
     </section>
   );

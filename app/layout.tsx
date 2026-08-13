@@ -7,7 +7,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { ProductModal } from '@/components/store/ProductModal';
 import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { CredentialVaultModal } from '@/components/vault/CredentialVaultModal';
-import { JsonLd } from '@/components/seo/JsonLd';
+import { ScrollProgress } from '@/components/ui/ScrollProgress';
 
 export const metadata: Metadata = {
   title: 'SubNexus — World-Class Retail Subscription Platform | ChatGPT, Netflix, Gemini, Claude',
@@ -60,6 +60,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-zinc-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200">
         <AppProvider>
+          <ScrollProgress />
           <div className="relative min-h-screen flex flex-col">
             <Navbar />
             <main className="flex-1">{children}</main>
