@@ -105,8 +105,8 @@ export const HeroBanner: React.FC = () => {
       {/* Main Centered Content */}
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center my-auto space-y-6">
         
-        {/* Live Status Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-cyan-500/30 bg-cyan-950/50 text-cyan-300 text-xs font-mono font-medium backdrop-blur-md shadow-sm">
+        {/* Live Status Pill - Borderless */}
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-xs font-mono font-medium backdrop-blur-md shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
           <span>{current.tag}</span>
           <span className="text-zinc-500">•</span>
@@ -143,7 +143,7 @@ export const HeroBanner: React.FC = () => {
           </h1>
         </div>
 
-        {/* Centered Dual Action Buttons */}
+        {/* Centered Dual Action Buttons - Borderless */}
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
           <a
             href="#catalog"
@@ -156,7 +156,7 @@ export const HeroBanner: React.FC = () => {
 
           <a
             href="#catalog"
-            className="px-8 py-3.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 font-bold text-xs tracking-widest uppercase border border-white/15 backdrop-blur-md transition-all hover:scale-105"
+            className="px-8 py-3.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 font-bold text-xs tracking-widest uppercase backdrop-blur-md transition-all hover:scale-105"
           >
             Browse Plans
           </a>
@@ -164,7 +164,7 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Bottom Segmented Glassmorphic Dock & Carousel Indicators */}
+      {/* Bottom Segmented Glassmorphic Dock & Carousel Indicators - Borderless */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-5">
         
         {/* Slider Indicator Line */}
@@ -181,9 +181,9 @@ export const HeroBanner: React.FC = () => {
           ))}
         </div>
 
-        {/* Unified Glassmorphic Category Capsule Dock */}
+        {/* Unified Glassmorphic Category Capsule Dock - 100% Borderless */}
         <div className="flex justify-center">
-          <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/80 border border-white/10 backdrop-blur-xl shadow-2xl overflow-x-auto max-w-full scrollbar-none">
+          <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/70 backdrop-blur-xl shadow-2xl overflow-x-auto max-w-full scrollbar-none">
             {categories.map((cat) => {
               const active = activeCategoryFilter === cat.id;
               return (
