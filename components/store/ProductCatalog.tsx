@@ -2,8 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Product } from '@/types';
-import { Check, ShoppingBag, Search } from 'lucide-react';
+import { Check, ShoppingBag, Search, Sparkles, TrendingUp, Percent, ArrowUpDown, X, Zap } from 'lucide-react';
 
 export const ProductCatalog: React.FC = () => {
   const {
@@ -42,44 +41,84 @@ export const ProductCatalog: React.FC = () => {
     setSelectedPlanMap((prev) => ({ ...prev, [productId]: planIndex }));
   };
 
+  const sortOptions = [
+    { id: 'popular', label: 'Popular', icon: <TrendingUp className="h-3 w-3" /> },
+    { id: 'discount', label: 'Highest Discount', icon: <Percent className="h-3 w-3" /> },
+    { id: 'price_low', label: 'Lowest Price', icon: <ArrowUpDown className="h-3 w-3" /> },
+  ];
+
   return (
-    <section id="catalog" className="space-y-6">
+    <section id="catalog" className="space-y-8">
       
-      {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4 border-b border-zinc-800/80">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Subscription Catalog</h2>
-          <p className="text-xs text-zinc-400 mt-1">
-            Choose duration tier for instant automated credential allocation.
+      {/* Creative & Polished Section Header */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-2">
+        
+        {/* Left: Dynamic Title & Status */}
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-950/60 text-blue-300 text-[11px] font-mono font-medium backdrop-blur-md">
+            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span>WHOLESALE POOL INVENTORY</span>
+            <span className="text-zinc-500">•</span>
+            <span className="text-white font-bold">{filteredProducts.length} ACTIVE TIERS</span>
+          </div>
+
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white uppercase font-mono">
+            Subscription <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Vault</span>
+          </h2>
+
+          <p className="text-xs text-zinc-400 max-w-lg leading-relaxed">
+            Select your preferred duration tier. Automated bot provisioning delivers decrypted credentials to your private vault in &lt; 30 seconds.
           </p>
         </div>
 
-        {/* Search & Sort Controls */}
-        <div className="flex items-center gap-3">
-          <div className="relative w-48 sm:w-60">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400" />
+        {/* Right: Glassmorphic Search & Sort Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          
+          {/* Glass Search Pill */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
             <input
               type="text"
               value={activeSearchQuery}
               onChange={(e) => setActiveSearchQuery(e.target.value)}
-              placeholder="Search catalog..."
-              className="w-full pl-8 pr-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-lg text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-700"
+              placeholder="Search by name or category..."
+              className="w-56 sm:w-64 pl-9 pr-8 py-2 bg-zinc-900/80 hover:bg-zinc-900 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono shadow-md"
             />
+            {activeSearchQuery && (
+              <button
+                onClick={() => setActiveSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-300 focus:outline-none focus:border-zinc-700 cursor-pointer"
-          >
-            <option value="popular">Popularity</option>
-            <option value="discount">Highest Discount</option>
-            <option value="price_low">Lowest Price</option>
-          </select>
+          {/* Custom Segmented Sort Buttons (No ugly native select) */}
+          <div className="inline-flex items-center p-1 rounded-full bg-zinc-900/80 backdrop-blur-md shadow-md">
+            {sortOptions.map((opt) => {
+              const active = sortBy === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setSortBy(opt.id as any)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                    active
+                      ? 'bg-white text-zinc-950 shadow-md font-bold'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                  }`}
+                >
+                  <span>{opt.icon}</span>
+                  <span className="hidden sm:inline">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
         </div>
       </div>
 
-      {/* Product Cards Grid with comfortable spacing */}
+      {/* Product Cards Grid with Widescreen Covers */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
         {filteredProducts.map((product) => {
           const currentPlanIndex = selectedPlanMap[product.id] || 0;
@@ -88,7 +127,7 @@ export const ProductCatalog: React.FC = () => {
           return (
             <div
               key={product.id}
-              className="rounded-2xl bg-zinc-900/90 border border-zinc-800 overflow-hidden hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between group shadow-lg"
+              className="rounded-2xl bg-zinc-900/90 border border-zinc-800/80 overflow-hidden hover:border-zinc-700 transition-all duration-200 flex flex-col justify-between group shadow-lg"
             >
               <div>
                 {/* Widescreen Cover Banner */}
