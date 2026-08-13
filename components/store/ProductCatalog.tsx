@@ -89,77 +89,19 @@ export const ProductCatalog: React.FC = () => {
   return (
     <section id="catalog" className="space-y-6">
       
-      {/* Unified, Well-Structured Catalog Control Header */}
-      <div className="flex flex-col gap-5">
+      {/* Single Unified, Well-Structured Toolbar */}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
         
-        {/* Top Line: Section Title + Search & Sort */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase font-mono">
-              Subscription <span className="text-cyan-400">Vault</span>
-            </h2>
-            <span className="text-[10px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/20">
-              {filteredProducts.length} ACTIVE TIERS
-            </span>
-          </div>
-
-          {/* Right Controls: Search + Sort */}
-          <div className="flex items-center gap-2.5">
-            
-            {/* Search Pill */}
-            <div className="relative flex-1 sm:flex-initial">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
-              <input
-                type="text"
-                value={activeSearchQuery}
-                onChange={(e) => setActiveSearchQuery(e.target.value)}
-                placeholder="Search vault..."
-                className="w-full sm:w-52 pl-9 pr-8 py-1.5 bg-zinc-900/90 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono"
-              />
-              {activeSearchQuery && (
-                <button
-                  onClick={() => setActiveSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Segmented Sort Toggle */}
-            <div className="inline-flex items-center p-1 rounded-full bg-zinc-900/90 shrink-0">
-              {sortOptions.map((opt) => {
-                const active = sortBy === opt.id;
-                return (
-                  <button
-                    key={opt.id}
-                    onClick={() => setSortBy(opt.id as any)}
-                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
-                      active
-                        ? 'bg-white text-zinc-950 shadow-md font-bold'
-                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
-                    }`}
-                  >
-                    <span>{opt.icon}</span>
-                    <span className="hidden sm:inline">{opt.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
-          </div>
-        </div>
-
-        {/* Second Line: Left-Aligned Seamless Category Switcher Dock */}
+        {/* Left: Category Navigation Capsule Dock */}
         <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-900/60 backdrop-blur-xl">
+          <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/80 backdrop-blur-xl">
             {categories.map((cat) => {
               const active = activeCategoryFilter === cat.id;
               return (
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategoryFilter(cat.id)}
-                  className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
+                  className={`px-4 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
                     active
                       ? 'bg-white text-zinc-950 shadow-md scale-100 font-black'
                       : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
@@ -177,6 +119,52 @@ export const ProductCatalog: React.FC = () => {
               );
             })}
           </div>
+        </div>
+
+        {/* Right: Search + Sort Controls */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          
+          {/* Search Pill */}
+          <div className="relative flex-1 sm:flex-initial">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+            <input
+              type="text"
+              value={activeSearchQuery}
+              onChange={(e) => setActiveSearchQuery(e.target.value)}
+              placeholder="Search subscriptions..."
+              className="w-full sm:w-56 pl-9 pr-8 py-2 bg-zinc-900/80 hover:bg-zinc-900 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono"
+            />
+            {activeSearchQuery && (
+              <button
+                onClick={() => setActiveSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Segmented Sort Toggle */}
+          <div className="inline-flex items-center p-1 rounded-full bg-zinc-900/80 shrink-0">
+            {sortOptions.map((opt) => {
+              const active = sortBy === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => setSortBy(opt.id as any)}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                    active
+                      ? 'bg-white text-zinc-950 shadow-md font-bold'
+                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                  }`}
+                >
+                  <span>{opt.icon}</span>
+                  <span className="hidden sm:inline">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
         </div>
 
       </div>
@@ -199,6 +187,10 @@ export const ProductCatalog: React.FC = () => {
                     src={product.logo}
                     alt={product.name}
                     className="h-full w-full object-cover group-hover:scale-108 transition-transform duration-700 ease-out"
+                    onError={(e) => {
+                      // Fallback solid gradient if image fails to load
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80';
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-black/60" />
 
