@@ -10,11 +10,8 @@ import {
   Layers,
   Menu,
   X,
-  User,
-  ShieldAlert,
   Lock,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
@@ -41,7 +38,7 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const totalCartPrice = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const totalCartPrice = cart.reduce((acc, item) => acc + (item.tier?.price || 0) * item.quantity, 0);
 
   const navLinks = [
     { label: 'Catalog', href: '/' },
