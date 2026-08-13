@@ -7,6 +7,7 @@ import { CartDrawer } from '@/components/cart/CartDrawer';
 import { ProductModal } from '@/components/store/ProductModal';
 import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { CredentialVaultModal } from '@/components/vault/CredentialVaultModal';
+import { JsonLd } from '@/components/seo/JsonLd';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
 
 export const metadata: Metadata = {
