@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, Sparkles, Film, Code, Palette, Shield } from 'lucide-react';
+import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X } from 'lucide-react';
 import { SubscriptionCategory } from '@/types';
 
 export const ProductCatalog: React.FC = () => {
@@ -21,43 +21,31 @@ export const ProductCatalog: React.FC = () => {
     id: SubscriptionCategory;
     label: string;
     description: string;
-    icon: React.ReactNode;
-    color: string;
   }[] = [
     {
       id: 'ai',
       label: 'AI & Intelligence',
       description: 'Frontier AI models, LLM compute & intelligent reasoning tools',
-      icon: <Sparkles className="h-4 w-4 text-cyan-400" />,
-      color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30',
     },
     {
       id: 'streaming',
       label: 'Cinema & 4K Streaming',
       description: 'Ultra HD 4K streaming, Dolby Atmos & high-fidelity audio',
-      icon: <Film className="h-4 w-4 text-red-400" />,
-      color: 'from-red-500/20 to-rose-500/20 text-red-400 border-red-500/30',
     },
     {
       id: 'dev',
       label: 'Developer Tools',
       description: 'AI code editors, fast generation requests & composer tools',
-      icon: <Code className="h-4 w-4 text-indigo-400" />,
-      color: 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/30',
     },
     {
       id: 'productivity',
       label: 'Design & Creative',
       description: 'Complete suites for photography, video editing & vector design',
-      icon: <Palette className="h-4 w-4 text-amber-400" />,
-      color: 'from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/30',
     },
     {
       id: 'vpn_security',
       label: 'VPN & Privacy',
       description: 'Encrypted tunnel networks & high-speed multi-country servers',
-      icon: <Shield className="h-4 w-4 text-blue-400" />,
-      color: 'from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/30',
     },
   ];
 
@@ -109,11 +97,11 @@ export const ProductCatalog: React.FC = () => {
       {/* 1. Master Toolbar: Section Title + Search & Sort */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.08]">
         
-        {/* Title */}
+        {/* Title in Space Grotesk Font */}
         <div className="flex items-center gap-3">
           <h2
-            className="text-2xl sm:text-3xl font-black tracking-wider text-white uppercase"
-            style={{ fontFamily: "'Orbitron', sans-serif" }}
+            className="text-2xl sm:text-3xl font-black tracking-tight text-white"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             Vault <span className="text-cyan-400">Inventory</span>
           </h2>
@@ -174,26 +162,21 @@ export const ProductCatalog: React.FC = () => {
         {categoryGroups.map((group) => (
           <div key={group.id} className="space-y-5">
             
-            {/* Category Header with Orbitron Font & Glow Accent */}
+            {/* Category Header with Clean Space Grotesk Typography (No Logo Icon Box) */}
             <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-xl bg-gradient-to-br ${group.meta.color} border flex items-center justify-center shadow-sm`}>
-                  {group.meta.icon}
-                </div>
-                <div>
-                  <h3
-                    className="text-lg sm:text-2xl font-black tracking-wider text-white uppercase"
-                    style={{ fontFamily: "'Orbitron', sans-serif" }}
-                  >
-                    {group.meta.label}
-                  </h3>
-                  <p className="text-xs text-zinc-400 font-sans hidden sm:block mt-0.5">
-                    {group.meta.description}
-                  </p>
-                </div>
+              <div>
+                <h3
+                  className="text-xl sm:text-2xl font-bold tracking-tight text-white"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {group.meta.label}
+                </h3>
+                <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                  {group.meta.description}
+                </p>
               </div>
 
-              <span className="text-xs font-mono font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full border border-white/10">
+              <span className="text-xs font-mono font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full border border-white/10 shrink-0">
                 {group.products.length} {group.products.length === 1 ? 'Service' : 'Services'}
               </span>
             </div>
