@@ -11,9 +11,6 @@ import {
   Menu,
   X,
   User,
-  Shield,
-  Zap,
-  Sparkles,
   Command,
 } from 'lucide-react';
 
@@ -52,8 +49,8 @@ export const Navbar: React.FC = () => {
       <div
         className={`max-w-7xl mx-auto transition-all duration-300 ${
           scrolled
-            ? 'bg-zinc-950/85 sm:rounded-2xl border-b sm:border border-white/10 backdrop-blur-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)]'
-            : 'bg-zinc-950/60 sm:rounded-2xl border-b sm:border border-white/[0.08] backdrop-blur-xl'
+            ? 'bg-zinc-950/85 sm:rounded-2xl backdrop-blur-2xl shadow-[0_15px_40px_rgba(0,0,0,0.8)]'
+            : 'bg-zinc-950/50 sm:rounded-2xl backdrop-blur-xl'
         }`}
       >
         <div className="px-4 sm:px-6 flex items-center justify-between h-16 gap-4">
@@ -73,8 +70,8 @@ export const Navbar: React.FC = () => {
             </div>
           </Link>
 
-          {/* Centered Desktop Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-1 bg-zinc-900/60 border border-white/10 rounded-full p-1 backdrop-blur-md">
+          {/* Centered Desktop Navigation Tabs - Borderless */}
+          <nav className="hidden md:flex items-center gap-1 bg-zinc-900/50 rounded-full p-1 backdrop-blur-md">
             {navLinks.map((link) => {
               const active = pathname === link.href;
               return (
@@ -93,18 +90,18 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right Action Bar */}
+          {/* Right Action Bar - Borderless */}
           <div className="flex items-center gap-2.5 sm:gap-3">
             
-            {/* Interactive Search Bar with Shortcut Badge */}
+            {/* Interactive Search Bar - Borderless */}
             <div className="relative hidden lg:flex items-center">
-              <Search className="absolute left-3 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+              <Search className="absolute left-3.5 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
               <input
                 type="text"
                 value={activeSearchQuery}
                 onChange={(e) => setActiveSearchQuery(e.target.value)}
                 placeholder="Search subscriptions..."
-                className="w-56 pl-9 pr-8 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/30 transition-all font-mono"
+                className="w-56 pl-9 pr-8 py-1.5 bg-zinc-900/60 hover:bg-zinc-900/90 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono"
               />
               {activeSearchQuery ? (
                 <button
@@ -114,17 +111,17 @@ export const Navbar: React.FC = () => {
                   <X className="h-3 w-3" />
                 </button>
               ) : (
-                <div className="absolute right-2.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700/60 text-[9px] font-mono text-zinc-400 pointer-events-none">
+                <div className="absolute right-2.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-800 text-[9px] font-mono text-zinc-400 pointer-events-none">
                   <Command className="h-2.5 w-2.5" />
                   <span>K</span>
                 </div>
               )}
             </div>
 
-            {/* Role Switcher Pill */}
+            {/* Role Switcher Pill - Borderless */}
             <button
               onClick={toggleUserRole}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-zinc-900/80 hover:bg-zinc-800 text-[11px] font-mono text-zinc-300 transition-colors shadow-sm"
+              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-900/60 hover:bg-zinc-850 text-[11px] font-mono text-zinc-300 transition-colors shadow-sm"
               title="Click to toggle between Customer Vault and Admin Command Portal"
             >
               <span
@@ -137,10 +134,10 @@ export const Navbar: React.FC = () => {
               <span className="capitalize font-bold">{user.role}</span>
             </button>
 
-            {/* Interactive Cart Button */}
+            {/* Cart Button - Borderless */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-zinc-900 border border-white/10 hover:border-cyan-500/40 text-zinc-300 hover:text-white transition-all hover:scale-105 shadow-sm"
+              className="relative flex items-center justify-center h-9 w-9 rounded-xl bg-zinc-900/60 hover:bg-zinc-850 text-zinc-300 hover:text-white transition-all hover:scale-105 shadow-sm"
               aria-label="Cart"
             >
               <ShoppingBag className="h-4 w-4" />
@@ -161,10 +158,10 @@ export const Navbar: React.FC = () => {
               <span className="sm:hidden">Login</span>
             </Link>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Borderless */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl bg-zinc-900 border border-white/10 text-zinc-300 hover:text-white"
+              className="md:hidden flex items-center justify-center h-9 w-9 rounded-xl bg-zinc-900/60 text-zinc-300 hover:text-white"
             >
               {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </button>
@@ -173,9 +170,9 @@ export const Navbar: React.FC = () => {
         </div>
       </div>
 
-      {/* Interactive Mobile Glass Drawer */}
+      {/* Interactive Mobile Glass Drawer - Borderless */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-2 mx-4 p-4 rounded-2xl bg-zinc-950/95 border border-white/10 backdrop-blur-2xl space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden mt-2 mx-4 p-4 rounded-2xl bg-zinc-950/95 backdrop-blur-2xl space-y-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200">
           
           {/* Mobile Search */}
           <div className="relative">
@@ -185,7 +182,7 @@ export const Navbar: React.FC = () => {
               value={activeSearchQuery}
               onChange={(e) => setActiveSearchQuery(e.target.value)}
               placeholder="Search subscriptions..."
-              className="w-full pl-9 pr-4 py-2 bg-zinc-900 border border-white/10 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none"
+              className="w-full pl-9 pr-4 py-2 bg-zinc-900 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none"
             />
           </div>
 
@@ -221,14 +218,14 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Role Switcher in Mobile Drawer */}
-          <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+          <div className="pt-3 flex items-center justify-between border-t border-white/5">
             <div className="flex items-center gap-2 text-xs text-zinc-400">
               <span className={`h-2 w-2 rounded-full ${user.role === 'admin' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
               <span className="capitalize font-mono">Active Role: <strong className="text-white">{user.role}</strong></span>
             </div>
             <button
               onClick={toggleUserRole}
-              className="px-3 py-1 rounded-lg bg-zinc-900 border border-white/10 text-xs font-bold text-cyan-400 hover:bg-zinc-800"
+              className="px-3 py-1 rounded-lg bg-zinc-900 text-xs font-bold text-cyan-400 hover:bg-zinc-800"
             >
               Switch Role
             </button>
