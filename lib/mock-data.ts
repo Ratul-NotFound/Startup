@@ -501,15 +501,13 @@ export const INITIAL_TICKETS: SupportTicket[] = [
 ];
 
 export const INITIAL_FINANCIAL_METRICS: FinancialMetric = {
-  totalRevenue: 48920.50,
-  monthlyRecurringRevenue: 14250.00,
+  mrr: 14250.00,
+  arr: 171000.00,
+  netRevenueToday: 1840.50,
   activeSubscribers: 1840,
-  autoRenewalRate: 78.4,
-  churnRate: 3.2,
-  renewalProjections: [
-    { day: 'Day 1-7', count: 142, revenue: 2980 },
-    { day: 'Day 8-14', count: 210, revenue: 4410 },
-    { day: 'Day 15-21', count: 185, revenue: 3890 },
-    { day: 'Day 22-30', count: 320, revenue: 6720 },
-  ],
+  churnRate: 1.8,
+  averageOrderValue: 24.50,
+  growthMoM: 24.6,
+  lifetimeValue: 148.00,
 };
+
