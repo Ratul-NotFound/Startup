@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '@/context/AppContext';
-import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X } from 'lucide-react';
+import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SubscriptionCategory } from '@/types';
 
 export const ProductCatalog: React.FC = () => {
@@ -16,6 +16,17 @@ export const ProductCatalog: React.FC = () => {
 
   const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'discount'>('popular');
   const [selectedPlanMap, setSelectedPlanMap] = useState<Record<string, number>>({});
+
+  // Refs for each category horizontal scroll container
+  const scrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const scrollCategory = (catId: string, direction: 'left' | 'right') => {
+    const el = scrollRefs.current[catId];
+    if (el) {
+      const scrollAmount = direction === 'left' ? -340 : 340;
+      el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   const categoryMetadata: {
     id: SubscriptionCategory;
@@ -157,12 +168,12 @@ export const ProductCatalog: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Category-Wise Sections */}
+      {/* 2. Category-Wise Horizontal Scrollable Rows (Netflix / Steam style) */}
       <div className="space-y-14">
         {categoryGroups.map((group) => (
-          <div key={group.id} className="space-y-5">
+          <div key={group.id} className="space-y-4">
             
-            {/* Category Header with Clean Space Grotesk Typography (No Logo Icon Box) */}
+            {/* Category Header with Scroll Navigation Buttons */}
             <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
               <div>
                 <h3
@@ -176,13 +187,36 @@ export const ProductCatalog: React.FC = () => {
                 </p>
               </div>
 
-              <span className="text-xs font-mono font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full border border-white/10 shrink-0">
-                {group.products.length} {group.products.length === 1 ? 'Service' : 'Services'}
-              </span>
+              {/* Right Controls: Service Count + Smooth Carousel Scroll Arrows */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-mono font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full border border-white/10 hidden sm:inline-block">
+                  {group.products.length} {group.products.length === 1 ? 'Service' : 'Services'}
+                </span>
+
+                <button
+                  onClick={() => scrollCategory(group.id, 'left')}
+                  className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors"
+                  aria-label="Scroll Left"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => scrollCategory(group.id, 'right')}
+                  className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors"
+                  aria-label="Scroll Right"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Product Cards for this Category */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5 md:gap-6">
+            {/* Horizontal Scrollable Product Cards Rail */}
+            <div
+              ref={(el) => {
+                scrollRefs.current[group.id] = el;
+              }}
+              className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-none py-2 px-1 snap-x snap-mandatory scroll-smooth"
+            >
               {group.products.map((product) => {
                 const currentPlanIndex = selectedPlanMap[product.id] || 0;
                 const currentPlan = product.pricingTiers[currentPlanIndex] || product.pricingTiers[0];
@@ -190,11 +224,11 @@ export const ProductCatalog: React.FC = () => {
                 return (
                   <div
                     key={product.id}
-                    className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900/70 hover:bg-zinc-900/90 border border-white/[0.06] hover:border-cyan-500/40 backdrop-blur-xl overflow-hidden transition-all duration-300 hover:shadow-[0_15px_40px_rgba(0,0,0,0.8)] hover:-translate-y-1 flex flex-col justify-between"
+                    className="w-[280px] sm:w-[320px] shrink-0 snap-start group relative rounded-2xl sm:rounded-3xl bg-zinc-900/70 hover:bg-zinc-900/90 border border-white/[0.06] hover:border-cyan-500/40 backdrop-blur-xl overflow-hidden transition-all duration-300 hover:shadow-[0_15px_40px_rgba(0,0,0,0.8)] hover:-translate-y-1 flex flex-col justify-between"
                   >
                     <div>
                       {/* Responsive Cover Banner */}
-                      <div className="relative h-28 sm:h-40 md:h-44 w-full overflow-hidden bg-zinc-950">
+                      <div className="relative h-36 sm:h-44 w-full overflow-hidden bg-zinc-950">
                         <img
                           src={product.logo}
                           alt={product.name}
@@ -206,28 +240,27 @@ export const ProductCatalog: React.FC = () => {
                         <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-black/60" />
 
                         {/* Top Badges */}
-                        <div className="absolute top-2 sm:top-3 left-2 sm:left-3 right-2 sm:right-3 flex items-center justify-between z-10">
-                          <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-zinc-300 border border-white/10 font-mono">
+                        <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center justify-between z-10">
+                          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-zinc-300 border border-white/10 font-mono">
                             {product.category}
                           </span>
-                          <span className="text-[8px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-mono shadow-sm">
-                            <span className="h-1 sm:h-1.5 w-1 sm:w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                            <span className="hidden sm:inline">{product.deliveryTimeEstimate}</span>
-                            <span className="sm:hidden">&lt;30s</span>
+                          <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 backdrop-blur-md text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-mono shadow-sm">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>{product.deliveryTimeEstimate}</span>
                           </span>
                         </div>
 
                         {/* Product Title */}
-                        <div className="absolute bottom-2 sm:bottom-3 left-2.5 sm:left-3.5 right-2.5 sm:right-3.5 z-10">
-                          <h4 className="text-xs sm:text-base font-black tracking-wide text-white drop-shadow-md truncate">
+                        <div className="absolute bottom-2.5 sm:bottom-3 left-3 sm:left-3.5 right-3 sm:right-3.5 z-10">
+                          <h4 className="text-sm sm:text-base font-black tracking-wide text-white drop-shadow-md truncate">
                             {product.name}
                           </h4>
                         </div>
                       </div>
 
                       {/* Card Body - Duration Capsule Selector */}
-                      <div className="p-2.5 sm:p-4">
-                        <div className="p-0.5 sm:p-1 rounded-xl bg-zinc-950/80 border border-white/[0.06] grid grid-cols-4 gap-0.5 sm:gap-1 shadow-inner">
+                      <div className="p-3 sm:p-4">
+                        <div className="p-1 rounded-xl bg-zinc-950/80 border border-white/[0.06] grid grid-cols-4 gap-1 shadow-inner">
                           {product.pricingTiers.map((tier, idx) => {
                             const isSelected = idx === currentPlanIndex;
                             return (
@@ -235,7 +268,7 @@ export const ProductCatalog: React.FC = () => {
                                 key={tier.duration}
                                 type="button"
                                 onClick={() => handleSelectPlanIndex(product.id, idx)}
-                                className={`py-1 sm:py-1.5 rounded-lg text-[9px] sm:text-xs font-bold transition-all font-mono ${
+                                className={`py-1.5 rounded-lg text-xs font-bold transition-all font-mono ${
                                   isSelected
                                     ? 'bg-white text-zinc-950 shadow-md font-black scale-100'
                                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
@@ -250,33 +283,33 @@ export const ProductCatalog: React.FC = () => {
                     </div>
 
                     {/* Card Footer: Price & Actions */}
-                    <div className="p-2.5 sm:p-4 pt-0">
-                      <div className="flex items-baseline justify-between mb-2 sm:mb-3">
-                        <div className="flex items-baseline gap-1 sm:gap-2">
-                          <span className="text-base sm:text-xl font-black text-white font-mono">
+                    <div className="p-3 sm:p-4 pt-0">
+                      <div className="flex items-baseline justify-between mb-3">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-lg sm:text-xl font-black text-white font-mono">
                             ${currentPlan.price.toFixed(2)}
                           </span>
-                          <span className="text-[10px] sm:text-xs text-zinc-500 line-through font-mono">
+                          <span className="text-xs text-zinc-500 line-through font-mono">
                             ${currentPlan.originalPrice.toFixed(2)}
                           </span>
                         </div>
-                        <span className="text-[9px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-1.5 sm:px-2 py-0.5 rounded-md sm:rounded-lg font-mono shadow-sm">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg font-mono shadow-sm">
                           -{currentPlan.discountPercentage}%
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         <button
                           onClick={() => setSelectedProduct(product)}
-                          className="w-full py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-[10px] sm:text-xs font-bold transition-colors border border-white/[0.06]"
+                          className="w-full py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-bold transition-colors border border-white/[0.06]"
                         >
                           Details
                         </button>
                         <button
                           onClick={() => addToCart(product, currentPlan)}
-                          className="w-full py-1.5 sm:py-2 rounded-lg sm:rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[10px] sm:text-xs font-bold uppercase transition-all shadow-[0_0_12px_rgba(37,99,235,0.3)] hover:scale-102 flex items-center justify-center gap-1"
+                          className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase transition-all shadow-[0_0_12px_rgba(37,99,235,0.3)] hover:scale-102 flex items-center justify-center gap-1.5"
                         >
-                          <ShoppingBag className="h-3 w-3" />
+                          <ShoppingBag className="h-3.5 w-3.5" />
                           <span>Buy</span>
                         </button>
                       </div>
