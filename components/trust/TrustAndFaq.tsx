@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, HelpCircle, ShieldCheck, Zap, Lock, MessageSquare } from 'lucide-react';
+import { ChevronDown, HelpCircle, MessageSquare } from 'lucide-react';
 
 interface FaqItem {
   tag: string;
@@ -14,40 +14,40 @@ export const TrustAndFaq: React.FC = () => {
 
   const faqs: FaqItem[] = [
     {
-      tag: 'INSTANT DISPATCH',
-      q: 'How does automated credential delivery work?',
-      a: 'Immediately upon checkout confirmation, our automated bot provisions your subscription. Decrypted credentials, dedicated PINs, or direct workspace invites appear in your private Customer Vault and are delivered to your email in under 30 seconds.',
+      tag: 'INSTANT DELIVERY',
+      q: 'How fast do I receive my subscription login details?',
+      a: 'Immediately after checkout, your login credentials, private PIN, or invite link are automatically displayed in your account dashboard and sent to your email in under 30 seconds.',
     },
     {
-      tag: 'PRIVACY & SLOTS',
-      q: 'Are accounts private or shared?',
-      a: 'We offer dedicated private accounts (such as ChatGPT Plus, Claude 3.5 Pro, and Cursor Pro) and dedicated PIN-locked private profile slots (such as Netflix 4K UHD and YouTube Premium) to ensure 100% uninterrupted access.',
+      tag: 'ACCOUNT TYPES',
+      q: 'Are these private accounts or shared?',
+      a: 'We offer dedicated private accounts (such as ChatGPT Plus, Claude 3.5 Pro, and Cursor Pro) and private PIN-locked profiles (such as Netflix 4K UHD and YouTube Premium) so your watch history and workspace stay 100% private.',
     },
     {
-      tag: 'WARRANTY & REPLACEMENT',
-      q: 'What is the full-term replacement guarantee?',
-      a: 'Every subscription purchased on SubNexus comes backed by our 100% Full-Term Replacement Warranty. If you ever encounter access disruptions, password updates, or regional lockouts, our support bots immediately reissue valid credentials.',
+      tag: 'WARRANTY & GUARANTEE',
+      q: 'What does the full-term replacement warranty cover?',
+      a: 'Every subscription comes with 100% full-period replacement protection. If you ever run into any login issues, password updates, or regional restrictions, we instantly fix or replace your plan with zero hassle.',
     },
     {
-      tag: 'AUTOMATED RENEWALS',
-      q: 'How do subscription extensions and renewals work?',
-      a: 'You have full autonomy over your subscriptions. You can enable automatic renewal or manually extend any plan (+30 days, +90 days, or +1 year) with a single click directly from your Customer Vault dashboard.',
+      tag: 'EASY RENEWALS',
+      q: 'How do subscription renewals work?',
+      a: 'You have complete control over your plans. You can enable automatic renewal or simply click "Extend +30 Days" anytime from your account dashboard whenever you are ready.',
     },
     {
-      tag: 'SECURITY PROTOCOL',
-      q: 'How is payment and credential data protected?',
-      a: 'We operate on zero-knowledge architecture. All credentials stored in your vault are encrypted with AES-256 bit protocols, and payments are processed through secure multi-rail gateways including Stripe, Apple Pay, and verified Crypto webhooks.',
+      tag: 'SAFE PAYMENTS',
+      q: 'What payment methods do you accept?',
+      a: 'We accept all major credit/debit cards (Visa, Mastercard), Apple Pay, Google Pay, and popular cryptocurrencies (USDT, Bitcoin) through secure, encrypted checkout.',
     },
   ];
 
   return (
     <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 pt-8 pb-12">
       
-      {/* Header with Space Grotesk Typography */}
+      {/* Header */}
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-[11px] font-mono font-medium backdrop-blur-md">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-xs font-semibold backdrop-blur-md">
           <HelpCircle className="h-3.5 w-3.5 text-cyan-400" />
-          <span>HELP & VERIFICATION</span>
+          <span>HELP & SUPPORT</span>
         </div>
 
         <h2
@@ -58,11 +58,11 @@ export const TrustAndFaq: React.FC = () => {
         </h2>
 
         <p className="text-xs text-zinc-400 max-w-md mx-auto">
-          Everything you need to know about automated bot dispatch, full-term warranty, and encrypted vaults.
+          Everything you need to know about instant delivery, warranties, and how your subscription works.
         </p>
       </div>
 
-      {/* Glassmorphic FAQ Accordion */}
+      {/* FAQ Accordion */}
       <div className="space-y-3">
         {faqs.map((faq, idx) => {
           const isOpen = openFaq === idx;
@@ -80,7 +80,7 @@ export const TrustAndFaq: React.FC = () => {
                 className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-semibold text-zinc-200 hover:text-white"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <span className="text-[9px] font-mono font-bold tracking-widest px-2 py-0.5 rounded-full bg-zinc-800 text-cyan-400 w-fit shrink-0 border border-white/5">
+                  <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-zinc-800 text-cyan-400 w-fit shrink-0 border border-white/5">
                     {faq.tag}
                   </span>
                   <span className="text-sm sm:text-base font-bold text-white font-sans">
@@ -114,8 +114,8 @@ export const TrustAndFaq: React.FC = () => {
             <MessageSquare className="h-5 w-5" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-white">Have custom enterprise inquiries or need help?</h4>
-            <p className="text-[11px] text-zinc-400">Our automated bot dispatch and support team is online 24/7.</p>
+            <h4 className="text-xs sm:text-sm font-bold text-white">Have questions or need custom team plans?</h4>
+            <p className="text-[11px] text-zinc-400">Our customer support team is online and ready to help 24/7.</p>
           </div>
         </div>
 
@@ -123,7 +123,7 @@ export const TrustAndFaq: React.FC = () => {
           href="/dashboard"
           className="px-5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs uppercase tracking-wider transition-all hover:scale-105 shrink-0"
         >
-          Open Support Ticket
+          Contact Support
         </a>
       </div>
 

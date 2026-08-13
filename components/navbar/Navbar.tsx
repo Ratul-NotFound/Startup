@@ -34,7 +34,7 @@ export const Navbar: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           
-          {/* Brand Logo - Clean, Human Crafted */}
+          {/* Brand Logo - Clean & Human */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center text-white font-bold text-sm shadow-sm group-hover:border-white/25 transition-colors">
               <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,7 +54,7 @@ export const Navbar: React.FC = () => {
                 pathname === '/' ? 'text-white font-semibold' : ''
               }`}
             >
-              Vault
+              Subscriptions
             </Link>
             <Link
               href="/dashboard"
@@ -62,7 +62,7 @@ export const Navbar: React.FC = () => {
                 pathname === '/dashboard' ? 'text-white font-semibold' : ''
               }`}
             >
-              My Subscriptions
+              My Orders
             </Link>
             <Link
               href="/admin"
@@ -70,7 +70,7 @@ export const Navbar: React.FC = () => {
                 pathname === '/admin' ? 'text-white font-semibold' : ''
               }`}
             >
-              Portal
+              Admin
             </Link>
           </nav>
 
@@ -91,12 +91,12 @@ export const Navbar: React.FC = () => {
               )}
             </button>
 
-            {/* Clean Sign In / Vault Button */}
+            {/* Clean My Account Button */}
             <Link
               href={user.role === 'admin' ? '/admin' : '/dashboard'}
               className="px-4 py-2 rounded-full bg-white text-zinc-950 hover:bg-zinc-200 text-xs sm:text-sm font-semibold transition-all shadow-sm"
             >
-              Access Vault
+              My Account
             </Link>
 
             {/* Mobile Menu Trigger */}
@@ -122,21 +122,21 @@ export const Navbar: React.FC = () => {
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-white transition-colors"
             >
-              Vault Catalog
+              All Subscriptions
             </Link>
             <Link
               href="/dashboard"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-white transition-colors"
             >
-              My Subscriptions
+              My Orders & Login Details
             </Link>
             <Link
               href="/admin"
               onClick={() => setMobileMenuOpen(false)}
               className="py-1 hover:text-white transition-colors"
             >
-              Admin Portal
+              Admin Dashboard
             </Link>
           </nav>
         </div>

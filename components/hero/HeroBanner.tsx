@@ -8,31 +8,31 @@ export const HeroBanner: React.FC = () => {
 
   const backgroundSlides = [
     {
-      sub: "Master the Art of Premium Access",
-      title: 'SUBNEXUS',
-      outline: 'ENTERPRISE',
-      tag: 'AUTOMATED BOT DISPATCH',
+      sub: 'Save Up to 80% on Top Subscriptions',
+      title: 'PREMIUM ACCESS',
+      outline: 'WHOLESALE',
+      tag: 'INSTANT 30S DELIVERY',
       bgImage: '/images/hero-vault.jpg',
     },
     {
-      sub: 'Next-Gen AI & Cinema 4K Infrastructure',
-      title: 'AI & CINEMA',
-      outline: 'INTELLIGENCE',
-      tag: 'OFFICIAL WHOLESALE POOL',
+      sub: 'ChatGPT Plus, Gemini Advanced & 4K Cinema',
+      title: 'AI & STREAMING',
+      outline: 'ENTERTAINMENT',
+      tag: 'VERIFIED OFFICIAL PLANS',
       bgImage: '/images/hero-ai-cinema.jpg',
     },
     {
-      sub: 'Frontier AI Code Editors & Cloud Compute',
-      title: 'DEVELOPER SUITE',
-      outline: 'COMPUTE',
-      tag: 'INSTANT REASONING ENGINES',
+      sub: 'Cursor Pro, Claude 3.5 & Developer Tools',
+      title: 'DEV WORKSPACE',
+      outline: 'PRO SUITES',
+      tag: 'FAST REASONING ENGINES',
       bgImage: '/images/hero-dev-code.jpg',
     },
     {
-      sub: 'Real-Time Creative Renders & Global Encrypted Tunnel',
+      sub: 'Adobe Creative Cloud & NordVPN Complete',
       title: 'CREATIVE & VPN',
-      outline: 'SECURE MATRIX',
-      tag: 'AES-256 ZERO KNOWLEDGE',
+      outline: 'SECURE SUITE',
+      tag: '100% SAFE & GUARANTEED',
       bgImage: '/images/hero-creative-vpn.jpg',
     },
   ];
@@ -68,7 +68,7 @@ export const HeroBanner: React.FC = () => {
           </div>
         ))}
 
-        {/* Seamless Cinematic Dark Overlays */}
+        {/* Seamless Dark Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-black/75" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/60 to-zinc-950" />
         <div className="absolute bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-zinc-950 to-transparent" />
@@ -81,11 +81,11 @@ export const HeroBanner: React.FC = () => {
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center my-auto space-y-6">
         
         {/* Live Status Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-xs font-mono font-medium backdrop-blur-md shadow-sm">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
           <span>{current.tag}</span>
           <span className="text-zinc-500">•</span>
-          <span className="text-zinc-300">AUTO-PROVISION READY</span>
+          <span className="text-zinc-300">FULL WARRANTY INCLUDED</span>
         </div>
 
         {/* Cursive Subtitle in Caveat script */}
@@ -96,12 +96,12 @@ export const HeroBanner: React.FC = () => {
           {current.sub}
         </p>
 
-        {/* Giant Bold Futuristic Title with Ghost Watermark in Orbitron Font */}
+        {/* Giant Bold Title in Space Grotesk / Orbitron */}
         <div className="relative py-2 select-none">
           <span
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl sm:text-7xl md:text-[110px] font-black tracking-widest text-transparent opacity-10 pointer-events-none transition-all duration-700 whitespace-nowrap"
             style={{
-              fontFamily: "'Orbitron', sans-serif",
+              fontFamily: "'Space Grotesk', sans-serif",
               WebkitTextStroke: '2px rgba(255,255,255,0.8)',
             }}
           >
@@ -109,8 +109,8 @@ export const HeroBanner: React.FC = () => {
           </span>
 
           <h1
-            className="relative text-3xl sm:text-5xl md:text-7xl font-black tracking-widest text-white uppercase drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)]"
-            style={{ fontFamily: "'Orbitron', sans-serif" }}
+            className="relative text-3xl sm:text-5xl md:text-7xl font-black tracking-wide text-white uppercase drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)]"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
             {current.title}
           </h1>
@@ -120,18 +120,18 @@ export const HeroBanner: React.FC = () => {
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
           <a
             href="#catalog"
-            className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs tracking-widest uppercase shadow-[0_0_25px_rgba(37,99,235,0.4)] transition-all hover:scale-105 flex items-center gap-2"
+            className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs tracking-wider uppercase shadow-[0_0_25px_rgba(37,99,235,0.4)] transition-all hover:scale-105 flex items-center gap-2"
           >
             <Zap className="h-4 w-4" />
-            <span>Explore Vault</span>
+            <span>Explore Subscriptions</span>
             <ArrowRight className="h-4 w-4" />
           </a>
 
           <a
             href="#catalog"
-            className="px-8 py-3.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 font-bold text-xs tracking-widest uppercase backdrop-blur-md transition-all hover:scale-105"
+            className="px-8 py-3.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 font-bold text-xs tracking-wider uppercase backdrop-blur-md transition-all hover:scale-105"
           >
-            Browse Plans
+            View All Plans
           </a>
         </div>
 
