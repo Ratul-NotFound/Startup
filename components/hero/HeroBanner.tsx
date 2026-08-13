@@ -45,7 +45,7 @@ export const HeroBanner: React.FC = () => {
     },
     {
       id: 'ai',
-      label: 'AI Models',
+      label: 'AI & Models',
       count: products.filter((p) => p.category === 'ai').length,
     },
     {
@@ -73,7 +73,7 @@ export const HeroBanner: React.FC = () => {
   const current = backgroundSlides[activeSlide];
 
   return (
-    <section className="relative min-h-[88vh] sm:min-h-[92vh] flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-10">
+    <section className="relative min-h-[88vh] sm:min-h-[92vh] flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-8">
       
       {/* Live Animated Concept Background with Smooth Ken Burns Slow Motion */}
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -164,10 +164,10 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Bottom Slider Dots Indicator & Clean Category Pills */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-6">
+      {/* Bottom Segmented Glassmorphic Dock & Carousel Indicators */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-5">
         
-        {/* Slider Dots */}
+        {/* Slider Indicator Line */}
         <div className="flex items-center justify-center gap-2">
           {backgroundSlides.map((_, idx) => (
             <button
@@ -181,31 +181,33 @@ export const HeroBanner: React.FC = () => {
           ))}
         </div>
 
-        {/* Clean Minimalist Category Pills (No AI Cliché Icons) */}
-        <div className="pt-4 border-t border-white/10 flex items-center justify-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {categories.map((cat) => {
-            const active = activeCategoryFilter === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategoryFilter(cat.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-2 ${
-                  active
-                    ? 'bg-white text-zinc-950 font-black shadow-lg scale-105'
-                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border border-white/10 backdrop-blur-md'
-                }`}
-              >
-                <span>{cat.label}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                    active ? 'bg-zinc-200 text-zinc-950 font-black' : 'bg-white/10 text-zinc-400 font-mono'
+        {/* Unified Glassmorphic Category Capsule Dock */}
+        <div className="flex justify-center">
+          <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/80 border border-white/10 backdrop-blur-xl shadow-2xl overflow-x-auto max-w-full scrollbar-none">
+            {categories.map((cat) => {
+              const active = activeCategoryFilter === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategoryFilter(cat.id)}
+                  className={`px-4 sm:px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
+                    active
+                      ? 'bg-white text-zinc-950 shadow-lg scale-100 font-black'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
                   }`}
                 >
-                  {cat.count}
-                </span>
-              </button>
-            );
-          })}
+                  <span>{cat.label}</span>
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                      active ? 'bg-zinc-200 text-zinc-900 font-bold' : 'text-zinc-500 bg-white/5'
+                    }`}
+                  >
+                    {cat.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
       </div>
