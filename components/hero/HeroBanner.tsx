@@ -73,14 +73,14 @@ export const HeroBanner: React.FC = () => {
   const current = backgroundSlides[activeSlide];
 
   return (
-    <section className="relative min-h-[88vh] sm:min-h-[92vh] flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-8">
+    <section className="relative min-h-screen w-full flex flex-col justify-between overflow-hidden -mt-20 pt-28 pb-8">
       
-      {/* Live Animated Concept Background with Smooth Ken Burns Slow Motion */}
+      {/* 100% Full-Viewport Responsive Background Carousel with Seamless Fade */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         {backgroundSlides.map((slide, idx) => (
           <div
             key={idx}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
               idx === activeSlide ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -94,9 +94,10 @@ export const HeroBanner: React.FC = () => {
           </div>
         ))}
 
-        {/* Ambient Dark Atmospheric Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-black/60 to-black/80" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/65 to-zinc-950" />
+        {/* Seamless Cinematic Overlays: Top shade, radial vignette, and bottom blend to background */}
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-black/75" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/60 to-zinc-950" />
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-zinc-950 to-transparent" />
         
         {/* Subtle Light Grid Overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
@@ -105,7 +106,7 @@ export const HeroBanner: React.FC = () => {
       {/* Main Centered Content */}
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center my-auto space-y-6">
         
-        {/* Live Status Pill - Borderless */}
+        {/* Live Status Pill */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-xs font-mono font-medium backdrop-blur-md shadow-sm">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
           <span>{current.tag}</span>
@@ -143,7 +144,7 @@ export const HeroBanner: React.FC = () => {
           </h1>
         </div>
 
-        {/* Centered Dual Action Buttons - Borderless */}
+        {/* Centered Dual Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
           <a
             href="#catalog"
@@ -164,8 +165,8 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Bottom Segmented Glassmorphic Dock & Carousel Indicators - Borderless */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-5">
+      {/* Bottom Segmented Glassmorphic Dock & Carousel Indicators */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-4">
         
         {/* Slider Indicator Line */}
         <div className="flex items-center justify-center gap-2">
@@ -181,7 +182,7 @@ export const HeroBanner: React.FC = () => {
           ))}
         </div>
 
-        {/* Unified Glassmorphic Category Capsule Dock - 100% Borderless */}
+        {/* Unified Glassmorphic Category Capsule Dock */}
         <div className="flex justify-center">
           <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/70 backdrop-blur-xl shadow-2xl overflow-x-auto max-w-full scrollbar-none">
             {categories.map((cat) => {
