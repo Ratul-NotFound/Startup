@@ -2,16 +2,14 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
-import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, Sparkles, Film, Code, Palette, Shield, Layers } from 'lucide-react';
-import { SubscriptionCategory, Product } from '@/types';
+import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, Sparkles, Film, Code, Palette, Shield } from 'lucide-react';
+import { SubscriptionCategory } from '@/types';
 
 export const ProductCatalog: React.FC = () => {
   const {
     products,
     setSelectedProduct,
     addToCart,
-    activeCategoryFilter,
-    setActiveCategoryFilter,
     activeSearchQuery,
     setActiveSearchQuery,
   } = useApp();
@@ -20,46 +18,46 @@ export const ProductCatalog: React.FC = () => {
   const [selectedPlanMap, setSelectedPlanMap] = useState<Record<string, number>>({});
 
   const categoryMetadata: {
-    id: SubscriptionCategory | 'all';
+    id: SubscriptionCategory;
     label: string;
     description: string;
     icon: React.ReactNode;
+    color: string;
   }[] = [
-    {
-      id: 'all',
-      label: 'All Vaults',
-      description: 'Explore our complete catalog of verified wholesale subscription accounts.',
-      icon: <Layers className="h-4 w-4 text-cyan-400" />,
-    },
     {
       id: 'ai',
       label: 'AI & Intelligence',
-      description: 'Frontier AI models, LLM compute & intelligent reasoning tools.',
+      description: 'Frontier AI models, LLM compute & intelligent reasoning tools',
       icon: <Sparkles className="h-4 w-4 text-cyan-400" />,
+      color: 'from-cyan-500/20 to-blue-500/20 text-cyan-400 border-cyan-500/30',
     },
     {
       id: 'streaming',
       label: 'Cinema & 4K Streaming',
-      description: 'Ultra HD 4K streaming, Dolby Atmos, and high-fidelity audio.',
+      description: 'Ultra HD 4K streaming, Dolby Atmos & high-fidelity audio',
       icon: <Film className="h-4 w-4 text-red-400" />,
+      color: 'from-red-500/20 to-rose-500/20 text-red-400 border-red-500/30',
     },
     {
       id: 'dev',
       label: 'Developer Tools',
-      description: 'AI code editors, fast generation requests, and composer tools.',
+      description: 'AI code editors, fast generation requests & composer tools',
       icon: <Code className="h-4 w-4 text-indigo-400" />,
+      color: 'from-indigo-500/20 to-purple-500/20 text-indigo-400 border-indigo-500/30',
     },
     {
       id: 'productivity',
       label: 'Design & Creative',
-      description: 'Complete suites for photography, video editing & vector design.',
+      description: 'Complete suites for photography, video editing & vector design',
       icon: <Palette className="h-4 w-4 text-amber-400" />,
+      color: 'from-amber-500/20 to-orange-500/20 text-amber-400 border-amber-500/30',
     },
     {
       id: 'vpn_security',
       label: 'VPN & Privacy',
-      description: 'Encrypted tunnel networks and high-speed multi-country servers.',
+      description: 'Encrypted tunnel networks & high-speed multi-country servers',
       icon: <Shield className="h-4 w-4 text-blue-400" />,
+      color: 'from-blue-500/20 to-cyan-500/20 text-blue-400 border-blue-500/30',
     },
   ];
 
@@ -83,138 +81,119 @@ export const ProductCatalog: React.FC = () => {
 
   // Group products by category
   const categoryGroups = useMemo(() => {
-    const activeCategories = activeCategoryFilter === 'all'
-      ? ['ai', 'streaming', 'dev', 'productivity', 'vpn_security']
-      : [activeCategoryFilter];
-
-    return activeCategories
-      .map((catId) => {
-        const meta = categoryMetadata.find((m) => m.id === catId);
-        const catProducts = processedProducts.filter((p) => p.category === catId);
+    return categoryMetadata
+      .map((meta) => {
+        const catProducts = processedProducts.filter((p) => p.category === meta.id);
         return {
-          id: catId,
-          meta: meta || { id: catId, label: catId, description: '', icon: null },
+          id: meta.id,
+          meta,
           products: catProducts,
         };
       })
       .filter((group) => group.products.length > 0);
-  }, [processedProducts, activeCategoryFilter, categoryMetadata]);
+  }, [processedProducts, categoryMetadata]);
 
   const handleSelectPlanIndex = (productId: string, planIndex: number) => {
     setSelectedPlanMap((prev) => ({ ...prev, [productId]: planIndex }));
   };
 
   const sortOptions = [
-    { id: 'popular', label: 'Popular', icon: <TrendingUp className="h-3 w-3" /> },
-    { id: 'discount', label: 'Discount', icon: <Percent className="h-3 w-3" /> },
-    { id: 'price_low', label: 'Price', icon: <ArrowUpDown className="h-3 w-3" /> },
+    { id: 'popular', label: 'Popular', icon: <TrendingUp className="h-3.5 w-3.5" /> },
+    { id: 'discount', label: 'Discount', icon: <Percent className="h-3.5 w-3.5" /> },
+    { id: 'price_low', label: 'Price', icon: <ArrowUpDown className="h-3.5 w-3.5" /> },
   ];
 
   return (
-    <section id="catalog" className="space-y-10">
+    <section id="catalog" className="space-y-12 pt-4">
       
-      {/* 1. Header Toolbar with Filter Pills + Search/Sort */}
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+      {/* 1. Master Toolbar: Section Title + Search & Sort */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-white/[0.08]">
         
-        {/* Category Pills */}
-        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-900/80 backdrop-blur-xl">
-            {categoryMetadata.map((cat) => {
-              const active = activeCategoryFilter === cat.id;
-              const count = cat.id === 'all'
-                ? products.length
-                : products.filter((p) => p.category === cat.id).length;
-
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategoryFilter(cat.id)}
-                  className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
-                    active
-                      ? 'bg-white text-zinc-950 shadow-md font-black'
-                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
-                  }`}
-                >
-                  <span>{cat.label}</span>
-                  <span
-                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                      active ? 'bg-zinc-200 text-zinc-900 font-bold' : 'text-zinc-500 bg-white/5'
-                    }`}
-                  >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        {/* Title */}
+        <div className="flex items-center gap-3">
+          <h2
+            className="text-2xl sm:text-3xl font-black tracking-wider text-white uppercase"
+            style={{ fontFamily: "'Orbitron', sans-serif" }}
+          >
+            Vault <span className="text-cyan-400">Inventory</span>
+          </h2>
+          <span className="text-[11px] font-bold font-mono px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/20">
+            {processedProducts.length} TIERS
+          </span>
         </div>
 
         {/* Right Search & Sort Controls */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-3">
+          
+          {/* Search Input */}
           <div className="relative flex-1 sm:flex-initial">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 pointer-events-none" />
             <input
               type="text"
               value={activeSearchQuery}
               onChange={(e) => setActiveSearchQuery(e.target.value)}
-              placeholder="Search plans..."
-              className="w-full sm:w-52 pl-9 pr-8 py-1.5 bg-zinc-900/80 hover:bg-zinc-900 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono"
+              placeholder="Search subscriptions..."
+              className="w-full sm:w-64 pl-10 pr-9 py-2.5 bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all font-mono shadow-sm"
             />
             {activeSearchQuery && (
               <button
                 onClick={() => setActiveSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          <div className="inline-flex items-center p-1 rounded-full bg-zinc-900/80 shrink-0">
+          {/* Sort Selector */}
+          <div className="inline-flex items-center p-1 rounded-xl bg-zinc-900/90 border border-white/10 shrink-0">
             {sortOptions.map((opt) => {
               const active = sortBy === opt.id;
               return (
                 <button
                   key={opt.id}
                   onClick={() => setSortBy(opt.id as any)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                     active
-                      ? 'bg-white text-zinc-950 shadow-md font-bold'
+                      ? 'bg-white text-zinc-950 shadow-md font-black'
                       : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
                   }`}
                 >
                   <span>{opt.icon}</span>
-                  <span className="hidden sm:inline">{opt.label}</span>
+                  <span>{opt.label}</span>
                 </button>
               );
             })}
           </div>
-        </div>
 
+        </div>
       </div>
 
-      {/* 2. Category-wise Section Render */}
-      <div className="space-y-12">
+      {/* 2. Category-Wise Sections */}
+      <div className="space-y-14">
         {categoryGroups.map((group) => (
-          <div key={group.id} className="space-y-4">
+          <div key={group.id} className="space-y-5">
             
-            {/* Category Section Header */}
-            <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 rounded-lg bg-zinc-900 border border-white/10">
+            {/* Category Header with Orbitron Font & Glow Accent */}
+            <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-xl bg-gradient-to-br ${group.meta.color} border flex items-center justify-center shadow-sm`}>
                   {group.meta.icon}
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-black text-white uppercase font-mono tracking-wide">
+                  <h3
+                    className="text-lg sm:text-2xl font-black tracking-wider text-white uppercase"
+                    style={{ fontFamily: "'Orbitron', sans-serif" }}
+                  >
                     {group.meta.label}
                   </h3>
-                  <p className="text-xs text-zinc-400 font-sans hidden sm:block">
+                  <p className="text-xs text-zinc-400 font-sans hidden sm:block mt-0.5">
                     {group.meta.description}
                   </p>
                 </div>
               </div>
 
-              <span className="text-xs font-mono font-bold text-zinc-400 bg-zinc-900 px-2.5 py-1 rounded-full border border-white/5">
+              <span className="text-xs font-mono font-bold text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full border border-white/10">
                 {group.products.length} {group.products.length === 1 ? 'Service' : 'Services'}
               </span>
             </div>
