@@ -82,104 +82,107 @@ export const ProductCatalog: React.FC = () => {
 
   const sortOptions = [
     { id: 'popular', label: 'Popular', icon: <TrendingUp className="h-3 w-3" /> },
-    { id: 'discount', label: 'Highest Discount', icon: <Percent className="h-3 w-3" /> },
-    { id: 'price_low', label: 'Lowest Price', icon: <ArrowUpDown className="h-3 w-3" /> },
+    { id: 'discount', label: 'Discount', icon: <Percent className="h-3 w-3" /> },
+    { id: 'price_low', label: 'Price', icon: <ArrowUpDown className="h-3 w-3" /> },
   ];
 
   return (
     <section id="catalog" className="space-y-6">
       
-      {/* 1. Seamless Glassmorphic Category Capsule Dock */}
-      <div className="flex justify-center pb-2">
-        <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/70 backdrop-blur-xl shadow-2xl overflow-x-auto max-w-full scrollbar-none">
-          {categories.map((cat) => {
-            const active = activeCategoryFilter === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategoryFilter(cat.id)}
-                className={`px-4 sm:px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
-                  active
-                    ? 'bg-white text-zinc-950 shadow-lg scale-100 font-black'
-                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
-                }`}
-              >
-                <span>{cat.label}</span>
-                <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                    active ? 'bg-zinc-200 text-zinc-900 font-bold' : 'text-zinc-500 bg-white/5'
-                  }`}
-                >
-                  {cat.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. Clean Streamlined Controls Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+      {/* Unified, Well-Structured Catalog Control Header */}
+      <div className="flex flex-col gap-5">
         
-        {/* Left: Dynamic Title & Active Counter */}
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase font-mono">
-            Subscription <span className="text-cyan-400">Vault</span>
-          </h2>
-          <span className="text-[10px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/20">
-            {filteredProducts.length} ACTIVE
-          </span>
-        </div>
-
-        {/* Right: Glassmorphic Search & Sort Controls */}
-        <div className="flex flex-wrap items-center gap-3">
-          
-          {/* Glass Search Pill */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
-            <input
-              type="text"
-              value={activeSearchQuery}
-              onChange={(e) => setActiveSearchQuery(e.target.value)}
-              placeholder="Search subscriptions..."
-              className="w-48 sm:w-56 pl-9 pr-8 py-1.5 bg-zinc-900/80 hover:bg-zinc-900 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono"
-            />
-            {activeSearchQuery && (
-              <button
-                onClick={() => setActiveSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            )}
+        {/* Top Line: Section Title + Search & Sort */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase font-mono">
+              Subscription <span className="text-cyan-400">Vault</span>
+            </h2>
+            <span className="text-[10px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/20">
+              {filteredProducts.length} ACTIVE TIERS
+            </span>
           </div>
 
-          {/* Custom Segmented Sort Buttons */}
-          <div className="inline-flex items-center p-1 rounded-full bg-zinc-900/80 backdrop-blur-md">
-            {sortOptions.map((opt) => {
-              const active = sortBy === opt.id;
+          {/* Right Controls: Search + Sort */}
+          <div className="flex items-center gap-2.5">
+            
+            {/* Search Pill */}
+            <div className="relative flex-1 sm:flex-initial">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-400 pointer-events-none" />
+              <input
+                type="text"
+                value={activeSearchQuery}
+                onChange={(e) => setActiveSearchQuery(e.target.value)}
+                placeholder="Search vault..."
+                className="w-full sm:w-52 pl-9 pr-8 py-1.5 bg-zinc-900/90 rounded-full text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 transition-all font-mono"
+              />
+              {activeSearchQuery && (
+                <button
+                  onClick={() => setActiveSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Segmented Sort Toggle */}
+            <div className="inline-flex items-center p-1 rounded-full bg-zinc-900/90 shrink-0">
+              {sortOptions.map((opt) => {
+                const active = sortBy === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => setSortBy(opt.id as any)}
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                      active
+                        ? 'bg-white text-zinc-950 shadow-md font-bold'
+                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                    }`}
+                  >
+                    <span>{opt.icon}</span>
+                    <span className="hidden sm:inline">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+          </div>
+        </div>
+
+        {/* Second Line: Left-Aligned Seamless Category Switcher Dock */}
+        <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="inline-flex items-center gap-1.5 p-1 rounded-full bg-zinc-900/60 backdrop-blur-xl">
+            {categories.map((cat) => {
+              const active = activeCategoryFilter === cat.id;
               return (
                 <button
-                  key={opt.id}
-                  onClick={() => setSortBy(opt.id as any)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                  key={cat.id}
+                  onClick={() => setActiveCategoryFilter(cat.id)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
                     active
-                      ? 'bg-white text-zinc-950 shadow-md font-bold'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                      ? 'bg-white text-zinc-950 shadow-md scale-100 font-black'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
                   }`}
                 >
-                  <span>{opt.icon}</span>
-                  <span className="hidden sm:inline">{opt.label}</span>
+                  <span>{cat.label}</span>
+                  <span
+                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                      active ? 'bg-zinc-200 text-zinc-900 font-bold' : 'text-zinc-500 bg-white/5'
+                    }`}
+                  >
+                    {cat.count}
+                  </span>
                 </button>
               );
             })}
           </div>
-
         </div>
+
       </div>
 
-      {/* 3. Product Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+      {/* Product Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-1">
         {filteredProducts.map((product) => {
           const currentPlanIndex = selectedPlanMap[product.id] || 0;
           const currentPlan = product.pricingTiers[currentPlanIndex] || product.pricingTiers[0];
