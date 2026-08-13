@@ -73,7 +73,7 @@ export const HeroBanner: React.FC = () => {
   const current = backgroundSlides[activeSlide];
 
   return (
-    <section className="relative min-h-[88vh] sm:min-h-[92vh] flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-10">
+    <section className="relative min-h-[85vh] sm:min-h-[88vh] flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-8">
       
       {/* Live Animated Concept Background with Smooth Ken Burns Slow Motion */}
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -123,7 +123,6 @@ export const HeroBanner: React.FC = () => {
 
         {/* Giant Bold Futuristic Title with Ghost Watermark in Orbitron Font */}
         <div className="relative py-2 select-none">
-          {/* Outlined Watermark Text */}
           <span
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl sm:text-8xl md:text-[130px] font-black tracking-widest text-transparent opacity-10 pointer-events-none transition-all duration-700 whitespace-nowrap"
             style={{
@@ -134,7 +133,6 @@ export const HeroBanner: React.FC = () => {
             {current.outline}
           </span>
 
-          {/* Foreground Main Title */}
           <h1
             className="relative text-4xl sm:text-6xl md:text-8xl font-black tracking-widest text-white uppercase drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)]"
             style={{ fontFamily: "'Orbitron', sans-serif" }}
@@ -164,41 +162,41 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Bottom Slider Dots Indicator & Clean Category Pills */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-6">
+      {/* Floating Dock: Combined Slide Dots & Clean Segmented Category Bar */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full flex flex-col items-center gap-3">
         
-        {/* Slider Dots */}
-        <div className="flex items-center justify-center gap-2">
+        {/* Slider Indicator */}
+        <div className="flex items-center justify-center gap-2 pb-1">
           {backgroundSlides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setActiveSlide(idx)}
-              className={`h-1.5 rounded-full transition-all duration-500 ${
-                idx === activeSlide ? 'w-10 bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]' : 'w-2.5 bg-white/20 hover:bg-white/40'
+              className={`h-1 rounded-full transition-all duration-500 ${
+                idx === activeSlide ? 'w-8 bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]' : 'w-2 bg-white/20 hover:bg-white/40'
               }`}
-              aria-label={`Go to slide ${idx + 1}`}
+              aria-label={`Slide ${idx + 1}`}
             />
           ))}
         </div>
 
-        {/* Clean Minimalist Category Pills (No AI Cliché Icons) */}
-        <div className="pt-4 border-t border-white/10 flex items-center justify-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {/* Unified Glassmorphic Category Segment Dock */}
+        <div className="p-1.5 rounded-2xl bg-zinc-950/80 border border-white/[0.12] backdrop-blur-2xl shadow-2xl flex items-center gap-1 overflow-x-auto max-w-full scrollbar-none">
           {categories.map((cat) => {
             const active = activeCategoryFilter === cat.id;
             return (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategoryFilter(cat.id)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
                   active
-                    ? 'bg-white text-zinc-950 font-black shadow-lg scale-105'
-                    : 'bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 border border-white/10 backdrop-blur-md'
+                    ? 'bg-zinc-100 text-zinc-950 font-black shadow-md scale-[1.02]'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'
                 }`}
               >
                 <span>{cat.label}</span>
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                    active ? 'bg-zinc-200 text-zinc-950 font-black' : 'bg-white/10 text-zinc-400 font-mono'
+                  className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono transition-colors ${
+                    active ? 'bg-zinc-300 text-zinc-950 font-black' : 'bg-white/[0.08] text-zinc-500'
                   }`}
                 >
                   {cat.count}

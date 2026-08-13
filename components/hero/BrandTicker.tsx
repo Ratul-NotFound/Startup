@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShieldCheck, Zap } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export const BrandTicker: React.FC = () => {
   const brandList = [
@@ -16,7 +16,7 @@ export const BrandTicker: React.FC = () => {
     },
     {
       name: 'Netflix',
-      badge: '4K HDR',
+      badge: '4K Ultra HD',
       logo: (
         <svg className="h-5 w-auto" viewBox="0 0 24 24" fill="#E50914">
           <path d="M5.398 0v24c1.17-.386 2.34-.73 3.51-1.07V0H5.398zm9.694 0l-5.69 16.082V0H5.894v24c3.275-.92 6.55-1.84 9.825-2.76V0h-.627zm3.51 0v20.457c1.17-.267 2.34-.533 3.51-.8V0h-3.51z" />
@@ -25,7 +25,7 @@ export const BrandTicker: React.FC = () => {
     },
     {
       name: 'Claude 3.5',
-      badge: 'Anthropic',
+      badge: 'Anthropic Pro',
       logo: (
         <svg className="h-5 w-auto" viewBox="0 0 24 24" fill="#D97706">
           <path d="M14.6 2.4L9.4 21.6h3.4l1.3-5.2h4.8l1.3 5.2h3.4L18.4 2.4h-3.8zm1.9 4.3l1.8 7.3h-3.6l1.8-7.3zM4.7 10.2L0 21.6h3.4l1-2.8h3.8l1 2.8h3.4L7.9 10.2H4.7zm1.1 6.2l1.1-3.2 1.1 3.2H5.8z" />
@@ -58,7 +58,7 @@ export const BrandTicker: React.FC = () => {
     },
     {
       name: 'Spotify',
-      badge: 'Lossless',
+      badge: 'Lossless HiFi',
       logo: (
         <svg className="h-5 w-auto" viewBox="0 0 24 24" fill="#1ED760">
           <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.307c-.218.358-.684.474-1.042.256-2.86-1.748-6.46-2.144-10.7-1.176-.407.093-.815-.16-.908-.567-.093-.408.16-.816.568-.908 4.64-1.06 8.62-.61 11.826 1.353.358.218.474.684.256 1.042zm1.474-3.273c-.274.446-.86.588-1.306.314-3.274-2.012-8.264-2.596-12.136-1.42-.497.15-1.028-.135-1.178-.632-.15-.497.135-1.028.632-1.178 4.42-1.342 9.914-.69 13.674 1.62.446.274.588.86.314 1.306zm.126-3.41c-3.926-2.332-10.395-2.547-14.15-1.407-.603.183-1.246-.164-1.428-.767-.183-.603.164-1.246.767-1.428 4.315-1.31 11.45-1.06 15.96 1.62.544.323.722 1.03.4 1.574-.324.544-1.03.722-1.574.408z" />
@@ -67,7 +67,7 @@ export const BrandTicker: React.FC = () => {
     },
     {
       name: 'YouTube',
-      badge: 'Premium',
+      badge: 'Premium Ad-Free',
       logo: (
         <svg className="h-5 w-auto" viewBox="0 0 24 24" fill="#FF0000">
           <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
@@ -76,7 +76,7 @@ export const BrandTicker: React.FC = () => {
     },
     {
       name: 'Adobe Creative',
-      badge: 'Master Suite',
+      badge: 'Master Cloud',
       logo: (
         <svg className="h-5 w-auto" viewBox="0 0 24 24" fill="#FF0000">
           <path d="M13.96 4h4.48L24 20h-4.32l-2.08-5.12h-4.24l2.4-6.48zm-3.92 0L4.32 20H0L5.68 4h4.36zM12 10.88l2.56 6.8h-5.12L12 10.88z" />
@@ -85,7 +85,7 @@ export const BrandTicker: React.FC = () => {
     },
     {
       name: 'Cursor AI',
-      badge: 'Pro Tier',
+      badge: 'Unlimited Fast',
       logo: (
         <div className="h-5 w-5 rounded-md bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-[10px] text-cyan-400">
           ⌥C
@@ -94,7 +94,7 @@ export const BrandTicker: React.FC = () => {
     },
     {
       name: 'NordVPN',
-      badge: '10Gbps Dedicated',
+      badge: 'Dedicated IP',
       logo: (
         <svg className="h-5 w-auto" viewBox="0 0 24 24" fill="#4687FF">
           <path d="M12 1L2 5.5v7.2c0 6.6 4.3 12.8 10 14.3 5.7-1.5 10-7.7 10-14.3V5.5L12 1zm0 3.3l7 3.1v5.3c0 5-3.1 9.8-7 11.2-3.9-1.4-7-6.2-7-11.2V7.4l7-3.1z" />
@@ -103,43 +103,42 @@ export const BrandTicker: React.FC = () => {
     },
   ];
 
-  // Double list for seamless 360-degree loop
   const marqueeItems = [...brandList, ...brandList];
 
   return (
-    <div className="relative overflow-hidden py-3 px-4 rounded-2xl bg-zinc-900/70 border border-zinc-800/80 backdrop-blur-xl shadow-2xl">
+    <div className="relative overflow-hidden py-4 px-5 rounded-2xl bg-zinc-950/80 border border-white/[0.1] backdrop-blur-2xl shadow-2xl">
       
-      {/* Left and Right Gradient Fade Masks */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-zinc-900/90 via-zinc-900/50 to-transparent z-10" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-zinc-900/90 via-zinc-900/50 to-transparent z-10" />
+      {/* Soft Gradient Fade Masks */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-28 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-28 bg-gradient-to-l from-zinc-950 via-zinc-950/70 to-transparent z-10" />
 
       <div className="flex items-center gap-6">
         
-        {/* Left Fixed Badge: Live Pulse */}
-        <div className="hidden sm:flex items-center gap-2.5 shrink-0 z-20 pr-4 border-r border-zinc-800/80">
-          <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+        {/* Left Fixed Status Badge */}
+        <div className="hidden md:flex items-center gap-3 shrink-0 z-20 pr-5 border-r border-white/10">
+          <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
           <div className="text-left">
-            <p className="text-[11px] font-bold text-white tracking-wide uppercase font-mono">
+            <p className="text-[11px] font-black text-white tracking-wider uppercase font-mono">
               Live Bot Active
             </p>
             <p className="text-[10px] text-zinc-400 font-mono">&lt; 30s latency</p>
           </div>
         </div>
 
-        {/* Center Infinite Smooth Marquee */}
+        {/* Center Marquee */}
         <div className="overflow-hidden flex-1 select-none">
-          <div className="animate-marquee gap-8 items-center">
+          <div className="animate-marquee gap-6 items-center">
             {marqueeItems.map((brand, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-zinc-950/60 border border-zinc-800/60 hover:border-cyan-500/40 text-zinc-300 hover:text-white transition-all hover:scale-105 shrink-0 cursor-pointer group shadow-sm"
+                className="flex items-center gap-3 px-4 py-2 rounded-xl bg-zinc-900/60 border border-white/[0.08] hover:border-cyan-500/40 text-zinc-300 hover:text-white transition-all hover:scale-105 shrink-0 cursor-pointer group shadow-sm"
               >
                 <div className="group-hover:scale-110 transition-transform">{brand.logo}</div>
                 <div className="text-left">
-                  <span className="text-xs font-bold tracking-wide text-zinc-200 block group-hover:text-cyan-300 transition-colors">
+                  <span className="text-xs font-black tracking-wide text-zinc-100 block group-hover:text-cyan-300 transition-colors">
                     {brand.name}
                   </span>
-                  <span className="text-[9px] font-mono text-zinc-500 block uppercase">
+                  <span className="text-[9px] font-mono text-zinc-400 block uppercase">
                     {brand.badge}
                   </span>
                 </div>
@@ -149,9 +148,9 @@ export const BrandTicker: React.FC = () => {
         </div>
 
         {/* Right Fixed Guarantee Pill */}
-        <div className="hidden lg:flex items-center gap-2 shrink-0 z-20 pl-4 border-l border-zinc-800/80">
-          <ShieldCheck className="h-4 w-4 text-cyan-400" />
-          <span className="text-[11px] font-bold text-zinc-300 uppercase tracking-wider font-mono">
+        <div className="hidden lg:flex items-center gap-2.5 shrink-0 z-20 pl-5 border-l border-white/10">
+          <ShieldCheck className="h-4.5 w-4.5 text-cyan-400" />
+          <span className="text-[11px] font-black text-zinc-200 uppercase tracking-wider font-mono">
             100% Term Warranty
           </span>
         </div>
