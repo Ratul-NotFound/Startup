@@ -8,31 +8,27 @@ export const HeroBanner: React.FC = () => {
 
   const backgroundSlides = [
     {
-      sub: 'Save Up to 80% on Top Subscriptions',
-      title: 'PREMIUM ACCESS',
-      outline: 'WHOLESALE',
+      sub: 'Save Up to 80% on Official Digital Plans',
+      title: 'Premium Subscriptions at Wholesale Rates',
       tag: 'INSTANT 30S DELIVERY',
       bgImage: '/images/hero-vault.jpg',
     },
     {
       sub: 'ChatGPT Plus, Gemini Advanced & 4K Cinema',
-      title: 'AI & STREAMING',
-      outline: 'ENTERTAINMENT',
-      tag: 'VERIFIED OFFICIAL PLANS',
+      title: 'AI Models & 4K Streaming Hub',
+      tag: 'VERIFIED OFFICIAL ACCOUNTS',
       bgImage: '/images/hero-ai-cinema.jpg',
     },
     {
-      sub: 'Cursor Pro, Claude 3.5 & Developer Tools',
-      title: 'DEV WORKSPACE',
-      outline: 'PRO SUITES',
-      tag: 'FAST REASONING ENGINES',
+      sub: 'Cursor Pro, Claude 3.5 & Developer Workspaces',
+      title: 'Pro Developer & Cloud Suites',
+      tag: 'FAST CLOUD SERVERS',
       bgImage: '/images/hero-dev-code.jpg',
     },
     {
       sub: 'Adobe Creative Cloud & NordVPN Complete',
-      title: 'CREATIVE & VPN',
-      outline: 'SECURE SUITE',
-      tag: '100% SAFE & GUARANTEED',
+      title: 'Creative Design & Security Suites',
+      tag: '100% REPLACEMENT WARRANTY',
       bgImage: '/images/hero-creative-vpn.jpg',
     },
   ];
@@ -47,7 +43,7 @@ export const HeroBanner: React.FC = () => {
   const current = backgroundSlides[activeSlide];
 
   return (
-    <section className="relative min-h-[92vh] sm:min-h-screen w-full flex flex-col justify-between overflow-hidden -mt-20 pt-24 pb-12">
+    <section className="relative min-h-[90vh] sm:min-h-screen w-full flex flex-col justify-between overflow-hidden -mt-20 pt-24 pb-12">
       
       {/* 100% Full-Viewport Responsive 4-Slide Background Carousel */}
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -96,25 +92,13 @@ export const HeroBanner: React.FC = () => {
           {current.sub}
         </p>
 
-        {/* Giant Bold Title in Space Grotesk / Orbitron */}
-        <div className="relative py-2 select-none">
-          <span
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl sm:text-7xl md:text-[110px] font-black tracking-widest text-transparent opacity-10 pointer-events-none transition-all duration-700 whitespace-nowrap"
-            style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              WebkitTextStroke: '2px rgba(255,255,255,0.8)',
-            }}
-          >
-            {current.outline}
-          </span>
-
-          <h1
-            className="relative text-3xl sm:text-5xl md:text-7xl font-black tracking-wide text-white uppercase drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)]"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {current.title}
-          </h1>
-        </div>
+        {/* Modern Headline in Outfit Display Typography */}
+        <h1
+          className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)] max-w-4xl mx-auto leading-[1.1] transition-all duration-500"
+          style={{ fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif" }}
+        >
+          {current.title}
+        </h1>
 
         {/* Centered Dual Action Buttons */}
         <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
