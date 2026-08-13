@@ -21,12 +21,26 @@ export const HeroBanner: React.FC = () => {
       tag: 'OFFICIAL WHOLESALE POOL',
       bgImage: '/images/hero-ai-cinema.jpg',
     },
+    {
+      sub: 'Frontier AI Code Editors & Cloud Compute',
+      title: 'DEVELOPER SUITE',
+      outline: 'COMPUTE',
+      tag: 'INSTANT REASONING ENGINES',
+      bgImage: '/images/hero-dev-code.jpg',
+    },
+    {
+      sub: 'Real-Time Creative Renders & Global Encrypted Tunnel',
+      title: 'CREATIVE & VPN',
+      outline: 'SECURE MATRIX',
+      tag: 'AES-256 ZERO KNOWLEDGE',
+      bgImage: '/images/hero-creative-vpn.jpg',
+    },
   ];
 
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % backgroundSlides.length);
-    }, 6500);
+    }, 6000);
     return () => clearInterval(timer);
   }, [backgroundSlides.length]);
 
@@ -35,7 +49,7 @@ export const HeroBanner: React.FC = () => {
   return (
     <section className="relative min-h-[92vh] sm:min-h-screen w-full flex flex-col justify-between overflow-hidden -mt-20 pt-24 pb-12">
       
-      {/* 100% Full-Viewport Responsive Background Carousel with Seamless Fade */}
+      {/* 100% Full-Viewport Responsive 4-Slide Background Carousel */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         {backgroundSlides.map((slide, idx) => (
           <div
@@ -54,7 +68,7 @@ export const HeroBanner: React.FC = () => {
           </div>
         ))}
 
-        {/* Seamless Cinematic Overlays */}
+        {/* Seamless Cinematic Dark Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-black/75" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/60 to-zinc-950" />
         <div className="absolute bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-zinc-950 to-transparent" />
@@ -84,9 +98,8 @@ export const HeroBanner: React.FC = () => {
 
         {/* Giant Bold Futuristic Title with Ghost Watermark in Orbitron Font */}
         <div className="relative py-2 select-none">
-          {/* Outlined Watermark Text */}
           <span
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-6xl sm:text-8xl md:text-[130px] font-black tracking-widest text-transparent opacity-10 pointer-events-none transition-all duration-700 whitespace-nowrap"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl sm:text-7xl md:text-[110px] font-black tracking-widest text-transparent opacity-10 pointer-events-none transition-all duration-700 whitespace-nowrap"
             style={{
               fontFamily: "'Orbitron', sans-serif",
               WebkitTextStroke: '2px rgba(255,255,255,0.8)',
@@ -95,9 +108,8 @@ export const HeroBanner: React.FC = () => {
             {current.outline}
           </span>
 
-          {/* Foreground Main Title */}
           <h1
-            className="relative text-4xl sm:text-6xl md:text-8xl font-black tracking-widest text-white uppercase drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)]"
+            className="relative text-3xl sm:text-5xl md:text-7xl font-black tracking-widest text-white uppercase drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)]"
             style={{ fontFamily: "'Orbitron', sans-serif" }}
           >
             {current.title}
@@ -125,7 +137,7 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Hero Carousel Indicators */}
+      {/* Hero Carousel Indicators (4 Slides) */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full flex justify-center">
         <div className="flex items-center justify-center gap-2">
           {backgroundSlides.map((_, idx) => (
