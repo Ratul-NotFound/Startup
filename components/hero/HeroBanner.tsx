@@ -1,12 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useApp } from '@/context/AppContext';
 import { ArrowRight, Zap } from 'lucide-react';
-import { SubscriptionCategory } from '@/types';
 
 export const HeroBanner: React.FC = () => {
-  const { activeCategoryFilter, setActiveCategoryFilter, products } = useApp();
   const [activeSlide, setActiveSlide] = useState(0);
 
   const backgroundSlides = [
@@ -33,47 +30,10 @@ export const HeroBanner: React.FC = () => {
     return () => clearInterval(timer);
   }, [backgroundSlides.length]);
 
-  const categories: {
-    id: SubscriptionCategory;
-    label: string;
-    count: number;
-  }[] = [
-    {
-      id: 'all',
-      label: 'All Vaults',
-      count: products.length,
-    },
-    {
-      id: 'ai',
-      label: 'AI & Models',
-      count: products.filter((p) => p.category === 'ai').length,
-    },
-    {
-      id: 'streaming',
-      label: 'Cinema 4K',
-      count: products.filter((p) => p.category === 'streaming').length,
-    },
-    {
-      id: 'dev',
-      label: 'Developer',
-      count: products.filter((p) => p.category === 'dev').length,
-    },
-    {
-      id: 'productivity',
-      label: 'Design & Pro',
-      count: products.filter((p) => p.category === 'productivity').length,
-    },
-    {
-      id: 'vpn_security',
-      label: 'VPN Privacy',
-      count: products.filter((p) => p.category === 'vpn_security').length,
-    },
-  ];
-
   const current = backgroundSlides[activeSlide];
 
   return (
-    <section className="relative min-h-screen w-full flex flex-col justify-between overflow-hidden -mt-20 pt-24 pb-16 sm:pb-24">
+    <section className="relative min-h-[92vh] sm:min-h-screen w-full flex flex-col justify-between overflow-hidden -mt-20 pt-24 pb-12">
       
       {/* 100% Full-Viewport Responsive Background Carousel with Seamless Fade */}
       <div className="absolute inset-0 z-0 overflow-hidden">
@@ -94,7 +54,7 @@ export const HeroBanner: React.FC = () => {
           </div>
         ))}
 
-        {/* Seamless Cinematic Overlays: Top shade, radial vignette, and bottom blend to background */}
+        {/* Seamless Cinematic Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-black/75" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/60 to-zinc-950" />
         <div className="absolute bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-zinc-950 to-transparent" />
@@ -165,10 +125,8 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Elevated Bottom Segmented Glassmorphic Dock & Indicators */}
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full space-y-4 mb-2 sm:mb-4">
-        
-        {/* Slider Indicator Line */}
+      {/* Hero Carousel Indicators */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full flex justify-center">
         <div className="flex items-center justify-center gap-2">
           {backgroundSlides.map((_, idx) => (
             <button
@@ -181,36 +139,6 @@ export const HeroBanner: React.FC = () => {
             />
           ))}
         </div>
-
-        {/* Unified Glassmorphic Category Capsule Dock */}
-        <div className="flex justify-center">
-          <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/70 backdrop-blur-xl shadow-2xl overflow-x-auto max-w-full scrollbar-none">
-            {categories.map((cat) => {
-              const active = activeCategoryFilter === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategoryFilter(cat.id)}
-                  className={`px-4 sm:px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
-                    active
-                      ? 'bg-white text-zinc-950 shadow-lg scale-100 font-black'
-                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
-                  }`}
-                >
-                  <span>{cat.label}</span>
-                  <span
-                    className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
-                      active ? 'bg-zinc-200 text-zinc-900 font-bold' : 'text-zinc-500 bg-white/5'
-                    }`}
-                  >
-                    {cat.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
       </div>
 
     </section>

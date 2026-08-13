@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X } from 'lucide-react';
+import { SubscriptionCategory } from '@/types';
 
 export const ProductCatalog: React.FC = () => {
   const {
@@ -10,12 +11,50 @@ export const ProductCatalog: React.FC = () => {
     setSelectedProduct,
     addToCart,
     activeCategoryFilter,
+    setActiveCategoryFilter,
     activeSearchQuery,
     setActiveSearchQuery,
   } = useApp();
 
   const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'discount'>('popular');
   const [selectedPlanMap, setSelectedPlanMap] = useState<Record<string, number>>({});
+
+  const categories: {
+    id: SubscriptionCategory;
+    label: string;
+    count: number;
+  }[] = [
+    {
+      id: 'all',
+      label: 'All Vaults',
+      count: products.length,
+    },
+    {
+      id: 'ai',
+      label: 'AI & Models',
+      count: products.filter((p) => p.category === 'ai').length,
+    },
+    {
+      id: 'streaming',
+      label: 'Cinema 4K',
+      count: products.filter((p) => p.category === 'streaming').length,
+    },
+    {
+      id: 'dev',
+      label: 'Developer',
+      count: products.filter((p) => p.category === 'dev').length,
+    },
+    {
+      id: 'productivity',
+      label: 'Design & Pro',
+      count: products.filter((p) => p.category === 'productivity').length,
+    },
+    {
+      id: 'vpn_security',
+      label: 'VPN Privacy',
+      count: products.filter((p) => p.category === 'vpn_security').length,
+    },
+  ];
 
   const filteredProducts = useMemo(() => {
     return products
@@ -50,8 +89,37 @@ export const ProductCatalog: React.FC = () => {
   return (
     <section id="catalog" className="space-y-6">
       
-      {/* Clean Streamlined Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* 1. Seamless Glassmorphic Category Capsule Dock */}
+      <div className="flex justify-center pb-2">
+        <div className="inline-flex items-center gap-1 p-1.5 rounded-full bg-zinc-900/70 backdrop-blur-xl shadow-2xl overflow-x-auto max-w-full scrollbar-none">
+          {categories.map((cat) => {
+            const active = activeCategoryFilter === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategoryFilter(cat.id)}
+                className={`px-4 sm:px-5 py-2 rounded-full text-xs font-bold tracking-wider uppercase transition-all duration-200 flex items-center gap-2 shrink-0 ${
+                  active
+                    ? 'bg-white text-zinc-950 shadow-lg scale-100 font-black'
+                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-white/5'
+                }`}
+              >
+                <span>{cat.label}</span>
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                    active ? 'bg-zinc-200 text-zinc-900 font-bold' : 'text-zinc-500 bg-white/5'
+                  }`}
+                >
+                  {cat.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Clean Streamlined Controls Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         
         {/* Left: Dynamic Title & Active Counter */}
         <div className="flex items-center gap-3">
@@ -110,8 +178,8 @@ export const ProductCatalog: React.FC = () => {
         </div>
       </div>
 
-      {/* Clean, Minimalist Product Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* 3. Product Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
         {filteredProducts.map((product) => {
           const currentPlanIndex = selectedPlanMap[product.id] || 0;
           const currentPlan = product.pricingTiers[currentPlanIndex] || product.pricingTiers[0];
