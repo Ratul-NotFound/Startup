@@ -29,6 +29,7 @@ export interface Product {
   tagline: string;
   description: string;
   logo: string;
+  images?: string[];
   bannerGradient: string;
   badge?: string;
   rating: number;

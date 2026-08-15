@@ -7,7 +7,7 @@ import { Layers, ShieldCheck, Zap, Lock, Globe, ArrowUpRight } from 'lucide-reac
 export const Footer: React.FC = () => {
   return (
     <footer className="border-t border-white/[0.08] bg-zinc-950 text-xs text-zinc-400 pt-16 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
         
         {/* Main Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">

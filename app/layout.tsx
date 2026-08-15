@@ -9,6 +9,7 @@ import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { CredentialVaultModal } from '@/components/vault/CredentialVaultModal';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
+import { InteractiveCursorGlow } from '@/components/ui/InteractiveCursorGlow';
 
 export const metadata: Metadata = {
   title: 'SubNexus — World-Class Retail Subscription Platform | ChatGPT, Netflix, Gemini, Claude',
@@ -70,6 +71,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-zinc-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200" suppressHydrationWarning>
         <AppProvider>
           <ScrollProgress />
+          <InteractiveCursorGlow />
           <div className="relative min-h-screen flex flex-col">
             <Navbar />
             <main className="flex-1">{children}</main>

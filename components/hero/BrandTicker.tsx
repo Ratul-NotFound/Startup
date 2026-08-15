@@ -105,16 +105,16 @@ export const BrandTicker: React.FC = () => {
 
       {/* Hero-Sized Floating Brand Marquee */}
       <div className="overflow-hidden select-none">
-        <div className="animate-marquee gap-20 sm:gap-32 items-center">
+        <div className="animate-marquee gap-8 sm:gap-12 items-center">
           {marqueeItems.map((brand, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-4 text-zinc-400 hover:text-white transition-all hover:scale-115 shrink-0 cursor-pointer group py-2"
+              className="flex items-center gap-3.5 px-5 py-2.5 rounded-2xl bg-zinc-900/30 hover:bg-zinc-900/85 border border-white/[0.04] hover:border-cyan-500/40 text-zinc-400 hover:text-white transition-all duration-300 hover:scale-108 hover:shadow-[0_0_25px_rgba(6,182,212,0.2)] shrink-0 cursor-pointer group backdrop-blur-md"
             >
-              <div className="opacity-85 group-hover:opacity-100 group-hover:scale-115 transition-all">
+              <div className="opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">
                 {brand.logo}
               </div>
-              <span className="text-base sm:text-xl font-black tracking-widest text-zinc-200 group-hover:text-white transition-colors uppercase font-mono">
+              <span className="text-sm sm:text-base font-black tracking-wider text-zinc-300 group-hover:text-white transition-colors uppercase font-mono">
                 {brand.name}
               </span>
             </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, HelpCircle, MessageSquare } from 'lucide-react';
 
 interface FaqItem {
@@ -49,7 +49,7 @@ export const TrustAndFaq: React.FC = () => {
         initial={{ opacity: 0, y: 25 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-50px' }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="text-center space-y-2"
       >
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 text-cyan-300 text-xs font-semibold backdrop-blur-md">
@@ -69,7 +69,7 @@ export const TrustAndFaq: React.FC = () => {
         </p>
       </motion.div>
 
-      {/* FAQ Accordion with Staggered Scroll Reveal */}
+      {/* FAQ Accordion with Staggered Scroll Reveal & Fluid Spring Height */}
       <div className="space-y-3">
         {faqs.map((faq, idx) => {
           const isOpen = openFaq === idx;
@@ -79,8 +79,8 @@ export const TrustAndFaq: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-40px' }}
-              transition={{ duration: 0.4, delay: idx * 0.08, ease: 'easeOut' }}
-              className={`rounded-2xl transition-all duration-300 backdrop-blur-xl border ${
+              transition={{ duration: 0.4, delay: idx * 0.07, ease: [0.16, 1, 0.3, 1] }}
+              className={`rounded-2xl transition-all duration-300 backdrop-blur-xl border overflow-hidden ${
                 isOpen
                   ? 'bg-zinc-900/90 border-cyan-500/30 shadow-[0_10px_30px_rgba(0,0,0,0.8)]'
                   : 'bg-zinc-900/50 hover:bg-zinc-900/70 border-white/[0.06]'
@@ -88,7 +88,7 @@ export const TrustAndFaq: React.FC = () => {
             >
               <button
                 onClick={() => setOpenFaq(isOpen ? null : idx)}
-                className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-semibold text-zinc-200 hover:text-white"
+                className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-semibold text-zinc-200 hover:text-white transition-colors"
               >
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                   <span className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-full bg-zinc-800 text-cyan-400 w-fit shrink-0 border border-white/5">
@@ -99,20 +99,32 @@ export const TrustAndFaq: React.FC = () => {
                   </span>
                 </div>
 
-                <div
-                  className={`flex h-7 w-7 items-center justify-center rounded-xl bg-zinc-800/80 text-zinc-400 transition-transform duration-300 shrink-0 ${
-                    isOpen ? 'rotate-180 bg-cyan-500/20 text-cyan-400' : ''
+                <motion.div
+                  animate={{ rotate: isOpen ? 180 : 0 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                  className={`flex h-7 w-7 items-center justify-center rounded-xl bg-zinc-800/80 text-zinc-400 shrink-0 ${
+                    isOpen ? 'bg-cyan-500/20 text-cyan-400' : ''
                   }`}
                 >
                   <ChevronDown className="h-4 w-4" />
-                </div>
+                </motion.div>
               </button>
 
-              {isOpen && (
-                <div className="px-4 sm:px-5 pb-5 text-xs sm:text-sm text-zinc-300/90 pt-1 leading-relaxed border-t border-white/5 animate-in fade-in duration-200">
-                  {faq.a}
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {isOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 sm:px-5 pb-5 text-xs sm:text-sm text-zinc-300/90 pt-1 leading-relaxed border-t border-white/5">
+                      {faq.a}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           );
         })}
@@ -123,7 +135,7 @@ export const TrustAndFaq: React.FC = () => {
         initial={{ opacity: 0, scale: 0.96 }}
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true, margin: '-40px' }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-zinc-900/60 to-cyan-950/40 border border-white/10 backdrop-blur-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left"
       >
         <div className="flex items-center gap-3">
@@ -136,12 +148,14 @@ export const TrustAndFaq: React.FC = () => {
           </div>
         </div>
 
-        <a
+        <motion.a
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           href="/dashboard"
-          className="px-5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs uppercase tracking-wider transition-all hover:scale-105 shrink-0"
+          className="px-5 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-200 font-bold text-xs uppercase tracking-wider transition-colors shrink-0 shadow-sm"
         >
           Contact Support
-        </a>
+        </motion.a>
       </motion.div>
 
     </section>

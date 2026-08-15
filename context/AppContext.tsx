@@ -185,6 +185,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           batch.set(docRef, prod);
         }
         await batch.commit();
+      } else {
+        // Ensure all existing Firestore product docs have images array
+        for (const docSnap of prodSnap.docs) {
+          const data = docSnap.data();
+          if (!data.images || data.images.length <= 1) {
+            const fallback = MOCK_PRODUCTS.find(p => p.id === docSnap.id);
+            if (fallback?.images) {
+              setDoc(doc(db, 'products', docSnap.id), { images: fallback.images }, { merge: true }).catch(() => {});
+            }
+          }
+        }
       }
 
       // 2. Seed coupons if empty
@@ -224,7 +235,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 1. Real-time products listener (available to all users)
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       if (!snapshot.empty) {
-        const prods = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+        const prods = snapshot.docs.map(d => {
+          const data = d.data() as Product;
+          const fallback = MOCK_PRODUCTS.find(p => p.id === d.id || p.slug === data.slug);
+          const gallery = (data.images && data.images.length > 1)
+            ? data.images
+            : (fallback?.images && fallback.images.length > 1)
+              ? fallback.images
+              : [data.logo || fallback?.logo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'];
+
+          return {
+            ...data,
+            id: d.id,
+            images: gallery,
+          } as Product;
+        });
         setProducts(prods);
       }
     }, (err) => console.warn('[Firestore] Products listener error:', err));

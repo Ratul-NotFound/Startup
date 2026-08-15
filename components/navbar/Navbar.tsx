@@ -66,7 +66,7 @@ export const Navbar: React.FC = () => {
             ? 'bg-zinc-950/90 backdrop-blur-xl border-b border-white/[0.07] shadow-lg shadow-black/20'
             : 'bg-transparent border-b border-transparent'
         }`}>
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4">
 
             {/* Brand */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0 group">

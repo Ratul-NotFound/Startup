@@ -23,6 +23,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: 'GPT-4o, Canvas, DALL-E & Advanced Voice',
     description: 'Official OpenAI Plus with priority access and full model capabilities.',
     logo: '/images/cards/chatgpt-plus.jpg',
+    images: [
+      '/images/cards/chatgpt-plus.jpg',
+      'https://images.unsplash.com/photo-1677442136019-21780efad99a?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-emerald-600/30 to-zinc-900',
     rating: 4.98,
     reviewCount: 4120,
@@ -58,6 +63,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: 'Gemini 2.0 Pro + 2TB Google One Storage',
     description: 'Google next-gen AI with 2M token context window and 2TB cloud storage.',
     logo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-blue-600/30 to-zinc-900',
     rating: 4.95,
     reviewCount: 2840,
@@ -93,6 +103,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: 'Anthropic Claude 3.5 Sonnet & Artifacts',
     description: 'Premier AI assistant for engineering, architecture, and coding.',
     logo: '/images/cards/claude-pro.jpg',
+    images: [
+      '/images/cards/claude-pro.jpg',
+      'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-amber-600/30 to-zinc-900',
     rating: 4.99,
     reviewCount: 3950,
@@ -128,6 +143,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: '4K Ultra HD, Dolby Atmos & Dedicated Profile',
     description: 'Watch all films and series in 4K HDR with dedicated PIN-locked profile.',
     logo: '/images/cards/netflix-4k.jpg',
+    images: [
+      '/images/cards/netflix-4k.jpg',
+      'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-red-600/30 to-zinc-900',
     rating: 4.94,
     reviewCount: 9240,
@@ -163,6 +183,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: 'Zero Ads, Background Play & YouTube Music',
     description: 'Ad-free playback across all devices plus high-fidelity music streaming.',
     logo: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-rose-600/30 to-zinc-900',
     rating: 4.97,
     reviewCount: 6510,
@@ -197,6 +222,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: 'Ad-Free 320kbps & Offline Downloads',
     description: 'Unlimited skips and offline music on your personal account.',
     logo: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-emerald-600/30 to-zinc-900',
     rating: 4.96,
     reviewCount: 8120,
@@ -231,6 +261,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: 'Fast Claude 3.5 & GPT-4o Code Editor',
     description: 'AI-first code editor with multi-file reasoning, fast completions, and full workspace context.',
     logo: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80',
+    images: [
+      '/images/hero-dev-code.jpg',
+      'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-cyan-600/30 to-zinc-900',
     rating: 4.99,
     reviewCount: 2150,
@@ -266,6 +301,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: '20+ Desktop Apps + Firefly AI Credits',
     description: 'Full Creative Cloud suite with Photoshop, Illustrator, Premiere Pro, After Effects, and 100GB cloud storage.',
     logo: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
+    images: [
+      '/images/hero-creative-vpn.jpg',
+      'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-red-600/30 to-zinc-900',
     rating: 4.93,
     reviewCount: 1980,
@@ -300,6 +340,11 @@ export const MOCK_PRODUCTS: Product[] = [
     tagline: 'Encrypted VPN + Threat Protection + 1TB Cloud',
     description: 'High-speed encrypted VPN across 111 countries with malware protection and cross-platform password manager.',
     logo: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80'
+    ],
     bannerGradient: 'from-blue-600/30 to-zinc-900',
     rating: 4.97,
     reviewCount: 4200,

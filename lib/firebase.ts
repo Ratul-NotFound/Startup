@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBE8M11pu50TRfRx-s7khgdys6X1zkj44M",
@@ -20,18 +19,21 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 
-// Safe Analytics initialization (only runs in browser if supported & not blocked by adblockers)
+// Safe Analytics helper - completely insulated from adblocker / extension interference
 export const initAnalytics = async () => {
-  if (typeof window !== 'undefined') {
-    try {
-      const supported = await isSupported();
+  if (typeof window === 'undefined') return null;
+  try {
+    // Only attempt if measurement ID is present and not running in strict privacy/extension environments
+    if (firebaseConfig.measurementId && typeof window !== 'undefined' && 'indexedDB' in window) {
+      const { isSupported, getAnalytics } = await import('firebase/analytics');
+      const supported = await isSupported().catch(() => false);
       if (supported) {
         return getAnalytics(app);
       }
-    } catch {
-      // Adblocker or privacy extension blocked analytics - gracefully ignore
-      return null;
     }
+  } catch {
+    // Gracefully handle browser extension / adblocker blockades (ERR_BLOCKED_BY_CLIENT / extension interceptors)
+    return null;
   }
   return null;
 };
