@@ -262,12 +262,12 @@ export const ProductCatalog: React.FC = () => {
                   <Interactive3DCard
                     key={product.id}
                     index={productIdx}
-                    maxTilt={9}
+                    maxTilt={16}
                     className="w-[280px] sm:w-[320px] shrink-0 snap-start"
                   >
                     <div
                       style={{ transformStyle: 'preserve-3d' }}
-                      className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900/70 hover:bg-zinc-900/90 border border-white/[0.06] hover:border-cyan-500/40 backdrop-blur-xl overflow-hidden transition-all duration-300 hover:shadow-[0_20px_50px_rgba(0,0,0,0.85)] flex flex-col justify-between h-full"
+                      className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900/70 hover:bg-zinc-900/90 border border-white/[0.06] hover:border-cyan-500/40 backdrop-blur-xl overflow-hidden transition-all duration-300 hover:shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between h-full"
                     >
                       
                       <div>
@@ -279,26 +279,26 @@ export const ProductCatalog: React.FC = () => {
                             index={productIdx}
                           />
 
-                          {/* Top Badges with 3D Depth */}
+                          {/* Top Badges with Enhanced 3D Elevation */}
                           <div
-                            style={{ transform: 'translateZ(24px)' }}
-                            className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center justify-between z-10"
+                            style={{ transform: 'translateZ(44px)' }}
+                            className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center justify-between z-10 drop-shadow-md"
                           >
-                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-zinc-300 border border-white/10">
+                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-zinc-300 border border-white/10 shadow-lg">
                               {product.category}
                             </span>
-                            <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-900/85 backdrop-blur-md text-cyan-400 border border-cyan-500/30 flex items-center gap-1 shadow-sm">
+                            <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-900/90 backdrop-blur-md text-cyan-400 border border-cyan-500/40 flex items-center gap-1 shadow-lg">
                               <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
                               <span>Instant Delivery</span>
                             </span>
                           </div>
 
-                          {/* Product Title with 3D Depth */}
+                          {/* Product Title with 3D Pop */}
                           <div
-                            style={{ transform: 'translateZ(20px)' }}
+                            style={{ transform: 'translateZ(36px)' }}
                             className="absolute bottom-2.5 sm:bottom-3 left-3 sm:left-3.5 right-3 sm:right-3.5 z-10"
                           >
-                            <h4 className="text-sm sm:text-base font-bold tracking-wide text-white drop-shadow-md truncate">
+                            <h4 className="text-sm sm:text-base font-bold tracking-wide text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] truncate">
                               {product.name}
                             </h4>
                           </div>
@@ -306,7 +306,7 @@ export const ProductCatalog: React.FC = () => {
 
                         {/* Card Body - Duration Capsule Selector with Smooth Sliding Pill */}
                         <div
-                          style={{ transform: 'translateZ(16px)' }}
+                          style={{ transform: 'translateZ(28px)' }}
                           className="p-3 sm:p-4"
                         >
                           <div className="p-1 rounded-xl bg-zinc-950/80 border border-white/[0.06] grid grid-cols-4 gap-1 shadow-inner relative">
@@ -338,9 +338,9 @@ export const ProductCatalog: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Card Footer: Price & Actions with Smooth Value Morphing */}
+                      {/* Card Footer: Price & Actions with 3D Depth Layer */}
                       <div
-                        style={{ transform: 'translateZ(18px)' }}
+                        style={{ transform: 'translateZ(38px)' }}
                         className="p-3 sm:p-4 pt-0"
                       >
                         <div className="flex items-baseline justify-between mb-3">
@@ -353,7 +353,7 @@ export const ProductCatalog: React.FC = () => {
                               transition={{ duration: 0.15 }}
                               className="flex items-baseline gap-2"
                             >
-                              <span className="text-lg sm:text-xl font-black text-white">
+                              <span className="text-lg sm:text-xl font-black text-white drop-shadow-sm">
                                 ${currentPlan.price.toFixed(2)}
                               </span>
                               <span className="text-xs text-zinc-500 line-through">
@@ -362,28 +362,28 @@ export const ProductCatalog: React.FC = () => {
                             </motion.div>
                           </AnimatePresence>
 
-                          <span className="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-sm">
+                          <span className="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-md">
                             Save {currentPlan.discountPercentage}%
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2" style={{ transform: 'translateZ(15px)' }}>
                           <motion.button
-                            whileHover={{ scale: 1.02 }}
+                            whileHover={{ scale: 1.03, z: 20 }}
                             whileTap={{ scale: 0.96 }}
                             onClick={() => setSelectedProduct(product)}
-                            className="w-full py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-colors border border-white/[0.06]"
+                            className="w-full py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-colors border border-white/[0.06] shadow-sm"
                           >
                             View Details
                           </motion.button>
                           <motion.button
-                            whileHover={{ scale: 1.02 }}
+                            whileHover={{ scale: 1.03, z: 20 }}
                             whileTap={{ scale: 0.96 }}
                             onClick={() => addToCart(product, currentPlan)}
-                            className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase transition-all shadow-[0_0_12px_rgba(37,99,235,0.3)] flex items-center justify-center gap-1.5"
+                            className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center justify-center gap-1.5"
                           >
                             <ShoppingBag className="h-3.5 w-3.5" />
-                            <span>Buy Now</span>
+                            <span>BUY NOW</span>
                           </motion.button>
                         </div>
                       </div>

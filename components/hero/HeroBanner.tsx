@@ -75,11 +75,17 @@ export const HeroBanner: React.FC = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
       </div>
 
-      {/* Main Centered Content */}
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center my-auto space-y-6">
+      {/* Main Centered Content with 3D Depth Layering */}
+      <div
+        style={{ perspective: 1200, transformStyle: 'preserve-3d' }}
+        className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center my-auto space-y-6"
+      >
         
         {/* Live Status Pill with Radar Pulse Ring */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-sm">
+        <div
+          style={{ transform: 'translateZ(30px)' }}
+          className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-sm"
+        >
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
@@ -90,7 +96,10 @@ export const HeroBanner: React.FC = () => {
         </div>
 
         {/* Cursive Subtitle with Smooth Animated Transitions */}
-        <div className="min-h-[2.5rem] flex items-center justify-center">
+        <div
+          style={{ transform: 'translateZ(45px)' }}
+          className="min-h-[2.5rem] flex items-center justify-center"
+        >
           <AnimatePresence mode="wait">
             <motion.p
               key={`sub-${activeSlide}`}
@@ -107,7 +116,10 @@ export const HeroBanner: React.FC = () => {
         </div>
 
         {/* Modern Headline with Smooth Word Fluidity */}
-        <div className="min-h-[4rem] sm:min-h-[6rem] flex items-center justify-center">
+        <div
+          style={{ transform: 'translateZ(65px)' }}
+          className="min-h-[4rem] sm:min-h-[6rem] flex items-center justify-center"
+        >
           <AnimatePresence mode="wait">
             <motion.h1
               key={`title-${activeSlide}`}
@@ -124,7 +136,10 @@ export const HeroBanner: React.FC = () => {
         </div>
 
         {/* Centered Dual Action Buttons with Magnetic Cursor Attraction */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
+        <div
+          style={{ transform: 'translateZ(50px)' }}
+          className="flex flex-wrap items-center justify-center gap-4 pt-4"
+        >
           <MagneticButton strength={0.28}>
             <motion.a
               whileHover={{ scale: 1.05 }}
