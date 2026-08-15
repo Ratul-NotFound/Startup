@@ -41,37 +41,25 @@ export const ProductModal: React.FC = () => {
             className="fixed inset-0 bg-black/85"
           />
 
-          {/* 3D Holographic Unfold Modal Card */}
+          {/* 3D Morphing Expanding Modal Card that sprouts directly from the clicked card */}
           <motion.div
+            layoutId={`product-card-container-${selectedProduct.id}`}
             initial={{
               opacity: 0,
-              scale: 0.55,
-              y: 90,
-              rotateX: 45,
-              rotateY: -18,
-              filter: 'blur(14px)',
+              scale: 0.85,
             }}
             animate={{
               opacity: 1,
               scale: 1,
-              y: 0,
-              rotateX: 0,
-              rotateY: 0,
-              filter: 'blur(0px)',
             }}
             exit={{
               opacity: 0,
-              scale: 0.65,
-              y: 60,
-              rotateX: -30,
-              rotateY: 15,
-              filter: 'blur(10px)',
+              scale: 0.85,
             }}
             transition={{
               type: 'spring',
-              damping: 22,
-              stiffness: 280,
-              mass: 0.8,
+              damping: 26,
+              stiffness: 340,
             }}
             style={{ transformStyle: 'preserve-3d', perspective: 1400 }}
             className="relative w-full max-w-lg rounded-3xl bg-zinc-900/95 border border-cyan-500/30 p-6 sm:p-7 shadow-[0_30px_90px_rgba(0,0,0,0.95)] space-y-6 my-6 z-10 backdrop-blur-2xl overflow-hidden"

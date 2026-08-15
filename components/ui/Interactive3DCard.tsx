@@ -88,7 +88,6 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
           scale: 0.86,
           rotateX: 25,
           rotateY: index % 2 === 0 ? -10 : 10,
-          filter: 'blur(6px)',
         }}
         whileInView={{
           opacity: 1,
@@ -97,7 +96,6 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
           scale: 1,
           rotateX: 0,
           rotateY: 0,
-          filter: 'blur(0px)',
         }}
         viewport={{ once: true, margin: '-50px' }}
         transition={{

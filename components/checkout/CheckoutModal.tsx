@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { PaymentMethod } from '@/types';
 import {
@@ -75,8 +76,28 @@ export const CheckoutModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-xl rounded-3xl bg-zinc-900 border border-white/10 p-6 sm:p-8 shadow-2xl space-y-6 my-6">
+    <AnimatePresence>
+      {isCheckoutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          {/* Cinema Backdrop with Progressive Blur */}
+          <motion.div
+            initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+            animate={{ opacity: 1, backdropFilter: 'blur(16px)' }}
+            exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+            transition={{ duration: 0.25 }}
+            onClick={() => { if (step !== 'processing') { setIsCheckoutOpen(false); setStep('details'); } }}
+            className="fixed inset-0 bg-black/85"
+          />
+
+          {/* 3D Holographic Unfold Checkout Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.6, y: 70, rotateX: 35, rotateY: -12, filter: 'blur(12px)' }}
+            animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0, rotateY: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.65, y: 50, rotateX: -25, rotateY: 10, filter: 'blur(8px)' }}
+            transition={{ type: 'spring', damping: 24, stiffness: 300, mass: 0.8 }}
+            style={{ transformStyle: 'preserve-3d', perspective: 1200 }}
+            className="relative w-full max-w-xl rounded-3xl bg-zinc-900/95 border border-cyan-500/30 p-6 sm:p-8 shadow-[0_30px_90px_rgba(0,0,0,0.95)] space-y-6 my-6 z-10 backdrop-blur-2xl overflow-hidden"
+          >
 
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
@@ -310,8 +331,9 @@ export const CheckoutModal: React.FC = () => {
             </div>
           </div>
         )}
-
+        </motion.div>
       </div>
-    </div>
-  );
+    )}
+  </AnimatePresence>
+);
 };

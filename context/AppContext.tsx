@@ -223,8 +223,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           addedAt: new Date().toISOString(),
         });
       }
-    } catch (err) {
-      console.warn('[Firestore] Seed check note:', err);
+    } catch (err: any) {
+      if (err?.code !== 'permission-denied') {
+        console.info('[Firestore] Seed check note:', err?.message || err);
+      }
     }
   }, []);
 
@@ -252,7 +254,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         setProducts(prods);
       }
-    }, (err) => console.warn('[Firestore] Products listener error:', err));
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[Firestore] Products listener error:', err);
+      }
+    });
 
     // 2. Real-time coupons listener (available to all users)
     const unsubCoupons = onSnapshot(collection(db, 'coupons'), (snapshot) => {
@@ -260,9 +266,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const cps = snapshot.docs.map(d => d.data() as Coupon);
         setCoupons(cps);
       }
-    }, (err) => console.warn('[Firestore] Coupons listener error:', err));
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[Firestore] Coupons listener error:', err);
+      }
+    });
 
-    // 3. Real-time admin list listener
+    // 3. Real-time admin list listener (only if authenticated/permitted)
     const unsubAdmins = onSnapshot(collection(db, 'admins'), (snapshot) => {
       if (!snapshot.empty) {
         const admins = snapshot.docs.map(d => d.data() as AdminMember);
@@ -277,7 +287,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           addedAt: new Date().toISOString(),
         }]);
       }
-    }, (err) => console.warn('[Firestore] Admin list listener error:', err));
+    }, (_err) => {
+      // Unauthenticated visitors do not have permission to view internal admins list
+      setAdminList([{
+        id: 'superadmin',
+        email: SUPERADMIN_EMAIL,
+        name: 'Owner',
+        role: 'superadmin',
+        addedBy: 'System',
+        addedAt: new Date().toISOString(),
+      }]);
+    });
 
     return () => {
       unsubProducts();

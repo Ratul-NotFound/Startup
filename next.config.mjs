@@ -9,6 +9,8 @@ const nextConfig = {
       { protocol: 'https', hostname: 'ui-avatars.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // Google OAuth avatars
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
+      { protocol: 'https', hostname: 'i.giphy.com' },
+      { protocol: 'https', hostname: 'media.giphy.com' },
     ],
   },
 
@@ -57,7 +59,7 @@ const nextConfig = {
               // Fonts: Google Fonts
               "font-src 'self' https://fonts.gstatic.com",
               // Images: allow self + known CDNs
-              "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://www.googletagmanager.com",
+              "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://www.googletagmanager.com https://i.giphy.com https://media.giphy.com https://*.giphy.com",
               // Connect: Firebase, Google APIs
               "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
               // Frames: Google sign-in popup

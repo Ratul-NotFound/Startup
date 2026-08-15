@@ -23,6 +23,7 @@ export const InteractiveCursorGlow: React.FC = () => {
 
   return (
     <motion.div
+      suppressHydrationWarning
       style={{
         x: springX,
         y: springY,
