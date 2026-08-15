@@ -20,16 +20,16 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
 
-// Safe Analytics initialization (only runs in browser if supported and not blocked by adblockers)
+// Safe Analytics initialization (only runs in browser if supported & not blocked by adblockers)
 export const initAnalytics = async () => {
   if (typeof window !== 'undefined') {
     try {
-      const supported = await isSupported().catch(() => false);
+      const supported = await isSupported();
       if (supported) {
         return getAnalytics(app);
       }
     } catch {
-      // Gracefully ignore adblockers / privacy extensions
+      // Adblocker or privacy extension blocked analytics - gracefully ignore
       return null;
     }
   }

@@ -49,7 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <JsonLd />
         {/* Security meta tags */}
@@ -67,7 +67,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-zinc-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200">
+      <body className="min-h-screen bg-zinc-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200" suppressHydrationWarning>
         <AppProvider>
           <ScrollProgress />
           <div className="relative min-h-screen flex flex-col">
