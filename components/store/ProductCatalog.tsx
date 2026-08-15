@@ -250,7 +250,8 @@ export const ProductCatalog: React.FC = () => {
               style={{
                 overscrollBehaviorY: 'auto',
                 overscrollBehaviorX: 'contain',
-                touchAction: 'pan-y',
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-x pan-y',
               }}
               className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-none py-3 px-1"
             >

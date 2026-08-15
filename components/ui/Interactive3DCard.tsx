@@ -109,7 +109,7 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
           transformStyle: 'preserve-3d',
           rotateX,
           rotateY,
-          touchAction: 'pan-y',
+          touchAction: 'pan-x pan-y',
         }}
         whileHover={{
           scale: 1.04,
