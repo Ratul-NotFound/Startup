@@ -24,7 +24,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Official OpenAI Plus with priority access and full model capabilities.',
     logo: '/images/cards/chatgpt-plus.jpg',
     images: [
-      'https://i.giphy.com/3oKIPnAiaMCws8nOsE.gif',
+      'https://i.giphy.com/f0VbswUmSY6X1cBz4C.gif',
       '/images/cards/chatgpt-plus.jpg',
       'https://images.unsplash.com/photo-1677442136019-21780efad99a?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'
@@ -65,7 +65,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Google next-gen AI with 2M token context window and 2TB cloud storage.',
     logo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
     images: [
-      'https://i.giphy.com/l41lFw057lAJQMwg0.gif',
+      'https://i.giphy.com/13YPREdAEAHpCoo1SA.gif',
       'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&auto=format&fit=crop&q=80'
@@ -106,7 +106,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Premier AI assistant for engineering, architecture, and coding.',
     logo: '/images/cards/claude-pro.jpg',
     images: [
-      'https://i.giphy.com/26tn33aiTi1jkl6H6.gif',
+      'https://i.giphy.com/CVtNe84hhYF9u.gif',
       '/images/cards/claude-pro.jpg',
       'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=600&auto=format&fit=crop&q=80'
@@ -147,7 +147,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Watch all films and series in 4K HDR with dedicated PIN-locked profile.',
     logo: '/images/cards/netflix-4k.jpg',
     images: [
-      'https://i.giphy.com/3o6Zt6ML6Bkl5NZ44M.gif',
+      'https://i.giphy.com/l41Y9SKrl3kLVamfC.gif',
       '/images/cards/netflix-4k.jpg',
       'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80'
@@ -188,7 +188,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Ad-free playback across all devices plus high-fidelity music streaming.',
     logo: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=80',
     images: [
-      'https://i.giphy.com/13HgwGsXF0aiGY.gif',
+      'https://i.giphy.com/TgMAmoaliiMthuz4zM.gif',
       'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=600&auto=format&fit=crop&q=80'
@@ -228,7 +228,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Unlimited skips and offline music on your personal account.',
     logo: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
     images: [
-      'https://i.giphy.com/3o7bu3XilJ5BOiSGic.gif',
+      'https://i.giphy.com/eLWxHo6CahrtnFBea3.gif',
       'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80'
@@ -268,7 +268,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'AI-first code editor with multi-file reasoning, fast completions, and full workspace context.',
     logo: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80',
     images: [
-      'https://i.giphy.com/xT9IgzoKnwFNmISR8I.gif',
+      'https://i.giphy.com/zOvBKUUEERdNm.gif',
       '/images/hero-dev-code.jpg',
       'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80'
@@ -309,7 +309,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'Full Creative Cloud suite with Photoshop, Illustrator, Premiere Pro, After Effects, and 100GB cloud storage.',
     logo: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
     images: [
-      'https://i.giphy.com/26ufdipQqU2lhNA4g.gif',
+      'https://i.giphy.com/jRZaSAayLWMRFwo3Ng.gif',
       '/images/hero-creative-vpn.jpg',
       'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=600&auto=format&fit=crop&q=80'
@@ -349,7 +349,7 @@ export const MOCK_PRODUCTS: Product[] = [
     description: 'High-speed encrypted VPN across 111 countries with malware protection and cross-platform password manager.',
     logo: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&auto=format&fit=crop&q=80',
     images: [
-      'https://i.giphy.com/l0MYt5jPR6QX5pnqM.gif',
+      'https://i.giphy.com/077i6AULCXc0FKTj9s.gif',
       'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80'

@@ -60,17 +60,23 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full">
-        <div className={`w-full transition-all duration-300 ${
-          scrolled
-            ? 'bg-zinc-950/90 backdrop-blur-xl border-b border-white/[0.07] shadow-lg shadow-black/20'
-            : 'bg-transparent border-b border-transparent'
-        }`}>
-          <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4">
+      <header className="sticky top-0 z-50 w-full" suppressHydrationWarning>
+        <div
+          suppressHydrationWarning
+          className={`w-full transition-all duration-300 ${
+            scrolled
+              ? 'bg-zinc-950/90 backdrop-blur-xl border-b border-white/[0.07] shadow-lg shadow-black/20'
+              : 'bg-transparent border-b border-transparent'
+          }`}
+        >
+          <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4" suppressHydrationWarning>
 
             {/* Brand */}
-            <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
-              <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/25 transition-colors">
+            <Link href="/" className="flex items-center gap-2.5 shrink-0 group" suppressHydrationWarning>
+              <div
+                suppressHydrationWarning
+                className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/25 transition-colors"
+              >
                 <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
                 </svg>
@@ -94,7 +100,7 @@ export const Navbar: React.FC = () => {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5" suppressHydrationWarning>
 
               {/* Cart */}
               <button
@@ -112,7 +118,7 @@ export const Navbar: React.FC = () => {
 
               {/* Auth / User */}
               {firebaseUser ? (
-                <div className="relative" ref={dropdownRef}>
+                <div className="relative" ref={dropdownRef} suppressHydrationWarning>
                   <button
                     onClick={() => setUserDropdownOpen(prev => !prev)}
                     className="flex items-center gap-2 py-1.5 pl-1.5 pr-3 rounded-full bg-zinc-900 border border-white/10 hover:border-white/20 transition-all"
@@ -132,10 +138,10 @@ export const Navbar: React.FC = () => {
 
                   {/* Dropdown */}
                   {userDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-zinc-900 border border-white/[0.1] shadow-2xl shadow-black/40 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-zinc-900 border border-white/[0.1] shadow-2xl shadow-black/40 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150" suppressHydrationWarning>
 
                       {/* User info header */}
-                      <div className="px-3 py-2.5 border-b border-white/[0.06] mb-1">
+                      <div className="px-3 py-2.5 border-b border-white/[0.06] mb-1" suppressHydrationWarning>
                         <p className="text-xs font-bold text-white truncate">{user.name}</p>
                         <p className="text-[10px] text-zinc-400 truncate mt-0.5">{user.email}</p>
                         {isSuperAdmin ? (
@@ -179,7 +185,7 @@ export const Navbar: React.FC = () => {
                         </Link>
                       )}
 
-                      <div className="border-t border-white/[0.06] mt-1 pt-1">
+                      <div className="border-t border-white/[0.06] mt-1 pt-1" suppressHydrationWarning>
                         <button
                           onClick={async () => {
                             setUserDropdownOpen(false);
@@ -217,7 +223,7 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-white/[0.08] bg-zinc-950/98 backdrop-blur-xl px-6 py-5 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="md:hidden border-b border-white/[0.08] bg-zinc-950/98 backdrop-blur-xl px-6 py-5 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200" suppressHydrationWarning>
             {navLinks.map(link => (
               <Link
                 key={link.href}

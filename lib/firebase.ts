@@ -21,10 +21,10 @@ export const db = getFirestore(app);
 
 // Safe Analytics helper - completely insulated from adblocker / extension interference
 export const initAnalytics = async () => {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined' || process.env.NODE_ENV !== 'production') return null;
   try {
-    // Only attempt if measurement ID is present and not running in strict privacy/extension environments
-    if (firebaseConfig.measurementId && typeof window !== 'undefined' && 'indexedDB' in window) {
+    // Only attempt in production if measurement ID is present and indexedDB is supported
+    if (firebaseConfig.measurementId && 'indexedDB' in window) {
       const { isSupported, getAnalytics } = await import('firebase/analytics');
       const supported = await isSupported().catch(() => false);
       if (supported) {

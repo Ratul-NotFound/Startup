@@ -10,6 +10,7 @@ import { CredentialVaultModal } from '@/components/vault/CredentialVaultModal';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { InteractiveCursorGlow } from '@/components/ui/InteractiveCursorGlow';
+import { HydrationGuard } from '@/components/ui/HydrationGuard';
 
 export const metadata: Metadata = {
   title: 'SubNexus — World-Class Retail Subscription Platform | ChatGPT, Netflix, Gemini, Claude',
@@ -67,14 +68,21 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
+        {/* Pre-hydration filter for browser extensions injecting arbitrary attributes like bis_skin_checked */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(typeof window!=='undefined'){var o=console.error;console.error=function(){if(arguments[0]&&typeof arguments[0]==='string'&&arguments[0].indexOf('bis_skin_checked')!==-1){return;}o.apply(console,arguments);};}})();`,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-zinc-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200" suppressHydrationWarning>
+        <HydrationGuard />
         <AppProvider>
           <ScrollProgress />
           <InteractiveCursorGlow />
-          <div className="relative min-h-screen flex flex-col">
+          <div className="relative min-h-screen flex flex-col" suppressHydrationWarning>
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1" suppressHydrationWarning>{children}</main>
             <Footer />
 
             {/* Global Reactive Slide-overs & Modals */}

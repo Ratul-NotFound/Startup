@@ -30,9 +30,10 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
   const initialX = direction === 'left' ? 60 : direction === 'right' ? -60 : 0;
 
   return (
-    <div style={{ perspective }} className={`overflow-visible ${className}`}>
+    <div style={{ perspective }} className={`overflow-visible ${className}`} suppressHydrationWarning>
       <motion.div
         ref={containerRef}
+        suppressHydrationWarning
         initial={{
           opacity: 0,
           y: initialY,
@@ -41,7 +42,6 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
           scale: scaleAmount,
           rotateX: rotateXAmount,
           rotateY: rotateYAmount,
-          filter: 'blur(8px)',
         }}
         whileInView={{
           opacity: 1,
@@ -51,7 +51,6 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
           scale: 1,
           rotateX: 0,
           rotateY: 0,
-          filter: 'blur(0px)',
         }}
         viewport={{ once: true, margin: '-50px' }}
         transition={{

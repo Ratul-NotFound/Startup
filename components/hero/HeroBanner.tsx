@@ -45,13 +45,14 @@ export const HeroBanner: React.FC = () => {
   const current = backgroundSlides[activeSlide];
 
   return (
-    <section className="relative min-h-[86vh] sm:min-h-[92vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12">
+    <section className="relative min-h-[86vh] sm:min-h-[92vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12" suppressHydrationWarning>
       
       {/* 100% Full-Viewport Responsive 4-Slide Background Carousel */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
+      <div className="absolute inset-0 z-0 overflow-hidden" suppressHydrationWarning>
         {backgroundSlides.map((slide, idx) => (
           <div
             key={idx}
+            suppressHydrationWarning
             className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
               idx === activeSlide ? 'opacity-100' : 'opacity-0'
             }`}
@@ -67,16 +68,17 @@ export const HeroBanner: React.FC = () => {
         ))}
 
         {/* Seamless Dark Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-black/75" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/60 to-zinc-950" />
-        <div className="absolute bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-zinc-950 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-black/75" suppressHydrationWarning />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-600/10 via-black/60 to-zinc-950" suppressHydrationWarning />
+        <div className="absolute bottom-0 left-0 right-0 h-44 bg-gradient-to-t from-zinc-950 to-transparent" suppressHydrationWarning />
         
         {/* Subtle Light Grid Overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" suppressHydrationWarning />
       </div>
 
       {/* Main Centered Content with 3D Depth Layering */}
       <div
+        suppressHydrationWarning
         style={{ perspective: 1200, transformStyle: 'preserve-3d' }}
         className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center my-auto space-y-6"
       >
