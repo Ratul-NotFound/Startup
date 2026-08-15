@@ -24,6 +24,9 @@ import {
   INITIAL_FINANCIAL_METRICS,
 } from '@/lib/mock-data';
 import { generateOrderNumber, generateRandomId, generateMockCredentials } from '@/lib/utils';
+import { auth, db, initAnalytics } from '@/lib/firebase';
+import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
+import { doc, setDoc, getDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 
 interface AppContextType {
   // Products
@@ -61,10 +64,14 @@ interface AppContextType {
   activeVaultSub: UserSubscription | null;
   setActiveVaultSub: (sub: UserSubscription | null) => void;
 
-  // Customer Profile & Role Switcher
+  // Customer Profile & Auth
   user: CustomerProfile;
   setUser: React.Dispatch<React.SetStateAction<CustomerProfile>>;
   toggleUserRole: () => void;
+  firebaseUser: FirebaseUser | null;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  logout: () => Promise<void>;
 
   // Admin & Renewal Simulator
   financialMetrics: FinancialMetric;
@@ -97,7 +104,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  // User & Subscriptions
+  // User & Firebase Auth
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [user, setUser] = useState<CustomerProfile>(INITIAL_USER_PROFILE);
   const [subscriptions, setSubscriptions] = useState<UserSubscription[]>(INITIAL_USER_SUBSCRIPTIONS);
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
@@ -133,6 +142,61 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Filters & Search
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
+
+  // Initialize Firebase Analytics
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentFirebaseUser) => {
+      setFirebaseUser(currentFirebaseUser);
+      if (currentFirebaseUser) {
+        const updatedProfile: CustomerProfile = {
+          id: currentFirebaseUser.uid,
+          name: currentFirebaseUser.displayName || currentFirebaseUser.email?.split('@')[0] || 'Subscriber',
+          email: currentFirebaseUser.email || 'user@subnexus.dev',
+          avatar: currentFirebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+          role: user.role || 'customer',
+          joinedDate: user.joinedDate || new Date().toISOString().split('T')[0],
+          lifetimeSpend: user.lifetimeSpend || 0,
+          activeSubscriptionsCount: subscriptions.length,
+          preferredCurrency: 'USD',
+          emailAlertsEnabled: true,
+          autoRenewEnabled: true,
+        };
+
+        setUser(updatedProfile);
+
+        // Sync with Firestore user profile
+        try {
+          const userDocRef = doc(db, 'users', currentFirebaseUser.uid);
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUser((prev) => ({ ...prev, ...data }));
+          } else {
+            await setDoc(userDocRef, updatedProfile, { merge: true });
+          }
+        } catch (err) {
+          console.warn('Firestore user profile sync note:', err);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user.role, subscriptions.length]);
+
+  const logout = async () => {
+    try {
+      await signOut(auth);
+      setFirebaseUser(null);
+      setUser(INITIAL_USER_PROFILE);
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
 
   // Sync to local storage for persistence across reloads
   useEffect(() => {
@@ -306,6 +370,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         };
 
         newSubs.push(sub);
+
+        // Async write each subscription to Firestore
+        try {
+          setDoc(doc(db, 'subscriptions', subId), sub);
+        } catch (err) {
+          console.warn('Firestore subscription write note:', err);
+        }
       }
     });
 
@@ -336,6 +407,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       generatedSubscriptionIds: generatedSubIds,
     };
 
+    // Async write order to Firestore
+    try {
+      setDoc(doc(db, 'orders', orderId), newOrder);
+    } catch (err) {
+      console.warn('Firestore order write note:', err);
+    }
+
     // Update state
     setSubscriptions((prev) => [...newSubs, ...prev]);
     setOrders((prev) => [newOrder, ...prev]);
@@ -349,52 +427,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Update financial metrics
     setFinancialMetrics((prev) => ({
       ...prev,
+      mrr: prev.mrr + cartTotal,
+      arr: (prev.mrr + cartTotal) * 12,
       netRevenueToday: prev.netRevenueToday + cartTotal,
-      mrr: prev.mrr + cartTotal * 0.4,
-      activeSubscribers: prev.activeSubscribers + 1,
+      activeSubscribers: prev.activeSubscribers + newSubs.length,
     }));
 
-    // Generate email dispatch notification
-    const emailNotif: EmailNotification = {
+    // Add automated fulfillment email
+    const fulfillmentEmail: EmailNotification = {
       id: generateRandomId('eml'),
       recipientEmail: customEmail || user.email,
-      subject: `🎉 Order #${orderNum} Delivered: Your ${cart[0]?.product.name} Credentials`,
+      subject: `🔐 Order Confirmed & Credentials: ${orderNum}`,
       templateType: 'order_fulfillment',
       sentAt: new Date().toISOString(),
       status: 'sent',
-      previewHtml: `<h3>Order #${orderNum} Completed</h3><p>Total Paid: $${cartTotal.toFixed(2)}</p><p>Check your Vault for instant login credentials.</p>`,
+      previewHtml: `<h3>Thank you for your order!</h3><p>Your subscription is active. Order #${orderNum} total: $${cartTotal.toFixed(2)}</p>`,
     };
-    setEmailNotifications((prev) => [emailNotif, ...prev]);
+    setEmailNotifications((prev) => [fulfillmentEmail, ...prev]);
 
     clearCart();
-    setIsCheckoutOpen(false);
-
     return newOrder;
   };
 
   const sendTestEmail = (recipient: string, templateType: EmailNotification['templateType']) => {
-    const templateTitles = {
-      order_fulfillment: '🔐 Immediate Account Credentials & Activation Link',
-      renewal_reminder: '⚠️ 3-Day Upcoming Renewal & Expiry Notice',
-      auto_renewal_success: '✅ Subscription Auto-Renewal Payment Successful',
-      security_alert: '🛡️ Security Alert: New Device Login Detected',
-      invoice_receipt: '🧾 Tax Invoice & Payment Receipt (PDF Attached)',
-    };
-
     const newEmail: EmailNotification = {
       id: generateRandomId('eml'),
       recipientEmail: recipient,
-      subject: templateTitles[templateType],
+      subject: templateType === 'order_fulfillment' 
+        ? '🔐 Manual Trigger: Order Fulfillment Vault Credentials'
+        : templateType === 'renewal_reminder'
+        ? '⚠️ Auto-Renewal 3-Day Notice'
+        : '🔒 Security Alert: New Device Login',
       templateType,
       sentAt: new Date().toISOString(),
       status: 'sent',
-      previewHtml: `<div style="font-family:sans-serif;padding:20px;background:#0f172a;color:#f8fafc;border-radius:8px;">
-        <h2 style="color:#6366f1;">SubNexus VIP Notification</h2>
-        <p>This is a live transactional preview generated by the SubNexus SMTP Engine for <strong>${recipient}</strong>.</p>
-        <p style="padding:10px;background:#1e293b;border-left:4px solid #06b6d4;">Template: <code>${templateType}</code></p>
-      </div>`,
+      previewHtml: `<p>Test email payload for ${templateType} sent to ${recipient}</p>`,
     };
-
     setEmailNotifications((prev) => [newEmail, ...prev]);
   };
 
@@ -402,20 +470,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let renewedCount = 0;
     let notifiedCount = 0;
 
+    const now = Date.now();
+
     setSubscriptions((prev) =>
       prev.map((sub) => {
-        const remaining = (new Date(sub.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-        if (remaining <= 3 && sub.autoRenew) {
-          renewedCount++;
-          const newExp = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        const expTime = new Date(sub.expiryDate).getTime();
+        const diffDays = (expTime - now) / (1000 * 60 * 60 * 24);
+
+        if (diffDays <= 0 && sub.autoRenew) {
+          renewedCount += 1;
+          const extended = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
           return {
             ...sub,
-            expiryDate: newExp,
-            warrantyValidUntil: newExp,
+            expiryDate: extended,
+            warrantyValidUntil: extended,
             status: 'active',
           };
-        } else if (remaining <= 3 && !sub.autoRenew) {
-          notifiedCount++;
+        } else if (diffDays <= 3 && diffDays > 0) {
+          notifiedCount += 1;
           return {
             ...sub,
             status: 'expiring_soon',
@@ -431,25 +503,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fastForwardSimulationDays = (days: number) => {
     setSubscriptions((prev) =>
       prev.map((sub) => {
-        const newExpiry = new Date(new Date(sub.expiryDate).getTime() - days * 24 * 60 * 60 * 1000).toISOString();
-        const remaining = (new Date(newExpiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-        let status: UserSubscription['status'] = 'active';
-        if (remaining <= 0) status = 'expired';
-        else if (remaining <= 3) status = 'expiring_soon';
-
+        const oldExp = new Date(sub.expiryDate).getTime();
+        const fastForwarded = new Date(oldExp - days * 24 * 60 * 60 * 1000).toISOString();
+        const isExpired = new Date(fastForwarded).getTime() < Date.now();
         return {
           ...sub,
-          expiryDate: newExpiry,
-          status,
+          expiryDate: fastForwarded,
+          status: isExpired ? 'expired' : 'active',
         };
       })
     );
   };
 
-  const createSupportTicket = (subject: string, category: SupportTicket['category'], initialMessage: string): SupportTicket => {
-    const newTkt: SupportTicket = {
-      id: generateRandomId('tkt'),
-      ticketNumber: `TKT-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`,
+  const createSupportTicket = (
+    subject: string,
+    category: SupportTicket['category'],
+    initialMessage: string
+  ): SupportTicket => {
+    const ticketId = generateRandomId('tkt');
+    const newTicket: SupportTicket = {
+      id: ticketId,
+      ticketNumber: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
       userId: user.id,
       userEmail: user.email,
       subject,
@@ -469,55 +543,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ],
     };
 
-    setTickets((prev) => [newTkt, ...prev]);
+    // Async write to Firestore support tickets
+    try {
+      setDoc(doc(db, 'support_tickets', ticketId), newTicket);
+    } catch (err) {
+      console.warn('Firestore ticket write note:', err);
+    }
 
-    // AI automated assistant reply simulation after 1.5s
-    setTimeout(() => {
-      setTickets((curr) =>
-        curr.map((t) =>
-          t.id === newTkt.id
-            ? {
-                ...t,
-                status: 'in_progress',
-                messages: [
-                  ...t.messages,
-                  {
-                    id: generateRandomId('msg'),
-                    sender: 'agent',
-                    senderName: 'SubNexus AI Rapid Assistant',
-                    content: `Hello ${user.name}! We received your request regarding "${subject}". Our automated warranty system is checking your subscription status. If credentials need refreshing, a new secure slot is ready in your Vault!`,
-                    timestamp: new Date().toISOString(),
-                  },
-                ],
-              }
-            : t
-        )
-      );
-    }, 1200);
-
-    return newTkt;
+    setTickets((prev) => [newTicket, ...prev]);
+    return newTicket;
   };
 
   const replyToTicket = (ticketId: string, content: string, sender: 'user' | 'agent') => {
     setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticketId
-          ? {
-              ...t,
-              updatedAt: new Date().toISOString(),
-              messages: [
-                ...t.messages,
-                {
-                  id: generateRandomId('msg'),
-                  sender,
-                  senderName: sender === 'user' ? user.name : 'SubNexus Support Agent',
-                  content,
-                  timestamp: new Date().toISOString(),
-                },
-              ],
-            }
-          : t
-      )
+      prev.map((ticket) => {
+        if (ticket.id !== ticketId) return ticket;
+        const newMsg = {
+          id: generateRandomId('msg'),
+          sender,
+          senderName: sender === 'user' ? user.name : 'SubNexus Support Ops',
+          content,
+          timestamp: new Date().toISOString(),
+        };
+        const updatedTicket = {
+          ...ticket,
+          updatedAt: new Date().toISOString(),
+          messages: [...ticket.messages, newMsg],
+        };
+
+        // Async sync reply to Firestore
+        try {
+          setDoc(doc(db, 'support_tickets', ticketId), updatedTicket, { merge: true });
+        } catch (err) {
+          console.warn('Firestore ticket reply sync note:', err);
+        }
+
+        return updatedTicket;
+      })
     );
   };
 
@@ -554,6 +616,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         user,
         setUser,
         toggleUserRole,
+        firebaseUser,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        logout,
         financialMetrics,
         emailNotifications,
         sendTestEmail,
@@ -575,6 +641,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (!context) throw new Error('useApp must be used within an AppProvider');
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
   return context;
 };
