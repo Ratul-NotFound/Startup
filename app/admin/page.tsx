@@ -85,11 +85,24 @@ export default function AdminPortalPage() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const revenueChartData = [
-    { month: 'Jan', revenue: 31200 }, { month: 'Feb', revenue: 34500 },
-    { month: 'Mar', revenue: 38900 }, { month: 'Apr', revenue: 41800 },
-    { month: 'May', revenue: 45200 }, { month: 'Live', revenue: financialMetrics.mrr > 0 ? financialMetrics.mrr : 48920 },
-  ];
+  const revenueChartData = React.useMemo(() => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const result = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const mName = months[d.getMonth()];
+      const year = d.getFullYear();
+      const monthOrders = allOrders.filter(o => {
+        const od = new Date(o.createdAt);
+        return od.getMonth() === d.getMonth() && od.getFullYear() === year && o.paymentStatus === 'paid';
+      });
+      const rev = monthOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+      result.push({ month: mName, revenue: rev, orders: monthOrders.length });
+    }
+    return result;
+  }, [allOrders]);
 
   // ─── AUTH GATES ─────────────────────────────────────────────────────
   if (!firebaseUser) {

@@ -501,13 +501,13 @@ export const INITIAL_TICKETS: SupportTicket[] = [
 ];
 
 export const INITIAL_FINANCIAL_METRICS: FinancialMetric = {
-  mrr: 14250.00,
-  arr: 171000.00,
-  netRevenueToday: 1840.50,
-  activeSubscribers: 1840,
-  churnRate: 1.8,
-  averageOrderValue: 24.50,
-  growthMoM: 24.6,
-  lifetimeValue: 148.00,
+  mrr: 0,
+  arr: 0,
+  netRevenueToday: 0,
+  activeSubscribers: 0,
+  churnRate: 0,
+  averageOrderValue: 0,
+  growthMoM: 0,
+  lifetimeValue: 0,
 };
 
