@@ -328,14 +328,14 @@ export const MOCK_PRODUCTS: Product[] = [
 ];
 
 export const INITIAL_USER_PROFILE: CustomerProfile = {
-  id: 'usr_88231',
-  name: 'Alex Vance',
-  email: 'alex.vance@subnexus.dev',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+  id: 'guest',
+  name: 'Guest',
+  email: '',
+  avatar: '',
   role: 'customer',
-  joinedDate: '2026-01-15',
-  lifetimeSpend: 184.95,
-  activeSubscriptionsCount: 3,
+  joinedDate: new Date().toISOString().split('T')[0],
+  lifetimeSpend: 0,
+  activeSubscriptionsCount: 0,
   preferredCurrency: 'USD',
   emailAlertsEnabled: true,
   autoRenewEnabled: true,

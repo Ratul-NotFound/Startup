@@ -1,411 +1,554 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useApp } from '@/context/AppContext';
+import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
 import {
-  Shield,
-  TrendingUp,
-  DollarSign,
-  Users,
-  Repeat,
-  Package,
-  Mail,
-  Play,
-  FastForward,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Send,
-  Sparkles,
-  Server,
-  Layers,
-  Database,
-  ArrowUpRight,
-  Eye,
-  Plus,
-  RefreshCw,
-  Search,
+  Shield, TrendingUp, DollarSign, Users, Package, Tag,
+  Headphones, ShoppingBag, Plus, Edit2, Trash2, Save, X,
+  CheckCircle2, AlertCircle, Clock, Search, RefreshCw, Eye, EyeOff,
+  BarChart2, MessageSquare, Lock, LogIn, UserPlus, UserCheck,
+  UserX, Sparkles, AlertTriangle, ArrowUpRight,
 } from 'lucide-react';
 import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { formatCurrency } from '@/lib/utils';
-import { EmailNotification } from '@/types';
+import { Product, Coupon, UserSubscription, Order, AdminMember } from '@/types';
+
+// ─── Blank product template ─────────────────────────────────────────
+const blankProduct = (): Omit<Product, 'id'> => ({
+  name: '', slug: '', category: 'ai', tagline: '', description: '',
+  logo: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+  bannerGradient: 'from-blue-600/30 to-zinc-900',
+  rating: 4.9, reviewCount: 120, deliveryType: 'instant_bot',
+  accountType: 'private_account', deliveryTimeEstimate: 'Instant (< 30s)',
+  features: ['Full access included', 'Fast reliable server pool', 'Replacement warranty'],
+  specs: { screens: 1, quality: 'Premium HD/4K', warranty: 'Full Period Replacement', platforms: ['Web', 'iOS', 'Android'], region: 'Global' },
+  pricingTiers: [
+    { duration: '1_month', label: '1 Month', price: 9.99, originalPrice: 20.00, discountPercentage: 50, isPopular: false },
+    { duration: '3_months', label: '3 Months', price: 24.99, originalPrice: 60.00, discountPercentage: 58, isPopular: true },
+    { duration: '12_months', label: '12 Months', price: 79.99, originalPrice: 240.00, discountPercentage: 66 },
+  ],
+  stockCount: 50, instructions: ['Log in with credentials provided in your vault.', 'Enjoy your premium subscription.'],
+});
 
 export default function AdminPortalPage() {
   const {
-    financialMetrics,
-    products,
-    subscriptions,
-    orders,
-    emailNotifications,
-    sendTestEmail,
-    triggerRenewalCronSimulation,
-    fastForwardSimulationDays,
+    firebaseUser, isAdmin, isSuperAdmin, setIsAuthModalOpen,
+    products, adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
+    allOrders, adminUpdateOrderStatus,
+    allUsers, adminUpdateUserRole,
+    allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
+    coupons, adminCreateCoupon, adminDeleteCoupon,
+    allTickets, adminReplyToTicket, adminCloseTicket,
+    adminList, adminAddAdmin, adminRemoveAdmin,
+    financialMetrics, triggerRenewalCronSimulation, fastForwardSimulationDays,
+    refreshAllData, isSyncing,
   } = useApp();
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'analytics' | 'renewals' | 'inventory' | 'smtp' | 'orders'>('analytics');
+  const [tab, setTab] = useState<'overview' | 'products' | 'orders' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets'>('overview');
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
-  // Renewal Cron Status state
-  const [cronFeedback, setCronFeedback] = useState<string | null>(null);
+  // Products state
+  const [editingProduct, setEditingProduct] = useState<(Product & { isNew?: boolean }) | null>(null);
+  const [productSearch, setProductSearch] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  // SMTP Testing state
-  const [smtpRecipient, setSmtpRecipient] = useState('customer.vip@example.com');
-  const [smtpTemplate, setSmtpTemplate] = useState<EmailNotification['templateType']>('order_fulfillment');
-  const [smtpFeedback, setSmtpFeedback] = useState<string | null>(null);
+  // Orders state
+  const [orderSearch, setOrderSearch] = useState('');
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
-  // Stock update modal state
-  const [selectedProductForStock, setSelectedProductForStock] = useState<string>(products[0]?.id || '');
-  const [stockAddAmount, setStockAddAmount] = useState<number>(20);
-  const [stockFeedback, setStockFeedback] = useState<string | null>(null);
+  // Users state
+  const [userSearch, setUserSearch] = useState('');
 
-  // Search orders
-  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  // Admins state
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminName, setNewAdminName] = useState('');
+  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
+  const [adminRemoveConfirm, setAdminRemoveConfirm] = useState<string | null>(null);
 
-  // Sample analytics chart data
+  // Subscriptions state
+  const [subSearch, setSubSearch] = useState('');
+  const [editingSubId, setEditingSubId] = useState<string | null>(null);
+  const [subCredEdit, setSubCredEdit] = useState<Record<string, string>>({});
+
+  // Coupons state
+  const [newCoupon, setNewCoupon] = useState<Coupon>({ code: '', discountPercent: 15, description: '' });
+  const [showCouponForm, setShowCouponForm] = useState(false);
+
+  // Tickets state
+  const [ticketReply, setTicketReply] = useState('');
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+
+  const showFeedback = (type: 'success' | 'error', msg: string) => {
+    setFeedback({ type, msg });
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
   const revenueChartData = [
-    { month: 'Jan', mrr: 31200, orders: 840 },
-    { month: 'Feb', mrr: 34500, orders: 960 },
-    { month: 'Mar', mrr: 38900, orders: 1120 },
-    { month: 'Apr', mrr: 41800, orders: 1250 },
-    { month: 'May', mrr: 45200, orders: 1390 },
-    { month: 'Jun', mrr: 48920, orders: 1540 },
+    { month: 'Jan', revenue: 31200 }, { month: 'Feb', revenue: 34500 },
+    { month: 'Mar', revenue: 38900 }, { month: 'Apr', revenue: 41800 },
+    { month: 'May', revenue: 45200 }, { month: 'Live', revenue: financialMetrics.mrr > 0 ? financialMetrics.mrr : 48920 },
   ];
 
-  const categoryShareData = [
-    { name: 'AI & LLMs', revenue: 24800, fill: '#8b5cf6' },
-    { name: 'Streaming 4K', revenue: 14200, fill: '#f43f5e' },
-    { name: 'Dev Tools', revenue: 6400, fill: '#06b6d4' },
-    { name: 'Design / Pro', revenue: 3520, fill: '#10b981' },
-  ];
+  // ─── AUTH GATES ─────────────────────────────────────────────────────
+  if (!firebaseUser) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center space-y-6 max-w-sm">
+          <div className="h-20 w-20 mx-auto rounded-3xl bg-zinc-900 border border-white/10 flex items-center justify-center">
+            <Shield className="h-9 w-9 text-zinc-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-white">Admin Access</h1>
+            <p className="text-sm text-slate-400 mt-1">Sign in with an authorized admin account to continue.</p>
+          </div>
+          <button
+            onClick={() => setIsAuthModalOpen(true)}
+            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-white text-zinc-950 font-bold text-sm hover:bg-zinc-100 transition-all"
+          >
+            <LogIn className="h-4 w-4" /> Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const handleRunRenewalCron = () => {
-    const res = triggerRenewalCronSimulation();
-    setCronFeedback(`Cron executed successfully: ${res.renewedCount} subscriptions auto-renewed, ${res.notifiedCount} expiry notices queued.`);
-    setTimeout(() => setCronFeedback(null), 5000);
+  if (!isAdmin && !isSuperAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="text-center space-y-6 max-w-md p-8 rounded-3xl bg-zinc-900 border border-red-500/30">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-red-950/60 border border-red-500/30 flex items-center justify-center">
+            <Lock className="h-8 w-8 text-red-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-white">Access Restricted</h1>
+            <p className="text-sm text-slate-400 mt-2">
+              The account <strong className="text-white font-mono">{firebaseUser.email}</strong> does not have administrator privileges.
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              Contact the superadmin at <strong className="text-cyan-400">{SUPERADMIN_EMAIL}</strong> to grant you access.
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              setIsAuthModalOpen(true);
+            }}
+            className="px-6 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-200 text-xs font-bold transition-all"
+          >
+            Switch Account
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── ADMIN TAB NAVIGATION ─────────────────────────────────────────
+  const navTabs = [
+    { id: 'overview', label: 'Overview', icon: <BarChart2 className="h-4 w-4" /> },
+    { id: 'products', label: `Products (${products.length})`, icon: <Package className="h-4 w-4" /> },
+    { id: 'orders', label: `Orders (${allOrders.length})`, icon: <ShoppingBag className="h-4 w-4" /> },
+    { id: 'users', label: `Users (${allUsers.length})`, icon: <Users className="h-4 w-4" /> },
+    { id: 'admins', label: `Admin Team (${adminList.length})`, icon: <Shield className="h-4 w-4 text-red-400" /> },
+    { id: 'subscriptions', label: `Subscriptions (${allSubscriptions.length})`, icon: <Shield className="h-4 w-4" /> },
+    { id: 'coupons', label: `Coupons (${coupons.length})`, icon: <Tag className="h-4 w-4" /> },
+    { id: 'tickets', label: `Tickets (${allTickets.length})`, icon: <Headphones className="h-4 w-4" /> },
+  ] as const;
+
+  // ─── PRODUCT HANDLERS ─────────────────────────────────────────────
+  const handleSaveProduct = async () => {
+    if (!editingProduct) return;
+    try {
+      if (editingProduct.isNew) {
+        const { isNew, id, ...rest } = editingProduct as Product & { isNew: boolean };
+        await adminCreateProduct(rest);
+        showFeedback('success', 'Product created and synced to database.');
+      } else {
+        await adminUpdateProduct(editingProduct.id, editingProduct);
+        showFeedback('success', 'Product updated in database.');
+      }
+      setEditingProduct(null);
+    } catch { showFeedback('error', 'Failed to save product.'); }
   };
 
-  const handleFastForward = (days: number) => {
-    fastForwardSimulationDays(days);
-    setCronFeedback(`Simulated time advanced by +${days} days. Checked renewal expirations.`);
-    setTimeout(() => setCronFeedback(null), 5000);
+  const handleDeleteProduct = async (id: string) => {
+    try {
+      await adminDeleteProduct(id);
+      setDeleteConfirm(null);
+      showFeedback('success', 'Product deleted from database.');
+    } catch { showFeedback('error', 'Failed to delete product.'); }
   };
 
-  const handleSendSmtpTest = (e: React.FormEvent) => {
+  const filteredProducts = products.filter(p =>
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    p.category.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  // ─── ORDER HANDLERS ───────────────────────────────────────────────
+  const filteredOrders = allOrders.filter(o =>
+    o.orderNumber.toLowerCase().includes(orderSearch.toLowerCase()) ||
+    o.userEmail.toLowerCase().includes(orderSearch.toLowerCase())
+  );
+
+  // ─── SUBSCRIPTION HANDLERS ────────────────────────────────────────
+  const filteredSubs = allSubscriptions.filter(s =>
+    s.productName.toLowerCase().includes(subSearch.toLowerCase()) ||
+    s.credentials?.email?.toLowerCase().includes(subSearch.toLowerCase())
+  );
+
+  const handleSaveSubCreds = async (subId: string) => {
+    await adminUpdateSubscriptionCredentials(subId, subCredEdit);
+    setEditingSubId(null);
+    setSubCredEdit({});
+    showFeedback('success', 'Credentials updated in database.');
+  };
+
+  // ─── ADMIN TEAM HANDLERS ──────────────────────────────────────────
+  const handleAddAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!smtpRecipient.trim()) return;
-    sendTestEmail(smtpRecipient, smtpTemplate);
-    setSmtpFeedback(`✓ SMTP Transactional Email dispatched to ${smtpRecipient}`);
-    setTimeout(() => setSmtpFeedback(null), 4000);
+    if (!newAdminEmail.trim()) return;
+    setIsAddingAdmin(true);
+    const res = await adminAddAdmin(newAdminEmail.trim(), newAdminName.trim() || undefined);
+    setIsAddingAdmin(false);
+    if (res.success) {
+      showFeedback('success', res.message);
+      setNewAdminEmail('');
+      setNewAdminName('');
+    } else {
+      showFeedback('error', res.message);
+    }
   };
 
-  const filteredOrders = orders.filter((o) => {
-    if (!orderSearchQuery.trim()) return true;
-    const q = orderSearchQuery.toLowerCase();
-    return o.orderNumber.toLowerCase().includes(q) || o.userEmail.toLowerCase().includes(q);
-  });
+  const handleRemoveAdmin = async (email: string) => {
+    const res = await adminRemoveAdmin(email);
+    setAdminRemoveConfirm(null);
+    if (res.success) {
+      showFeedback('success', res.message);
+    } else {
+      showFeedback('error', res.message);
+    }
+  };
+
+  // ─── COUPON HANDLERS ──────────────────────────────────────────────
+  const handleCreateCoupon = async () => {
+    if (!newCoupon.code.trim()) return;
+    await adminCreateCoupon({ ...newCoupon, code: newCoupon.code.toUpperCase() });
+    setNewCoupon({ code: '', discountPercent: 15, description: '' });
+    setShowCouponForm(false);
+    showFeedback('success', 'Coupon created and synced.');
+  };
+
+  // ─── TICKET HANDLERS ──────────────────────────────────────────────
+  const handleReplyTicket = async (ticketId: string) => {
+    if (!ticketReply.trim()) return;
+    await adminReplyToTicket(ticketId, ticketReply);
+    setTicketReply('');
+    showFeedback('success', 'Reply sent to user.');
+  };
+
+  const activeTicket = allTickets.find(t => t.id === selectedTicketId) || allTickets[0] || null;
 
   return (
-    <div className="min-h-screen py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-      
-      {/* Top Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-obsidian-900 via-brand-950/40 to-obsidian-900 border border-brand-500/30 shadow-2xl">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-500/20 text-brand-400 border border-brand-500/30 shadow-glow">
-            <Shield className="h-7 w-7" />
+    <div className="min-h-screen py-8 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+      {/* Admin Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-zinc-900 border border-white/[0.08]">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-950/50">
+            <Shield className="h-6 w-6 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-white">Master Admin Command Center</h1>
-              <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                Live Production Ops
-              </span>
+              <h1 className="text-xl font-black text-white">Admin Management Hub</h1>
+              {isSuperAdmin ? (
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-950 border border-red-500/40 text-red-300">
+                  Superadmin
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-950 border border-blue-500/40 text-blue-300">
+                  Administrator
+                </span>
+              )}
             </div>
-            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-              Recurring revenue growth monitoring, wholesale credential provisioning & automated renewal cron controller.
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">Logged in as {firebaseUser.email} · Real-time Firestore Sync Active</p>
           </div>
         </div>
 
-        {/* Quick Simulation Triggers */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5">
           <button
-            onClick={handleRunRenewalCron}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-glow-emerald transition-all flex items-center gap-1.5"
+            onClick={async () => {
+              await refreshAllData();
+              showFeedback('success', 'Database re-synced successfully.');
+            }}
+            disabled={isSyncing}
+            className="px-3.5 py-2 rounded-xl bg-zinc-800 border border-white/10 text-xs text-slate-200 hover:text-white font-bold flex items-center gap-2 hover:bg-zinc-750 transition-all disabled:opacity-50"
           >
-            <Play className="h-3.5 w-3.5" />
-            <span>Run Renewal Engine</span>
-          </button>
-          <button
-            onClick={() => handleFastForward(7)}
-            className="px-3.5 py-2 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 text-slate-200 border border-white/[0.1] text-xs font-semibold transition-all flex items-center gap-1"
-          >
-            <FastForward className="h-3.5 w-3.5 text-cyan-400" />
-            <span>+7 Days Sim</span>
+            <RefreshCw className={`h-3.5 w-3.5 text-cyan-400 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? 'Syncing...' : 'Sync Live Data'}</span>
           </button>
         </div>
       </div>
 
-      {/* Cron Notification Alert */}
-      {cronFeedback && (
-        <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-xs font-semibold text-emerald-300 flex items-center gap-2 shadow-glow-emerald">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>{cronFeedback}</span>
+      {/* Feedback toast */}
+      {feedback && (
+        <div className={`fixed top-20 right-4 z-50 flex items-center gap-2.5 px-5 py-3 rounded-2xl border text-sm font-bold shadow-2xl animate-in slide-in-from-right duration-200 ${
+          feedback.type === 'success' ? 'bg-emerald-950/95 border-emerald-500/50 text-emerald-200' : 'bg-red-950/95 border-red-500/50 text-red-200'
+        }`}>
+          {feedback.type === 'success' ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : <AlertCircle className="h-4 w-4 text-red-400" />}
+          {feedback.msg}
         </div>
       )}
 
-      {/* Primary Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-2 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveAdminTab('analytics')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-            activeAdminTab === 'analytics'
-              ? 'bg-brand-600 text-white shadow-glow border border-brand-400/40'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <TrendingUp className="h-4 w-4 text-cyan-400" />
-          <span>MRR & Revenue Analytics</span>
-        </button>
-
-        <button
-          onClick={() => setActiveAdminTab('renewals')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-            activeAdminTab === 'renewals'
-              ? 'bg-brand-600 text-white shadow-glow border border-brand-400/40'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <Repeat className="h-4 w-4 text-emerald-400" />
-          <span>Auto-Renewal Engine ({subscriptions.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveAdminTab('inventory')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-            activeAdminTab === 'inventory'
-              ? 'bg-brand-600 text-white shadow-glow border border-brand-400/40'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <Package className="h-4 w-4 text-amber-400" />
-          <span>Wholesale Stock & Pool</span>
-        </button>
-
-        <button
-          onClick={() => setActiveAdminTab('orders')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-            activeAdminTab === 'orders'
-              ? 'bg-brand-600 text-white shadow-glow border border-brand-400/40'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <DollarSign className="h-4 w-4 text-blue-400" />
-          <span>Customer Orders ({orders.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveAdminTab('smtp')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
-            activeAdminTab === 'smtp'
-              ? 'bg-brand-600 text-white shadow-glow border border-brand-400/40'
-              : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-          }`}
-        >
-          <Mail className="h-4 w-4 text-purple-400" />
-          <span>SMTP Notifications & Templates</span>
-        </button>
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1 border-b border-white/[0.08] overflow-x-auto scrollbar-none pb-0">
+        {navTabs.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`flex items-center gap-2 px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 -mb-px transition-all ${
+              tab === t.id ? 'border-white text-white bg-white/[0.03]' : 'border-transparent text-slate-400 hover:text-white'
+            }`}
+          >
+            {t.icon} {t.label}
+          </button>
+        ))}
       </div>
 
-      {/* TAB 1: MRR & RECURRING REVENUE ANALYTICS */}
-      {activeAdminTab === 'analytics' && (
-        <div className="space-y-8">
-          {/* Key Metrics Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            
-            <div className="p-5 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Monthly Recurring (MRR)</span>
-                <span className="text-emerald-400 font-bold flex items-center gap-0.5">
-                  <ArrowUpRight className="h-3.5 w-3.5" /> +28.4%
-                </span>
-              </div>
-              <p className="text-2xl sm:text-3xl font-black text-white font-mono">
-                ${financialMetrics.mrr.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-              </p>
-              <p className="text-[11px] text-slate-500">Run-rate ARR: ${(financialMetrics.mrr * 12).toLocaleString()}</p>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Active Subscribers</span>
-                <span className="text-cyan-400 font-bold">98.6% Retained</span>
-              </div>
-              <p className="text-2xl sm:text-3xl font-black text-cyan-300 font-mono">
-                {financialMetrics.activeSubscribers.toLocaleString()}
-              </p>
-              <p className="text-[11px] text-slate-500">Avg Life Time Value: $142.50</p>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Today Gross Inflow</span>
-                <span className="text-brand-400 font-bold">Realtime Bot</span>
-              </div>
-              <p className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono">
-                ${financialMetrics.netRevenueToday.toFixed(2)}
-              </p>
-              <p className="text-[11px] text-slate-500">Avg Order Value: $34.80</p>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
-                <span>Monthly Churn Rate</span>
-                <span className="text-emerald-400 font-bold">Ultra Low</span>
-              </div>
-              <p className="text-2xl sm:text-3xl font-black text-amber-400 font-mono">
-                {financialMetrics.churnRate}%
-              </p>
-              <p className="text-[11px] text-slate-500">Benchmark Industry: 5.2%</p>
-            </div>
-
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            {/* Area Chart: MRR Velocity */}
-            <div className="lg:col-span-8 p-6 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-white">MRR Growth & Recurring Revenue Velocity</h3>
-                  <p className="text-xs text-slate-400">Cumulative Monthly Recurring Inflow (USD)</p>
-                </div>
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-500/30">
-                  +56% Q/Q
-                </span>
-              </div>
-
-              <div className="h-72 w-full pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={revenueChartData}>
-                    <defs>
-                      <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e2742" />
-                    <XAxis dataKey="month" stroke="#64748b" textAnchor="end" fontSize={11} />
-                    <YAxis stroke="#64748b" fontSize={11} tickFormatter={(val) => `$${val / 1000}k`} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#090d14', borderColor: '#312e81', borderRadius: '12px' }}
-                      formatter={(val: number) => [`$${val.toLocaleString()}`, 'MRR']}
-                    />
-                    <Area type="monotone" dataKey="mrr" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorMrr)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Bar Chart: Revenue by Category */}
-            <div className="lg:col-span-4 p-6 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-4">
-              <div>
-                <h3 className="text-base font-bold text-white">Revenue By Category</h3>
-                <p className="text-xs text-slate-400">AI Models leading retail demand</p>
-              </div>
-
-              <div className="h-72 w-full pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryShareData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e2742" />
-                    <XAxis dataKey="name" stroke="#64748b" fontSize={9} interval={0} />
-                    <YAxis stroke="#64748b" fontSize={11} tickFormatter={(val) => `$${val / 1000}k`} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#090d14', borderColor: '#312e81', borderRadius: '12px' }}
-                      formatter={(val: number) => [`$${val.toLocaleString()}`, 'Revenue']}
-                    />
-                    <Bar dataKey="revenue" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: AUTO-RENEWAL ENGINE CONTROLLER */}
-      {activeAdminTab === 'renewals' && (
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* OVERVIEW TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'overview' && (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-obsidian-900 border border-white/[0.08]">
-            <div>
-              <h3 className="text-lg font-bold text-white">Automated Renewal Queue</h3>
-              <p className="text-xs text-slate-400">
-                Subscriptions scheduled for auto-charge, email reminders, and cryptographic credential renewal.
-              </p>
-            </div>
-            <button
-              onClick={handleRunRenewalCron}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-obsidian-950 font-black text-xs shadow-glow-emerald transition-all flex items-center gap-2"
-            >
-              <Play className="h-4 w-4" />
-              <span>Trigger Cron Job Now</span>
-            </button>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Revenue', value: `$${financialMetrics.mrr.toFixed(2)}`, sub: `${allOrders.length} total orders`, icon: <DollarSign className="h-5 w-5 text-emerald-400" />, color: 'text-emerald-400' },
+              { label: 'Active Users', value: allUsers.length.toString(), sub: `${allSubscriptions.length} subscriptions`, icon: <Users className="h-5 w-5 text-blue-400" />, color: 'text-blue-400' },
+              { label: "Today's Revenue", value: `$${financialMetrics.netRevenueToday.toFixed(2)}`, sub: 'Live automated checkout', icon: <TrendingUp className="h-5 w-5 text-cyan-400" />, color: 'text-cyan-400' },
+              { label: 'Open Support Tickets', value: allTickets.filter(t => t.status !== 'closed').length.toString(), sub: `${allTickets.length} total tickets`, icon: <Headphones className="h-5 w-5 text-amber-400" />, color: 'text-amber-400' },
+            ].map(kpi => (
+              <div key={kpi.label} className="p-5 rounded-3xl bg-zinc-900 border border-white/[0.08] flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-semibold">{kpi.label}</span>
+                  <div className="h-8 w-8 rounded-xl bg-zinc-800 flex items-center justify-center">{kpi.icon}</div>
+                </div>
+                <div>
+                  <p className={`text-2xl font-black ${kpi.color}`}>{kpi.value}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{kpi.sub}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div className="rounded-3xl bg-obsidian-900 border border-white/[0.08] overflow-hidden">
-            <div className="overflow-x-auto">
+          {/* Charts & Quick Feed */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-white">Revenue Performance</h3>
+                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                  Real-time Data
+                </span>
+              </div>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={revenueChartData}>
+                  <defs>
+                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} />
+                  <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+                  <Tooltip contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12 }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#a5b4fc' }} formatter={(v: number) => [`$${v.toLocaleString()}`, 'Revenue']} />
+                  <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} fill="url(#revGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-white">Recent Store Orders</h3>
+                <button onClick={() => setTab('orders')} className="text-xs font-bold text-cyan-400 hover:underline flex items-center gap-1">
+                  View All <ArrowUpRight className="h-3 w-3" />
+                </button>
+              </div>
+              <div className="space-y-2.5 max-h-[220px] overflow-y-auto">
+                {allOrders.slice(0, 6).map(o => (
+                  <div key={o.id} className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-950 border border-white/[0.04] text-xs">
+                    <div>
+                      <span className="font-mono text-cyan-400 font-bold">{o.orderNumber}</span>
+                      <p className="text-slate-400 text-[11px] truncate max-w-[180px]">{o.userEmail}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-white">${o.total.toFixed(2)}</p>
+                      <span className="text-[10px] text-emerald-400 font-semibold">{o.paymentStatus}</span>
+                    </div>
+                  </div>
+                ))}
+                {allOrders.length === 0 && (
+                  <p className="text-slate-500 text-xs text-center py-10">No orders recorded in Firestore yet.</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Simulation & Maintenance Tools */}
+          <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
+            <h3 className="text-sm font-bold text-white">Automated Engine & Tools</h3>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => {
+                  const res = triggerRenewalCronSimulation();
+                  showFeedback('success', `Cron executed: ${res.renewedCount} renewed, ${res.notifiedCount} notices sent.`);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 transition-all"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Run Auto-Renewal Engine
+              </button>
+              {[7, 14, 30].map(d => (
+                <button
+                  key={d}
+                  onClick={() => {
+                    fastForwardSimulationDays(d);
+                    showFeedback('success', `Simulated time forward by +${d} days.`);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-zinc-800 border border-white/10 text-xs font-bold text-slate-200 hover:bg-zinc-700 transition-all"
+                >
+                  Fast Forward +{d} Days
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ADMIN TEAM TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'admins' && (
+        <div className="space-y-6">
+          <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-white">Administrator Access Control</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Grant team members access to the SubNexus Admin Control Panel.
+                </p>
+              </div>
+            </div>
+
+            {/* Add New Admin Form */}
+            {isSuperAdmin && (
+              <form onSubmit={handleAddAdmin} className="p-5 rounded-2xl bg-zinc-950 border border-white/[0.08] space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-cyan-400" /> Add New Administrator
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                  <div className="sm:col-span-6">
+                    <input
+                      type="email"
+                      required
+                      value={newAdminEmail}
+                      onChange={e => setNewAdminEmail(e.target.value)}
+                      placeholder="admin.email@domain.com"
+                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="sm:col-span-4">
+                    <input
+                      type="text"
+                      value={newAdminName}
+                      onChange={e => setNewAdminName(e.target.value)}
+                      placeholder="Display Name (optional)"
+                      className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <button
+                      type="submit"
+                      disabled={isAddingAdmin}
+                      className="w-full h-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                    >
+                      <Plus className="h-4 w-4" /> Grant Access
+                    </button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  When this user signs in with Google or Email, they will immediately have administrator panel access.
+                </p>
+              </form>
+            )}
+
+            {/* Admin Members List */}
+            <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
               <table className="w-full text-left text-xs">
-                <thead className="bg-obsidian-950 text-slate-400 uppercase font-semibold border-b border-white/[0.06]">
+                <thead className="bg-zinc-950 text-slate-400 uppercase font-semibold border-b border-white/[0.06]">
                   <tr>
-                    <th className="p-4">Sub ID</th>
-                    <th className="p-4">Service</th>
-                    <th className="p-4">Account User</th>
-                    <th className="p-4">Renewal Expiry</th>
-                    <th className="p-4">Auto-Renew</th>
-                    <th className="p-4">Status</th>
+                    <th className="p-4">Admin</th>
+                    <th className="p-4">Email</th>
+                    <th className="p-4">Role</th>
+                    <th className="p-4">Added On</th>
+                    <th className="p-4">Granted By</th>
                     <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.05] text-slate-300">
-                  {subscriptions.map((sub) => {
-                    const days = Math.ceil((new Date(sub.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                <tbody className="divide-y divide-white/[0.04]">
+                  {adminList.map(admin => {
+                    const isOwner = admin.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+
                     return (
-                      <tr key={sub.id} className="hover:bg-white/[0.02]">
-                        <td className="p-4 font-mono font-bold text-white">{sub.id}</td>
-                        <td className="p-4 font-semibold text-slate-200">{sub.productName}</td>
-                        <td className="p-4 font-mono text-slate-400">{sub.credentials.email}</td>
+                      <tr key={admin.id || admin.email} className="hover:bg-white/[0.02]">
+                        <td className="p-4 font-bold text-white flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-lg bg-zinc-800 flex items-center justify-center text-xs font-bold text-cyan-400">
+                            {(admin.name || admin.email)[0].toUpperCase()}
+                          </div>
+                          <span>{admin.name || 'Admin'}</span>
+                        </td>
+                        <td className="p-4 font-mono text-slate-300">{admin.email}</td>
                         <td className="p-4">
-                          <span className={`font-bold ${days <= 3 ? 'text-amber-400' : 'text-slate-200'}`}>
-                            {new Date(sub.expiryDate).toLocaleDateString()} ({days}d left)
-                          </span>
+                          {isOwner ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-red-950/80 text-red-300 border border-red-500/40">
+                              Superadmin (Owner)
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-blue-950/80 text-blue-300 border border-blue-500/40">
+                              Admin
+                            </span>
+                          )}
                         </td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            sub.autoRenew ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' : 'bg-obsidian-950 text-slate-500'
-                          }`}>
-                            {sub.autoRenew ? 'ACTIVE' : 'MANUAL'}
-                          </span>
-                        </td>
-                        <td className="p-4 uppercase font-bold text-[10px] text-cyan-400">
-                          {sub.status.replace('_', ' ')}
-                        </td>
+                        <td className="p-4 text-slate-400">{admin.addedAt ? new Date(admin.addedAt).toLocaleDateString() : 'System'}</td>
+                        <td className="p-4 text-slate-400">{admin.addedBy || 'Owner'}</td>
                         <td className="p-4 text-right">
-                          <button
-                            onClick={() => fastForwardSimulationDays(3)}
-                            className="px-2.5 py-1 rounded bg-obsidian-800 hover:bg-obsidian-700 text-[10px] font-bold text-slate-300"
-                          >
-                            Simulate -3d
-                          </button>
+                          {isOwner ? (
+                            <span className="text-[10px] text-slate-500 italic">Primary Account</span>
+                          ) : isSuperAdmin ? (
+                            adminRemoveConfirm === admin.email ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleRemoveAdmin(admin.email)}
+                                  className="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold transition-all"
+                                >
+                                  Confirm Revoke
+                                </button>
+                                <button
+                                  onClick={() => setAdminRemoveConfirm(null)}
+                                  className="p-1 rounded-lg bg-zinc-800 text-slate-400"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setAdminRemoveConfirm(admin.email)}
+                                className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-red-950/60 text-slate-300 hover:text-red-300 text-xs font-bold transition-colors inline-flex items-center gap-1.5"
+                              >
+                                <UserX className="h-3.5 w-3.5 text-red-400" /> Revoke
+                              </button>
+                            )
+                          ) : (
+                            <span className="text-[10px] text-slate-500">Superadmin only</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -417,99 +560,306 @@ export default function AdminPortalPage() {
         </div>
       )}
 
-      {/* TAB 3: WHOLESALE STOCK & INVENTORY POOL */}
-      {activeAdminTab === 'inventory' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {products.map((prod) => (
-              <div key={prod.id} className="p-6 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-4">
-                <div className="flex items-center gap-3">
-                  <img src={prod.logo} alt={prod.name} className="h-12 w-12 rounded-xl object-cover" />
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* PRODUCTS TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'products' && (
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input value={productSearch} onChange={e => setProductSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
+                placeholder="Search products…" />
+            </div>
+            <button
+              onClick={() => setEditingProduct({ ...blankProduct(), id: '', isNew: true } as Product & { isNew: boolean })}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg"
+            >
+              <Plus className="h-4 w-4" /> Add New Product
+            </button>
+          </div>
+
+          <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-zinc-950 text-slate-400 uppercase font-semibold border-b border-white/[0.06]">
+                <tr>
+                  <th className="p-4">Product</th>
+                  <th className="p-4">Category</th>
+                  <th className="p-4">Pricing Tiers</th>
+                  <th className="p-4">Stock</th>
+                  <th className="p-4">Rating</th>
+                  <th className="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {filteredProducts.map(p => (
+                  <tr key={p.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <img src={p.logo} alt={p.name} className="h-9 w-9 rounded-lg object-cover ring-1 ring-white/10"
+                          onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'; }} />
+                        <div>
+                          <p className="font-bold text-white">{p.name}</p>
+                          <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{p.tagline}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4 capitalize text-slate-300">
+                      <span className="px-2 py-0.5 rounded-md bg-zinc-800 text-slate-300 border border-white/5">
+                        {p.category}
+                      </span>
+                    </td>
+                    <td className="p-4 text-slate-300 font-mono">
+                      {p.pricingTiers.map(t => `$${t.price}`).join(' · ')}
+                    </td>
+                    <td className="p-4">
+                      <span className={`font-bold ${p.stockCount < 20 ? 'text-amber-400' : 'text-emerald-400'}`}>{p.stockCount}</span>
+                    </td>
+                    <td className="p-4 text-yellow-400 font-bold">★ {p.rating}</td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => setEditingProduct(p)}
+                          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-blue-400 transition-colors">
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        {deleteConfirm === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => handleDeleteProduct(p.id)} className="p-1.5 rounded-lg bg-red-600 text-white text-[10px] font-bold px-2">Delete</button>
+                            <button onClick={() => setDeleteConfirm(null)} className="p-1.5 rounded-lg bg-zinc-800 text-slate-400"><X className="h-3 w-3" /></button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setDeleteConfirm(p.id)} className="p-2 rounded-lg bg-zinc-800 hover:bg-red-950/60 text-red-400 transition-colors">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Product Edit / Create Modal */}
+          {editingProduct && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
+              <div className="w-full max-w-2xl rounded-3xl bg-zinc-900 border border-white/10 p-6 my-6 space-y-5 shadow-2xl">
+                <div className="flex justify-between items-center border-b border-white/[0.08] pb-4">
+                  <h3 className="text-lg font-black text-white">{(editingProduct as any).isNew ? 'Create New Product' : `Edit Product: ${editingProduct.name}`}</h3>
+                  <button onClick={() => setEditingProduct(null)} className="p-1.5 rounded-lg bg-zinc-800 text-slate-400 hover:text-white"><X className="h-4 w-4" /></button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  {[
+                    { label: 'Product Name', key: 'name', type: 'text' },
+                    { label: 'Slug (URL identifier)', key: 'slug', type: 'text' },
+                    { label: 'Logo Image URL', key: 'logo', type: 'text' },
+                    { label: 'Stock Count', key: 'stockCount', type: 'number' },
+                    { label: 'Rating (0-5)', key: 'rating', type: 'number' },
+                    { label: 'Review Count', key: 'reviewCount', type: 'number' },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label className="text-slate-400 block mb-1 font-semibold">{field.label}</label>
+                      <input
+                        type={field.type}
+                        value={(editingProduct as any)[field.key] ?? ''}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, [field.key]: field.type === 'number' ? Number(e.target.value) : e.target.value } : null)}
+                        className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  ))}
+
+                  <div className="col-span-2">
+                    <label className="text-slate-400 block mb-1 font-semibold">Tagline / Key Highlight</label>
+                    <input
+                      value={editingProduct.tagline}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, tagline: e.target.value } : null)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="text-slate-400 block mb-1 font-semibold">Description</label>
+                    <textarea
+                      rows={3} value={editingProduct.description}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, description: e.target.value } : null)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 resize-none"
+                    />
+                  </div>
+
                   <div>
-                    <h4 className="text-sm font-bold text-white">{prod.name}</h4>
-                    <span className="text-xs text-slate-400 capitalize">{prod.deliveryType.replace('_', ' ')}</span>
+                    <label className="text-slate-400 block mb-1 font-semibold">Category</label>
+                    <select
+                      value={editingProduct.category}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, category: e.target.value as any } : null)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {['ai', 'streaming', 'dev', 'productivity', 'vpn_security'].map(c => (
+                        <option key={c} value={c}>{c.toUpperCase()}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Account Provision Type</label>
+                    <select
+                      value={editingProduct.accountType}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, accountType: e.target.value as any } : null)}
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                    >
+                      {['private_account', 'shared_profile', 'family_slot', 'direct_upgrade'].map(t => (
+                        <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-obsidian-950 border border-white/[0.05] flex items-center justify-between">
-                  <span className="text-xs text-slate-400">Remaining Bot Slots:</span>
-                  <span className="text-base font-black text-emerald-400 font-mono">{prod.stockCount} Available</span>
+                {/* Pricing Tiers */}
+                <div className="p-4 rounded-2xl bg-zinc-950 border border-white/[0.06] space-y-3">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-slate-200">Pricing Durations</label>
+                    <button
+                      type="button"
+                      onClick={() => setEditingProduct(prev => prev ? { ...prev, pricingTiers: [...prev.pricingTiers, { duration: '1_month', label: '1 Month', price: 9.99, originalPrice: 20, discountPercentage: 50 }] } : null)}
+                      className="text-xs font-bold text-cyan-400 hover:underline flex items-center gap-1"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add Tier
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {editingProduct.pricingTiers.map((tier, i) => (
+                      <div key={i} className="grid grid-cols-12 gap-2 text-xs">
+                        <div className="col-span-4">
+                          <input value={tier.label} onChange={e => {
+                            const tiers = [...editingProduct.pricingTiers];
+                            tiers[i] = { ...tiers[i], label: e.target.value };
+                            setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
+                          }} placeholder="Label (e.g. 1 Month)" className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white focus:outline-none" />
+                        </div>
+                        <div className="col-span-3">
+                          <input type="number" step="0.01" value={tier.price} onChange={e => {
+                            const tiers = [...editingProduct.pricingTiers];
+                            tiers[i] = { ...tiers[i], price: Number(e.target.value) };
+                            setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
+                          }} placeholder="Price ($)" className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white focus:outline-none" />
+                        </div>
+                        <div className="col-span-3">
+                          <input type="number" step="0.01" value={tier.originalPrice} onChange={e => {
+                            const tiers = [...editingProduct.pricingTiers];
+                            tiers[i] = { ...tiers[i], originalPrice: Number(e.target.value) };
+                            setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
+                          }} placeholder="Original ($)" className="w-full px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white focus:outline-none" />
+                        </div>
+                        <div className="col-span-2 flex items-center justify-center">
+                          <button type="button" onClick={() => {
+                            const tiers = editingProduct.pricingTiers.filter((_, idx) => idx !== i);
+                            setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
+                          }} className="p-1.5 rounded-lg bg-red-950/60 text-red-400 hover:bg-red-950 transition-colors">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      prod.stockCount += 25;
-                      setStockFeedback(`✓ Added +25 wholesale slots to ${prod.name}`);
-                      setTimeout(() => setStockFeedback(null), 3000);
-                    }}
-                    className="flex-1 py-2 rounded-xl bg-obsidian-800 hover:bg-obsidian-700 text-xs font-bold text-slate-200 border border-white/[0.1] transition-colors"
-                  >
-                    +25 Batch Replenish
+                <div className="flex justify-end gap-3 pt-3 border-t border-white/[0.08]">
+                  <button onClick={() => setEditingProduct(null)} className="px-5 py-2.5 rounded-xl bg-zinc-800 text-slate-300 text-xs font-bold">Cancel</button>
+                  <button onClick={handleSaveProduct} className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 transition-all">
+                    <Save className="h-3.5 w-3.5" /> Save to Database
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {stockFeedback && (
-            <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-xs text-emerald-300 font-bold">
-              {stockFeedback}
             </div>
           )}
         </div>
       )}
 
-      {/* TAB 4: CUSTOMER ORDERS TABLE */}
-      {activeAdminTab === 'orders' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={orderSearchQuery}
-                onChange={(e) => setOrderSearchQuery(e.target.value)}
-                placeholder="Search orders by number or email..."
-                className="w-full pl-10 pr-4 py-2 bg-obsidian-900 border border-white/[0.08] rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
-              />
-            </div>
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ORDERS TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'orders' && (
+        <div className="space-y-5">
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input value={orderSearch} onChange={e => setOrderSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
+              placeholder="Search by email or order #…" />
           </div>
 
-          <div className="rounded-3xl bg-obsidian-900 border border-white/[0.08] overflow-hidden">
+          <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-obsidian-950 text-slate-400 uppercase font-semibold border-b border-white/[0.06]">
+                <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06]">
                   <tr>
                     <th className="p-4">Order #</th>
-                    <th className="p-4">Customer Email</th>
-                    <th className="p-4">Item Details</th>
+                    <th className="p-4">Customer</th>
+                    <th className="p-4">Items Ordered</th>
+                    <th className="p-4">Date</th>
                     <th className="p-4">Total</th>
                     <th className="p-4">Payment</th>
                     <th className="p-4">Delivery</th>
+                    <th className="p-4">Update Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.05] text-slate-300">
-                  {filteredOrders.map((o) => (
-                    <tr key={o.id} className="hover:bg-white/[0.02]">
-                      <td className="p-4 font-mono font-bold text-white">{o.orderNumber}</td>
-                      <td className="p-4 font-medium text-slate-200">{o.userEmail}</td>
-                      <td className="p-4">
-                        {o.items.map((i, idx) => (
-                          <div key={idx} className="text-slate-300">
-                            {i.productName} ({i.durationLabel})
-                          </div>
-                        ))}
-                      </td>
-                      <td className="p-4 font-black text-emerald-400 font-mono">${o.total.toFixed(2)}</td>
-                      <td className="p-4 font-mono uppercase text-[10px] text-cyan-400">{o.paymentMethod.replace('_', ' ')}</td>
-                      <td className="p-4">
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold uppercase">
-                          {o.deliveryStatus}
-                        </span>
-                      </td>
-                    </tr>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {filteredOrders.map(o => (
+                    <React.Fragment key={o.id}>
+                      <tr className="hover:bg-white/[0.02] transition-colors">
+                        <td className="p-4 font-mono font-bold text-white">{o.orderNumber}</td>
+                        <td className="p-4 text-slate-300 font-medium">{o.userEmail}</td>
+                        <td className="p-4 text-slate-400">{o.items.map(i => `${i.productName} (${i.durationLabel})`).join(', ')}</td>
+                        <td className="p-4 text-slate-400">{new Date(o.createdAt).toLocaleDateString()}</td>
+                        <td className="p-4 font-bold text-white">${o.total.toFixed(2)}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                            o.paymentStatus === 'paid' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
+                            'bg-amber-950/60 text-amber-400 border-amber-500/30'
+                          }`}>{o.paymentStatus}</span>
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                            o.deliveryStatus === 'delivered' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
+                            'bg-blue-950/60 text-blue-400 border-blue-500/30'
+                          }`}>{o.deliveryStatus}</span>
+                        </td>
+                        <td className="p-4">
+                          <button onClick={() => setEditingOrderId(editingOrderId === o.id ? null : o.id)}
+                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-cyan-400 transition-colors">
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                      {editingOrderId === o.id && (
+                        <tr>
+                          <td colSpan={8} className="px-4 pb-4 bg-zinc-950/80">
+                            <div className="flex items-center gap-4 pt-3">
+                              <div>
+                                <label className="text-[11px] text-slate-400 font-bold block mb-1">Payment Status</label>
+                                <select defaultValue={o.paymentStatus}
+                                  onChange={e => adminUpdateOrderStatus(o.id, e.target.value as any, o.deliveryStatus).then(() => showFeedback('success', 'Order updated.'))}
+                                  className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none">
+                                  {['paid', 'pending', 'failed', 'refunded'].map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[11px] text-slate-400 font-bold block mb-1">Delivery Status</label>
+                                <select defaultValue={o.deliveryStatus}
+                                  onChange={e => adminUpdateOrderStatus(o.id, o.paymentStatus, e.target.value as any).then(() => showFeedback('success', 'Order updated.'))}
+                                  className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none">
+                                  {['delivered', 'processing', 'failed'].map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
+                  {filteredOrders.length === 0 && (
+                    <tr><td colSpan={8} className="p-8 text-center text-slate-500">No orders found.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -517,132 +867,338 @@ export default function AdminPortalPage() {
         </div>
       )}
 
-      {/* TAB 5: SMTP NOTIFICATIONS & LIVE PREVIEWS */}
-      {activeAdminTab === 'smtp' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* Left: Dispatcher Form */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="p-6 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-4">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Mail className="h-5 w-5 text-purple-400" />
-                <span>SMTP Transactional Engine</span>
-              </h3>
-              <p className="text-xs text-slate-400">
-                Trigger simulated live SMTP transactional emails to verify template rendering and delivery webhooks.
-              </p>
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* USERS TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'users' && (
+        <div className="space-y-5">
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
+              placeholder="Search users by name or email…" />
+          </div>
+          <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06]">
+                <tr>
+                  <th className="p-4">User</th>
+                  <th className="p-4">Email</th>
+                  <th className="p-4">Role</th>
+                  <th className="p-4">Joined Date</th>
+                  <th className="p-4">Lifetime Spend</th>
+                  <th className="p-4 text-right">Role Management</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.04]">
+                {allUsers.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase())).map(u => {
+                  const isOwner = u.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
 
-              <form onSubmit={handleSendSmtpTest} className="space-y-3">
+                  return (
+                    <tr key={u.id} className="hover:bg-white/[0.02]">
+                      <td className="p-4">
+                        <div className="flex items-center gap-2.5">
+                          <img src={u.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=6366f1&color=fff&size=40`} className="h-8 w-8 rounded-full object-cover" alt={u.name} />
+                          <span className="font-bold text-white">{u.name}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-slate-400 font-mono">{u.email}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          isOwner ? 'bg-red-950/80 text-red-300 border-red-500/40' :
+                          u.role === 'admin' ? 'bg-blue-950/60 text-blue-400 border-blue-500/30' : 'bg-zinc-800 text-slate-300 border-white/10'
+                        }`}>{isOwner ? 'Superadmin' : u.role}</span>
+                      </td>
+                      <td className="p-4 text-slate-400">{u.joinedDate ? new Date(u.joinedDate).toLocaleDateString() : '—'}</td>
+                      <td className="p-4 font-bold text-emerald-400">${(u.lifetimeSpend || 0).toFixed(2)}</td>
+                      <td className="p-4 text-right">
+                        {isOwner ? (
+                          <span className="text-[10px] text-slate-500 italic">Primary Superadmin</span>
+                        ) : isSuperAdmin ? (
+                          <select
+                            value={u.role}
+                            onChange={e => adminUpdateUserRole(u.id, e.target.value as any).then(() => showFeedback('success', 'User role updated.'))}
+                            className="px-2.5 py-1.5 rounded-xl bg-zinc-800 border border-white/10 text-xs text-white focus:outline-none"
+                          >
+                            <option value="customer">Customer</option>
+                            <option value="admin">Administrator</option>
+                          </select>
+                        ) : (
+                          <span className="text-[10px] text-slate-500">Superadmin required</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {allUsers.length === 0 && (
+                  <tr><td colSpan={6} className="p-8 text-center text-slate-500">No users registered yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* SUBSCRIPTIONS TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'subscriptions' && (
+        <div className="space-y-5">
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input value={subSearch} onChange={e => setSubSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
+              placeholder="Search subscriptions…" />
+          </div>
+          <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06]">
+                  <tr>
+                    <th className="p-4">Product</th>
+                    <th className="p-4">Plan Duration</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Expires On</th>
+                    <th className="p-4">Assigned Credential</th>
+                    <th className="p-4 text-right">Edit Credentials</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {filteredSubs.map(s => (
+                    <React.Fragment key={s.id}>
+                      <tr className="hover:bg-white/[0.02]">
+                        <td className="p-4">
+                          <div className="flex items-center gap-2.5">
+                            <img src={s.productLogo} className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/10" alt={s.productName} />
+                            <span className="font-bold text-white">{s.productName}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-slate-300">{s.durationLabel}</td>
+                        <td className="p-4">
+                          <select value={s.status}
+                            onChange={e => adminUpdateSubscriptionStatus(s.id, e.target.value as any).then(() => showFeedback('success', 'Status updated.'))}
+                            className={`px-2 py-1 rounded-lg border text-[10px] font-bold focus:outline-none bg-zinc-900 ${
+                              s.status === 'active' ? 'text-emerald-400 border-emerald-500/30' :
+                              s.status === 'expired' ? 'text-red-400 border-red-500/30' :
+                              'text-amber-400 border-amber-500/30'
+                            }`}>
+                            {['active', 'expiring_soon', 'expired', 'paused'].map(st => <option key={st} value={st}>{st}</option>)}
+                          </select>
+                        </td>
+                        <td className="p-4 text-slate-400">{new Date(s.expiryDate).toLocaleDateString()}</td>
+                        <td className="p-4 font-mono text-xs text-slate-300 max-w-[180px] truncate">{s.credentials?.email || 'N/A'}</td>
+                        <td className="p-4 text-right">
+                          <button onClick={() => {
+                            setEditingSubId(editingSubId === s.id ? null : s.id);
+                            setSubCredEdit({
+                              email: s.credentials?.email || '',
+                              password: s.credentials?.password || '',
+                              notes: s.credentials?.notes || '',
+                            });
+                          }} className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-blue-400">
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                      {editingSubId === s.id && (
+                        <tr>
+                          <td colSpan={6} className="px-4 pb-4 bg-zinc-950/80">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
+                              {[
+                                { k: 'email', label: 'Account Login Email' },
+                                { k: 'password', label: 'Account Password' },
+                                { k: 'notes', label: 'Vault Note / PIN / Instructions' },
+                              ].map(f => (
+                                <div key={f.k}>
+                                  <label className="text-[11px] text-slate-400 font-bold block mb-1">{f.label}</label>
+                                  <input value={subCredEdit[f.k] || ''}
+                                    onChange={e => setSubCredEdit(prev => ({ ...prev, [f.k]: e.target.value }))}
+                                    className="w-full px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-blue-500"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={() => handleSaveSubCreds(s.id)}
+                              className="mt-3 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5">
+                              <Save className="h-3.5 w-3.5" /> Save Credentials
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                  {filteredSubs.length === 0 && (
+                    <tr><td colSpan={6} className="p-8 text-center text-slate-500">No subscriptions created yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* COUPONS TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'coupons' && (
+        <div className="space-y-5 max-w-2xl">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-bold text-white">Promotional Coupons</h2>
+              <p className="text-xs text-slate-400">Manage promo discount codes synced in Firestore.</p>
+            </div>
+            <button onClick={() => setShowCouponForm(!showCouponForm)}
+              className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2">
+              <Plus className="h-4 w-4" /> New Coupon
+            </button>
+          </div>
+
+          {showCouponForm && (
+            <div className="p-5 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
+              <h3 className="text-sm font-bold text-white">Create Promo Code</h3>
+              <div className="grid grid-cols-3 gap-4 text-xs">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 block mb-1">Target Recipient</label>
-                  <input
-                    type="email"
-                    value={smtpRecipient}
-                    onChange={(e) => setSmtpRecipient(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-obsidian-850 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-brand-500"
-                  />
+                  <label className="text-slate-400 font-bold block mb-1">Code</label>
+                  <input value={newCoupon.code} onChange={e => setNewCoupon(p => ({ ...p, code: e.target.value }))}
+                    placeholder="e.g. VIP40"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white uppercase focus:outline-none focus:border-blue-500 font-mono" />
                 </div>
-
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 block mb-1">Select Email Template</label>
-                  <select
-                    value={smtpTemplate}
-                    onChange={(e) => setSmtpTemplate(e.target.value as any)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-obsidian-850 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-brand-500"
-                  >
-                    <option value="order_fulfillment">Order Credentials Delivered</option>
-                    <option value="renewal_reminder">3-Day Expiration Renewal Notice</option>
-                    <option value="auto_renewal_success">Auto-Renew Payment Confirmed</option>
-                    <option value="security_alert">New Device Login Alert</option>
-                    <option value="invoice_receipt">Tax Invoice PDF Receipt</option>
-                  </select>
+                  <label className="text-slate-400 font-bold block mb-1">Discount %</label>
+                  <input type="number" value={newCoupon.discountPercent} onChange={e => setNewCoupon(p => ({ ...p, discountPercent: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500" />
                 </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-glow-purple transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  <span>Send Live SMTP Preview</span>
+                <div>
+                  <label className="text-slate-400 font-bold block mb-1">Min Order ($)</label>
+                  <input type="number" value={newCoupon.minOrderAmount || ''} onChange={e => setNewCoupon(p => ({ ...p, minOrderAmount: Number(e.target.value) || undefined }))}
+                    placeholder="Optional"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500" />
+                </div>
+                <div className="col-span-3">
+                  <label className="text-slate-400 font-bold block mb-1">Description</label>
+                  <input value={newCoupon.description} onChange={e => setNewCoupon(p => ({ ...p, description: e.target.value }))}
+                    placeholder="e.g. 40% off summer promo"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500" />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleCreateCoupon} className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2">
+                  <Save className="h-3.5 w-3.5" /> Save Coupon
                 </button>
-              </form>
-
-              {smtpFeedback && (
-                <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-xs text-emerald-300 font-bold">
-                  {smtpFeedback}
-                </div>
-              )}
-            </div>
-
-            {/* Email Dispatch History */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Recent SMTP Dispatches ({emailNotifications.length})
-              </h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {emailNotifications.map((eml) => (
-                  <div key={eml.id} className="p-3 rounded-xl bg-obsidian-900 border border-white/[0.06] text-xs space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-white truncate max-w-[200px]">{eml.subject}</span>
-                      <span className="text-[9px] uppercase font-bold text-emerald-400">{eml.status}</span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 font-mono">To: {eml.recipientEmail}</p>
-                    <p className="text-[9px] text-slate-500">{new Date(eml.sentAt).toLocaleTimeString()}</p>
-                  </div>
-                ))}
+                <button onClick={() => setShowCouponForm(false)} className="px-5 py-2.5 rounded-xl bg-zinc-800 text-slate-300 text-xs font-bold">Cancel</button>
               </div>
             </div>
+          )}
+
+          <div className="space-y-3">
+            {coupons.map(c => (
+              <div key={c.code} className="flex items-center justify-between p-4 rounded-2xl bg-zinc-900 border border-white/[0.08]">
+                <div className="flex items-center gap-4">
+                  <div className="px-3.5 py-2 rounded-xl bg-emerald-950/60 border border-emerald-500/30">
+                    <span className="font-mono font-black text-emerald-400 text-sm">{c.code}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white">{c.discountPercent}% OFF</p>
+                    <p className="text-[11px] text-slate-400">{c.description}{c.minOrderAmount ? ` · Min order $${c.minOrderAmount}` : ''}</p>
+                  </div>
+                </div>
+                <button onClick={() => adminDeleteCoupon(c.code).then(() => showFeedback('success', `Coupon ${c.code} deleted.`))}
+                  className="p-2 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-red-400 transition-colors">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* TICKETS TAB */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'tickets' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left: Ticket list */}
+          <div className="lg:col-span-4 space-y-2">
+            <h2 className="text-sm font-bold text-white mb-3">All Customer Tickets ({allTickets.length})</h2>
+            {allTickets.length === 0 ? (
+              <p className="text-slate-500 text-sm text-center py-10">No support tickets found.</p>
+            ) : allTickets.map(t => (
+              <div key={t.id} onClick={() => setSelectedTicketId(t.id)}
+                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                  (activeTicket?.id === t.id) ? 'bg-blue-950/50 border-blue-500/50 shadow-lg' : 'bg-zinc-900 border-white/[0.06] hover:bg-zinc-800'
+                }`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-mono text-cyan-400 font-bold">{t.ticketNumber}</span>
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
+                    t.status === 'open' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
+                    t.status === 'in_progress' ? 'bg-blue-950/60 text-blue-400 border-blue-500/30' :
+                    'bg-zinc-800 text-zinc-400 border-white/10'
+                  }`}>{t.status.replace('_', ' ')}</span>
+                </div>
+                <p className="text-xs font-bold text-white truncate">{t.subject}</p>
+                <p className="text-[10px] text-slate-400 mt-1">{t.userEmail}</p>
+              </div>
+            ))}
           </div>
 
-          {/* Right: Live HTML Template Preview Frame */}
-          <div className="lg:col-span-7">
-            <div className="p-6 rounded-3xl bg-obsidian-900 border border-white/[0.08] space-y-4">
-              <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Live HTML Render Preview
-                </span>
-                <span className="text-xs font-mono text-cyan-400 font-bold">{smtpTemplate}.html</span>
-              </div>
-
-              {/* Mock rendered email body */}
-              <div className="rounded-2xl bg-obsidian-950 border border-white/[0.1] p-6 text-slate-200 space-y-4 font-sans text-xs">
-                <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="h-6 w-6 rounded-lg bg-brand-500 flex items-center justify-center text-white font-bold">
-                      SN
-                    </div>
-                    <span className="font-black text-sm text-white">SubNexus VIP Fulfillment</span>
+          {/* Right: Ticket thread & reply */}
+          <div className="lg:col-span-8">
+            {activeTicket ? (
+              <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] flex flex-col" style={{ height: 600 }}>
+                <div className="p-4 border-b border-white/[0.06] bg-zinc-950 flex items-center justify-between rounded-t-3xl">
+                  <div>
+                    <span className="text-[10px] font-mono text-cyan-400 font-bold">{activeTicket.ticketNumber}</span>
+                    <h4 className="text-sm font-bold text-white">{activeTicket.subject}</h4>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{activeTicket.userEmail} · Category: <span className="text-slate-200 capitalize">{activeTicket.category.replace('_', ' ')}</span></p>
                   </div>
-                  <span className="text-[10px] text-slate-500 font-mono">SMTP 250 OK</span>
+                  {activeTicket.status !== 'closed' && (
+                    <button onClick={() => adminCloseTicket(activeTicket.id).then(() => showFeedback('success', 'Ticket closed.'))}
+                      className="px-3.5 py-1.5 rounded-xl bg-zinc-800 border border-white/10 text-xs text-slate-300 hover:text-white font-bold transition-all">
+                      Close Ticket
+                    </button>
+                  )}
                 </div>
 
-                <div className="space-y-2">
-                  <h4 className="text-base font-bold text-white">
-                    {smtpTemplate === 'order_fulfillment' && 'Your Subscription Credentials Have Been Allocated'}
-                    {smtpTemplate === 'renewal_reminder' && 'Reminder: Your Subscription Renews in 3 Days'}
-                    {smtpTemplate === 'auto_renewal_success' && 'Auto-Renewal Payment Successfully Settled'}
-                    {smtpTemplate === 'security_alert' && 'Security Notice: New Session Initiated'}
-                    {smtpTemplate === 'invoice_receipt' && 'Tax Invoice & Proof of Payment'}
-                  </h4>
-                  <p className="text-slate-300 leading-relaxed">
-                    Hello Alex Vance, this is an automated dispatch from the SubNexus Enterprise Gateway regarding your account.
-                  </p>
+                <div className="flex-1 p-5 overflow-y-auto space-y-4">
+                  {activeTicket.messages.map(msg => {
+                    const isAgent = msg.sender === 'agent';
+                    return (
+                      <div key={msg.id} className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'}`}>
+                        <span className="text-[11px] text-slate-400 mb-1">{msg.senderName} · {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <div className={`p-3.5 rounded-2xl max-w-sm text-xs leading-relaxed ${
+                          isAgent ? 'bg-blue-600 text-white rounded-tr-none shadow-md' : 'bg-zinc-800 text-slate-200 border border-white/[0.06] rounded-tl-none'
+                        }`}>
+                          {msg.content}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                <div className="p-4 rounded-xl bg-obsidian-900 border border-brand-500/30 space-y-2 font-mono text-[11px]">
-                  <p className="text-cyan-400 font-bold">Account Vault Snapshot:</p>
-                  <p className="text-slate-300">Target Email: {smtpRecipient}</p>
-                  <p className="text-slate-300">AES-256 Vault Token: enc_9941_vip_active</p>
-                  <p className="text-emerald-400">Warranty: 100% Term Protected</p>
-                </div>
-
-                <p className="text-[10px] text-slate-500 pt-2 border-t border-white/[0.06]">
-                  SubNexus Inc. 256-Bit SSL Automated Retail Vault. Reply directly to this email for assistance.
-                </p>
+                {activeTicket.status !== 'closed' ? (
+                  <div className="p-4 border-t border-white/[0.06] bg-zinc-950 flex gap-2 rounded-b-3xl">
+                    <input value={ticketReply} onChange={e => setTicketReply(e.target.value)}
+                      placeholder="Type official admin reply to customer…"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReplyTicket(activeTicket.id); } }}
+                    />
+                    <button onClick={() => handleReplyTicket(activeTicket.id)}
+                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all">
+                      Send Reply
+                    </button>
+                  </div>
+                ) : (
+                  <div className="p-3 text-center text-xs text-slate-500 bg-zinc-950 border-t border-white/[0.06] rounded-b-3xl">
+                    This support ticket is closed.
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="h-60 rounded-3xl bg-zinc-900 border border-white/[0.08] flex items-center justify-center text-slate-500 text-sm">
+                Select a ticket to view the conversation.
+              </div>
+            )}
           </div>
-
         </div>
       )}
 

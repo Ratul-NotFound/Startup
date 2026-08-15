@@ -11,8 +11,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Tag,
-  Sparkles,
-  Zap,
+  LogIn,
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 
@@ -30,6 +29,8 @@ export const CartDrawer: React.FC = () => {
     cartDiscount,
     cartTotal,
     setIsCheckoutOpen,
+    firebaseUser,
+    setIsAuthModalOpen,
   } = useApp();
 
   const [couponInput, setCouponInput] = useState('');
@@ -46,6 +47,11 @@ export const CartDrawer: React.FC = () => {
   };
 
   const handleProceedToCheckout = () => {
+    if (!firebaseUser) {
+      setIsCartOpen(false);
+      setIsAuthModalOpen(true);
+      return;
+    }
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
@@ -68,8 +74,8 @@ export const CartDrawer: React.FC = () => {
                 <ShoppingBag className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-base font-bold text-white">Your Subscription Cart</h3>
-                <p className="text-xs text-slate-400">{cart.length} item(s) pending dispatch</p>
+                <h3 className="text-base font-bold text-white">Your Cart</h3>
+                <p className="text-xs text-slate-400">{cart.length} item{cart.length !== 1 ? 's' : ''} in cart</p>
               </div>
             </div>
             <button
@@ -231,14 +237,22 @@ export const CartDrawer: React.FC = () => {
                 onClick={handleProceedToCheckout}
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-brand-600 via-indigo-600 to-cyan-500 hover:from-brand-500 hover:to-cyan-400 text-white font-extrabold text-sm shadow-glow transition-all flex items-center justify-center gap-2"
               >
-                <Zap className="h-4 w-4" />
-                <span>Instant Bot Checkout (${cartTotal.toFixed(2)})</span>
-                <ArrowRight className="h-4 w-4" />
+                {firebaseUser ? (
+                  <>
+                    <ArrowRight className="h-4 w-4" />
+                    <span>Proceed to Checkout (${cartTotal.toFixed(2)})</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" />
+                    <span>Sign In to Checkout</span>
+                  </>
+                )}
               </button>
 
               <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Instant dispatch with 100% replacement warranty</span>
+                <span>Instant delivery · 100% replacement warranty</span>
               </div>
             </div>
           )}

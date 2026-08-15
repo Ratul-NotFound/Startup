@@ -180,3 +180,12 @@ export interface FinancialMetric {
   growthMoM: number; // e.g. +24.6%
   lifetimeValue: number;
 }
+
+export interface AdminMember {
+  id: string;
+  email: string;
+  name?: string;
+  role: 'superadmin' | 'admin';
+  addedBy: string;
+  addedAt: string;
+}

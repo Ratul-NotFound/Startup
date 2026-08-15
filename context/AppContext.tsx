@@ -1,35 +1,29 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import {
-  Product,
-  CartItem,
-  Coupon,
-  CustomerProfile,
-  UserSubscription,
-  Order,
-  SupportTicket,
-  FinancialMetric,
-  EmailNotification,
-  PlanPricing,
-  PaymentMethod,
+  Product, CartItem, Coupon, CustomerProfile, UserSubscription,
+  Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
+  AdminMember,
 } from '@/types';
 import {
-  MOCK_PRODUCTS,
-  MOCK_COUPONS,
-  INITIAL_USER_PROFILE,
-  INITIAL_USER_SUBSCRIPTIONS,
-  INITIAL_ORDERS,
-  INITIAL_TICKETS,
+  MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
   INITIAL_FINANCIAL_METRICS,
 } from '@/lib/mock-data';
 import { generateOrderNumber, generateRandomId, generateMockCredentials } from '@/lib/utils';
 import { auth, db, initAnalytics } from '@/lib/firebase';
-import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
-import { doc, setDoc, getDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
+import {
+  onAuthStateChanged, signOut, User as FirebaseUser,
+} from 'firebase/auth';
+import {
+  doc, setDoc, getDoc, collection, getDocs, addDoc, updateDoc,
+  deleteDoc, query, where, orderBy, onSnapshot, writeBatch,
+} from 'firebase/firestore';
+
+// ─── Superadmin email ───────────────────────────────────────────────
+export const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
 
 interface AppContextType {
-  // Products
   products: Product[];
   selectedProduct: Product | null;
   setSelectedProduct: (p: Product | null) => void;
@@ -57,14 +51,14 @@ interface AppContextType {
   latestOrder: Order | null;
   setLatestOrder: (order: Order | null) => void;
 
-  // Subscriptions & Vault
+  // Subscriptions
   subscriptions: UserSubscription[];
   toggleAutoRenew: (subId: string) => void;
   extendSubscription: (subId: string, additionalDays: number) => void;
   activeVaultSub: UserSubscription | null;
   setActiveVaultSub: (sub: UserSubscription | null) => void;
 
-  // Customer Profile & Auth
+  // Auth & User
   user: CustomerProfile;
   setUser: React.Dispatch<React.SetStateAction<CustomerProfile>>;
   toggleUserRole: () => void;
@@ -72,15 +66,52 @@ interface AppContextType {
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
   logout: () => Promise<void>;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
 
-  // Admin & Renewal Simulator
+  // Admin Team Management
+  adminList: AdminMember[];
+  adminAddAdmin: (email: string, name?: string) => Promise<{ success: boolean; message: string }>;
+  adminRemoveAdmin: (email: string) => Promise<{ success: boolean; message: string }>;
+
+  // Admin: Product CRUD
+  adminCreateProduct: (product: Omit<Product, 'id'>) => Promise<string>;
+  adminUpdateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  adminDeleteProduct: (id: string) => Promise<void>;
+
+  // Admin: Order management
+  allOrders: Order[];
+  adminUpdateOrderStatus: (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => Promise<void>;
+
+  // Admin: User management
+  allUsers: CustomerProfile[];
+  adminUpdateUserRole: (userId: string, role: 'customer' | 'admin') => Promise<void>;
+
+  // Admin: Subscription management
+  allSubscriptions: UserSubscription[];
+  adminUpdateSubscriptionCredentials: (subId: string, credentials: Partial<UserSubscription['credentials']>) => Promise<void>;
+  adminUpdateSubscriptionStatus: (subId: string, status: UserSubscription['status']) => Promise<void>;
+
+  // Admin: Coupon CRUD
+  coupons: Coupon[];
+  adminCreateCoupon: (coupon: Coupon) => Promise<void>;
+  adminDeleteCoupon: (code: string) => Promise<void>;
+
+  // Admin: Support tickets
+  allTickets: SupportTicket[];
+  adminReplyToTicket: (ticketId: string, message: string) => Promise<void>;
+  adminCloseTicket: (ticketId: string) => Promise<void>;
+
+  // Analytics & Admin
   financialMetrics: FinancialMetric;
   emailNotifications: EmailNotification[];
   sendTestEmail: (recipient: string, templateType: EmailNotification['templateType']) => void;
   triggerRenewalCronSimulation: () => { renewedCount: number; notifiedCount: number };
   fastForwardSimulationDays: (days: number) => void;
+  refreshAllData: () => Promise<void>;
+  isSyncing: boolean;
 
-  // Support
+  // User Support
   tickets: SupportTicket[];
   createSupportTicket: (subject: string, category: SupportTicket['category'], initialMessage: string) => SupportTicket;
   replyToTicket: (ticketId: string, content: string, sender: 'user' | 'agent') => void;
@@ -97,158 +128,390 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  
+
   // Cart
   const [cart, setCart] = useState<CartItem[]>([]);
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  // User & Firebase Auth
+  // Auth & Roles
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminList, setAdminList] = useState<AdminMember[]>([]);
+
+  // User data
   const [user, setUser] = useState<CustomerProfile>(INITIAL_USER_PROFILE);
-  const [subscriptions, setSubscriptions] = useState<UserSubscription[]>(INITIAL_USER_SUBSCRIPTIONS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [latestOrder, setLatestOrder] = useState<Order | null>(null);
   const [activeVaultSub, setActiveVaultSub] = useState<UserSubscription | null>(null);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
-  // Analytics & Admin
+  // Admin data (all users' data)
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [allUsers, setAllUsers] = useState<CustomerProfile[]>([]);
+  const [allSubscriptions, setAllSubscriptions] = useState<UserSubscription[]>([]);
+  const [allTickets, setAllTickets] = useState<SupportTicket[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>(MOCK_COUPONS);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Analytics
   const [financialMetrics, setFinancialMetrics] = useState<FinancialMetric>(INITIAL_FINANCIAL_METRICS);
-  const [emailNotifications, setEmailNotifications] = useState<EmailNotification[]>([
-    {
-      id: 'eml-101',
-      recipientEmail: 'alex.vance@techcorp.io',
-      subject: '🔐 Your ChatGPT Plus Credentials & Access Vault',
-      templateType: 'order_fulfillment',
-      sentAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-      status: 'sent',
-      previewHtml: '<h1>Welcome to SubNexus VIP</h1><p>Your subscription is active. Credentials revealed in secure vault.</p>',
-    },
-    {
-      id: 'eml-102',
-      recipientEmail: 'alex.vance@techcorp.io',
-      subject: '⚠️ Reminder: Claude 3.5 Pro Renews in 3 Days',
-      templateType: 'renewal_reminder',
-      sentAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      status: 'sent',
-      previewHtml: '<h1>Renewal Notice</h1><p>Your Claude 3.5 Pro plan expires in 3 days. Extend now to keep continuous access.</p>',
-    },
-  ]);
+  const [emailNotifications, setEmailNotifications] = useState<EmailNotification[]>([]);
 
-  // Support
-  const [tickets, setTickets] = useState<SupportTicket[]>(INITIAL_TICKETS);
-
-  // Filters & Search
+  // Global UI
   const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [activeCategoryFilter, setActiveCategoryFilter] = useState('all');
 
-  // Initialize Firebase Analytics
-  useEffect(() => {
-    initAnalytics();
+  // Active unsubs ref to clean up on unmount or user change
+  const unsubscribersRef = useRef<(() => void)[]>([]);
+
+  // ─── Analytics init ────────────────────────────────────────────────
+  useEffect(() => { initAnalytics(); }, []);
+
+  // ─── Auto-seed Firestore if empty on startup ──────────────────────
+  const seedFirestoreIfEmpty = useCallback(async () => {
+    try {
+      // 1. Seed products if empty
+      const prodSnap = await getDocs(collection(db, 'products'));
+      if (prodSnap.empty) {
+        console.log('[Firestore] Seeding initial products...');
+        const batch = writeBatch(db);
+        for (const prod of MOCK_PRODUCTS) {
+          const docRef = doc(db, 'products', prod.id);
+          batch.set(docRef, prod);
+        }
+        await batch.commit();
+      }
+
+      // 2. Seed coupons if empty
+      const couponSnap = await getDocs(collection(db, 'coupons'));
+      if (couponSnap.empty) {
+        console.log('[Firestore] Seeding initial coupons...');
+        const batch = writeBatch(db);
+        for (const c of MOCK_COUPONS) {
+          const docRef = doc(db, 'coupons', c.code);
+          batch.set(docRef, c);
+        }
+        await batch.commit();
+      }
+
+      // 3. Ensure superadmin doc exists in admins collection
+      const superAdminRef = doc(db, 'admins', SUPERADMIN_EMAIL.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+      const superAdminSnap = await getDoc(superAdminRef);
+      if (!superAdminSnap.exists()) {
+        await setDoc(superAdminRef, {
+          id: superAdminRef.id,
+          email: SUPERADMIN_EMAIL.toLowerCase(),
+          name: 'Owner (Superadmin)',
+          role: 'superadmin',
+          addedBy: 'System',
+          addedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.warn('[Firestore] Seed check note:', err);
+    }
   }, []);
 
-  // Listen to Firebase Auth state
+  // ─── Global Real-time Listeners (Products & Coupons & Admin List) ─
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentFirebaseUser) => {
-      setFirebaseUser(currentFirebaseUser);
-      if (currentFirebaseUser) {
-        const updatedProfile: CustomerProfile = {
-          id: currentFirebaseUser.uid,
-          name: currentFirebaseUser.displayName || currentFirebaseUser.email?.split('@')[0] || 'Subscriber',
-          email: currentFirebaseUser.email || 'user@subnexus.dev',
-          avatar: currentFirebaseUser.photoURL || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-          role: user.role || 'customer',
-          joinedDate: user.joinedDate || new Date().toISOString().split('T')[0],
-          lifetimeSpend: user.lifetimeSpend || 0,
-          activeSubscriptionsCount: subscriptions.length,
+    seedFirestoreIfEmpty();
+
+    // 1. Real-time products listener (available to all users)
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+      if (!snapshot.empty) {
+        const prods = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Product));
+        setProducts(prods);
+      }
+    }, (err) => console.warn('[Firestore] Products listener error:', err));
+
+    // 2. Real-time coupons listener (available to all users)
+    const unsubCoupons = onSnapshot(collection(db, 'coupons'), (snapshot) => {
+      if (!snapshot.empty) {
+        const cps = snapshot.docs.map(d => d.data() as Coupon);
+        setCoupons(cps);
+      }
+    }, (err) => console.warn('[Firestore] Coupons listener error:', err));
+
+    // 3. Real-time admin list listener
+    const unsubAdmins = onSnapshot(collection(db, 'admins'), (snapshot) => {
+      if (!snapshot.empty) {
+        const admins = snapshot.docs.map(d => d.data() as AdminMember);
+        setAdminList(admins);
+      } else {
+        setAdminList([{
+          id: 'superadmin',
+          email: SUPERADMIN_EMAIL,
+          name: 'Owner',
+          role: 'superadmin',
+          addedBy: 'System',
+          addedAt: new Date().toISOString(),
+        }]);
+      }
+    }, (err) => console.warn('[Firestore] Admin list listener error:', err));
+
+    return () => {
+      unsubProducts();
+      unsubCoupons();
+      unsubAdmins();
+    };
+  }, [seedFirestoreIfEmpty]);
+
+  // ─── Real-time Admin Data Listeners ─────────────────────────────────
+  const setupAdminRealtimeListeners = useCallback(() => {
+    // Clear any previous listeners
+    unsubscribersRef.current.forEach(u => u());
+    unsubscribersRef.current = [];
+
+    // All orders listener
+    const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+      const ords = snapshot.docs.map(d => d.data() as Order).sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setAllOrders(ords);
+
+      // Recompute financial metrics live
+      const totalRev = ords.reduce((acc, o) => acc + (o.total || 0), 0);
+      const todayStr = new Date().toDateString();
+      const todayRev = ords
+        .filter(o => new Date(o.createdAt).toDateString() === todayStr)
+        .reduce((acc, o) => acc + (o.total || 0), 0);
+
+      setFinancialMetrics(prev => ({
+        ...prev,
+        mrr: totalRev,
+        arr: totalRev * 12,
+        netRevenueToday: todayRev,
+        activeSubscribers: ords.length,
+        averageOrderValue: ords.length > 0 ? totalRev / ords.length : 0,
+      }));
+    });
+    unsubscribersRef.current.push(unsubOrders);
+
+    // All users listener
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const usrs = snapshot.docs.map(d => d.data() as CustomerProfile);
+      setAllUsers(usrs);
+    });
+    unsubscribersRef.current.push(unsubUsers);
+
+    // All subscriptions listener
+    const unsubSubs = onSnapshot(collection(db, 'subscriptions'), (snapshot) => {
+      const sbs = snapshot.docs.map(d => d.data() as UserSubscription);
+      setAllSubscriptions(sbs);
+    });
+    unsubscribersRef.current.push(unsubSubs);
+
+    // All support tickets listener
+    const unsubTickets = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
+      const tkts = snapshot.docs.map(d => d.data() as SupportTicket).sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setAllTickets(tkts);
+    });
+    unsubscribersRef.current.push(unsubTickets);
+  }, []);
+
+  // ─── Auth state listener & User-specific live listeners ─────────────
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      setFirebaseUser(fbUser);
+
+      if (fbUser) {
+        const userEmailLower = (fbUser.email || '').toLowerCase().trim();
+        const isSuper = userEmailLower === SUPERADMIN_EMAIL.toLowerCase();
+        setIsSuperAdmin(isSuper);
+
+        // Check if user is an admin in the adminList or has admin role in Firestore
+        let isUserAdmin = isSuper;
+        try {
+          const adminDocId = userEmailLower.replace(/[^a-z0-9]/g, '_');
+          const adminDocSnap = await getDoc(doc(db, 'admins', adminDocId));
+          if (adminDocSnap.exists()) {
+            isUserAdmin = true;
+          }
+        } catch { }
+
+        setIsAdmin(isUserAdmin);
+
+        // Base user profile
+        const profile: CustomerProfile = {
+          id: fbUser.uid,
+          name: fbUser.displayName || userEmailLower.split('@')[0] || 'User',
+          email: fbUser.email || '',
+          avatar: fbUser.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(fbUser.displayName || 'User')}&background=6366f1&color=fff&size=200`,
+          role: isUserAdmin ? 'admin' : 'customer',
+          joinedDate: new Date().toISOString().split('T')[0],
+          lifetimeSpend: 0,
+          activeSubscriptionsCount: 0,
           preferredCurrency: 'USD',
           emailAlertsEnabled: true,
           autoRenewEnabled: true,
         };
 
-        setUser(updatedProfile);
-
-        // Sync with Firestore user profile
+        // Sync user in Firestore
         try {
-          const userDocRef = doc(db, 'users', currentFirebaseUser.uid);
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setUser((prev) => ({ ...prev, ...data }));
+          const userRef = doc(db, 'users', fbUser.uid);
+          const snap = await getDoc(userRef);
+          if (snap.exists()) {
+            const data = snap.data() as CustomerProfile;
+            const updatedRole = isUserAdmin ? 'admin' : (data.role || 'customer');
+            setUser({ ...profile, ...data, role: updatedRole });
+            if (data.role !== updatedRole) {
+              await updateDoc(userRef, { role: updatedRole });
+            }
           } else {
-            await setDoc(userDocRef, updatedProfile, { merge: true });
+            await setDoc(userRef, profile);
+            setUser(profile);
           }
-        } catch (err) {
-          console.warn('Firestore user profile sync note:', err);
+        } catch {
+          setUser(profile);
         }
+
+        // Live User Orders Listener
+        const unsubUserOrders = onSnapshot(
+          query(collection(db, 'orders'), where('userId', '==', fbUser.uid)),
+          (snapshot) => {
+            const uOrders = snapshot.docs.map(d => d.data() as Order);
+            setOrders(uOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+          }
+        );
+
+        // Live User Subscriptions Listener
+        const unsubUserSubs = onSnapshot(
+          query(collection(db, 'subscriptions'), where('userId', '==', fbUser.uid)),
+          (snapshot) => {
+            const uSubs = snapshot.docs.map(d => d.data() as UserSubscription);
+            setSubscriptions(uSubs);
+          }
+        );
+
+        // Live User Tickets Listener
+        const unsubUserTickets = onSnapshot(
+          query(collection(db, 'support_tickets'), where('userId', '==', fbUser.uid)),
+          (snapshot) => {
+            const uTkts = snapshot.docs.map(d => d.data() as SupportTicket);
+            setTickets(uTkts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+          }
+        );
+
+        unsubscribersRef.current.push(unsubUserOrders, unsubUserSubs, unsubUserTickets);
+
+        // If admin or superadmin, activate full real-time database listeners
+        if (isUserAdmin) {
+          setupAdminRealtimeListeners();
+        }
+
+        setIsAuthModalOpen(false);
+      } else {
+        // Signed out
+        setIsSuperAdmin(false);
+        setIsAdmin(false);
+        setUser(INITIAL_USER_PROFILE);
+        setOrders([]);
+        setSubscriptions([]);
+        setTickets([]);
+        setAllOrders([]);
+        setAllUsers([]);
+        setAllSubscriptions([]);
+        setAllTickets([]);
+
+        // Clean up listeners
+        unsubscribersRef.current.forEach(u => u());
+        unsubscribersRef.current = [];
       }
     });
 
-    return () => unsubscribe();
-  }, [user.role, subscriptions.length]);
+    return () => {
+      unsubscribeAuth();
+      unsubscribersRef.current.forEach(u => u());
+      unsubscribersRef.current = [];
+    };
+  }, [setupAdminRealtimeListeners]);
 
-  const logout = async () => {
+  // ─── Manual Refresh All Data ──────────────────────────────────────
+  const refreshAllData = useCallback(async () => {
+    setIsSyncing(true);
     try {
-      await signOut(auth);
-      setFirebaseUser(null);
-      setUser(INITIAL_USER_PROFILE);
+      // Refresh products
+      const pSnap = await getDocs(collection(db, 'products'));
+      if (!pSnap.empty) {
+        setProducts(pSnap.docs.map(d => ({ id: d.id, ...d.data() } as Product)));
+      }
+
+      // Refresh coupons
+      const cSnap = await getDocs(collection(db, 'coupons'));
+      if (!cSnap.empty) {
+        setCoupons(cSnap.docs.map(d => d.data() as Coupon));
+      }
+
+      // Refresh admins
+      const aSnap = await getDocs(collection(db, 'admins'));
+      if (!aSnap.empty) {
+        setAdminList(aSnap.docs.map(d => d.data() as AdminMember));
+      }
+
+      // If admin, refresh all collections
+      if (isAdmin || isSuperAdmin) {
+        const [ordSnap, usrSnap, subSnap, tktSnap] = await Promise.all([
+          getDocs(collection(db, 'orders')),
+          getDocs(collection(db, 'users')),
+          getDocs(collection(db, 'subscriptions')),
+          getDocs(collection(db, 'support_tickets')),
+        ]);
+
+        const ords = ordSnap.docs.map(d => d.data() as Order).sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setAllOrders(ords);
+        setAllUsers(usrSnap.docs.map(d => d.data() as CustomerProfile));
+        setAllSubscriptions(subSnap.docs.map(d => d.data() as UserSubscription));
+        setAllTickets(tktSnap.docs.map(d => d.data() as SupportTicket).sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ));
+
+        const totalRev = ords.reduce((acc, o) => acc + (o.total || 0), 0);
+        setFinancialMetrics(prev => ({
+          ...prev,
+          mrr: totalRev,
+          arr: totalRev * 12,
+          activeSubscribers: ords.length,
+        }));
+      }
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error('[AppContext] Manual sync error:', err);
+    } finally {
+      setIsSyncing(false);
     }
-  };
+  }, [isAdmin, isSuperAdmin]);
 
-  // Sync to local storage for persistence across reloads
+  // ─── Cart persistence ──────────────────────────────────────────────
   useEffect(() => {
     try {
-      const savedCart = localStorage.getItem('subnexus_cart');
-      if (savedCart) setCart(JSON.parse(savedCart));
-      const savedSubs = localStorage.getItem('subnexus_subs');
-      if (savedSubs) setSubscriptions(JSON.parse(savedSubs));
-      const savedOrders = localStorage.getItem('subnexus_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
-    } catch {
-      // ignore
-    }
+      const saved = localStorage.getItem('subnexus_cart');
+      if (saved) setCart(JSON.parse(saved));
+    } catch { }
   }, []);
-
   useEffect(() => {
-    try {
-      localStorage.setItem('subnexus_cart', JSON.stringify(cart));
-    } catch {
-      // ignore
-    }
+    try { localStorage.setItem('subnexus_cart', JSON.stringify(cart)); } catch { }
   }, [cart]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('subnexus_subs', JSON.stringify(subscriptions));
-    } catch {
-      // ignore
-    }
-  }, [subscriptions]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('subnexus_orders', JSON.stringify(orders));
-    } catch {
-      // ignore
-    }
-  }, [orders]);
-
-  // Cart Calculations
-  const cartSubtotal = cart.reduce((acc, item) => acc + item.selectedPlan.price * item.quantity, 0);
+  // ─── Computed cart values ──────────────────────────────────────────
+  const cartSubtotal = cart.reduce((acc, i) => acc + i.selectedPlan.price * i.quantity, 0);
   const cartDiscount = appliedCoupon ? (cartSubtotal * appliedCoupon.discountPercent) / 100 : 0;
   const cartTotal = Math.max(0, cartSubtotal - cartDiscount);
 
+  // ─── Cart actions ──────────────────────────────────────────────────
   const addToCart = (product: Product, selectedPlan: PlanPricing, customEmail?: string) => {
-    setCart((prev) => {
-      const existingIndex = prev.findIndex(
-        (item) => item.product.id === product.id && item.selectedPlan.duration === selectedPlan.duration
-      );
-      if (existingIndex > -1) {
+    setCart(prev => {
+      const idx = prev.findIndex(i => i.product.id === product.id && i.selectedPlan.duration === selectedPlan.duration);
+      if (idx > -1) {
         const updated = [...prev];
-        updated[existingIndex].quantity += 1;
+        updated[idx].quantity += 1;
         return updated;
       }
       return [...prev, { product, selectedPlan, quantity: 1, customEmail }];
@@ -256,393 +519,402 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsCartOpen(true);
   };
 
-  const removeFromCart = (productId: string, duration: string) => {
-    setCart((prev) => prev.filter((item) => !(item.product.id === productId && item.selectedPlan.duration === duration)));
-  };
+  const removeFromCart = (productId: string, duration: string) =>
+    setCart(prev => prev.filter(i => !(i.product.id === productId && i.selectedPlan.duration === duration)));
 
   const updateCartItemQuantity = (productId: string, duration: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId, duration);
-      return;
-    }
-    setCart((prev) =>
-      prev.map((item) =>
-        item.product.id === productId && item.selectedPlan.duration === duration
-          ? { ...item, quantity }
-          : item
-      )
-    );
+    if (quantity <= 0) { removeFromCart(productId, duration); return; }
+    setCart(prev => prev.map(i =>
+      i.product.id === productId && i.selectedPlan.duration === duration ? { ...i, quantity } : i
+    ));
   };
 
-  const clearCart = () => {
-    setCart([]);
-    setAppliedCoupon(null);
-  };
+  const clearCart = () => { setCart([]); setAppliedCoupon(null); };
 
   const applyCoupon = (code: string) => {
-    const cleanCode = code.trim().toUpperCase();
-    const found = MOCK_COUPONS.find((c) => c.code === cleanCode);
-    if (!found) {
-      return { success: false, message: 'Invalid promo code. Try NEXUS20 or VIP50' };
-    }
-    if (found.minOrderAmount && cartSubtotal < found.minOrderAmount) {
-      return { success: false, message: `Coupon requires minimum order of $${found.minOrderAmount}` };
-    }
+    const found = coupons.find(c => c.code.toUpperCase() === code.trim().toUpperCase());
+    if (!found) return { success: false, message: 'Invalid promo code.' };
+    if (found.minOrderAmount && cartSubtotal < found.minOrderAmount)
+      return { success: false, message: `Minimum order $${found.minOrderAmount} required.` };
     setAppliedCoupon(found);
-    return { success: true, message: `Applied ${found.discountPercent}% OFF coupon!` };
+    return { success: true, message: `${found.discountPercent}% discount applied!` };
   };
 
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-  };
+  const removeCoupon = () => setAppliedCoupon(null);
 
-  const toggleUserRole = () => {
-    setUser((prev) => ({
-      ...prev,
-      role: prev.role === 'customer' ? 'admin' : 'customer',
-    }));
-  };
-
-  const toggleAutoRenew = (subId: string) => {
-    setSubscriptions((prev) =>
-      prev.map((sub) => (sub.id === subId ? { ...sub, autoRenew: !sub.autoRenew } : sub))
-    );
-  };
-
-  const extendSubscription = (subId: string, additionalDays: number) => {
-    setSubscriptions((prev) =>
-      prev.map((sub) => {
-        if (sub.id !== subId) return sub;
-        const currentExp = new Date(sub.expiryDate).getTime();
-        const baseTime = currentExp > Date.now() ? currentExp : Date.now();
-        const newExp = new Date(baseTime + additionalDays * 24 * 60 * 60 * 1000).toISOString();
-        return {
-          ...sub,
-          expiryDate: newExp,
-          warrantyValidUntil: newExp,
-          status: 'active',
-        };
-      })
-    );
-  };
-
+  // ─── Checkout ──────────────────────────────────────────────────────
   const processCheckout = async (paymentMethod: PaymentMethod, customEmail?: string): Promise<Order> => {
     const orderId = generateRandomId('ord');
     const orderNum = generateOrderNumber();
+    const newSubs: UserSubscription[] = [];
     const generatedSubIds: string[] = [];
 
-    const newSubs: UserSubscription[] = [];
-
-    cart.forEach((item) => {
+    for (const item of cart) {
       for (let i = 0; i < item.quantity; i++) {
         const subId = generateRandomId('sub');
         generatedSubIds.push(subId);
-
-        let durationDays = 30;
-        if (item.selectedPlan.duration === '3_months') durationDays = 90;
-        if (item.selectedPlan.duration === '6_months') durationDays = 180;
-        if (item.selectedPlan.duration === '12_months') durationDays = 365;
-        if (item.selectedPlan.duration === 'lifetime') durationDays = 730;
-
+        const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+        const durationDays = daysMap[item.selectedPlan.duration] || 30;
         const startDate = new Date().toISOString();
-        const expiryDate = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString();
-
+        const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
         const creds = generateMockCredentials(item.product.name, item.product.accountType, customEmail || user.email);
-
         const sub: UserSubscription = {
-          id: subId,
-          orderId: orderId,
-          productId: item.product.id,
-          productName: item.product.name,
-          productLogo: item.product.logo,
-          planDuration: item.selectedPlan.duration,
-          durationLabel: item.selectedPlan.label,
-          pricePaid: item.selectedPlan.price,
-          status: 'active',
-          startDate,
-          expiryDate,
-          autoRenew: true,
-          autoRenewReminderDays: 3,
-          accountType: item.product.accountType,
-          warrantyValidUntil: expiryDate,
-          paymentMethod,
-          credentials: creds,
+          id: subId, orderId,
+          productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
+          planDuration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
+          pricePaid: item.selectedPlan.price, status: 'active', startDate, expiryDate,
+          autoRenew: true, autoRenewReminderDays: 3, accountType: item.product.accountType,
+          warrantyValidUntil: expiryDate, paymentMethod, credentials: creds,
+          // @ts-ignore – store userId for Firestore queries
+          userId: user.id,
         };
-
         newSubs.push(sub);
-
-        // Async write each subscription to Firestore
-        try {
-          setDoc(doc(db, 'subscriptions', subId), sub);
-        } catch (err) {
-          console.warn('Firestore subscription write note:', err);
-        }
+        // Write to Firestore
+        try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
       }
-    });
+    }
 
     const newOrder: Order = {
-      id: orderId,
-      orderNumber: orderNum,
-      createdAt: new Date().toISOString(),
-      userId: user.id,
-      userEmail: customEmail || user.email,
-      items: cart.map((item) => ({
-        productId: item.product.id,
-        productName: item.product.name,
-        productLogo: item.product.logo,
-        duration: item.selectedPlan.duration,
-        durationLabel: item.selectedPlan.label,
-        price: item.selectedPlan.price,
-        quantity: item.quantity,
+      id: orderId, orderNumber: orderNum, createdAt: new Date().toISOString(),
+      userId: user.id, userEmail: customEmail || user.email,
+      items: cart.map(item => ({
+        productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
+        duration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
+        price: item.selectedPlan.price, quantity: item.quantity,
       })),
-      subtotal: cartSubtotal,
-      discount: cartDiscount,
-      total: cartTotal,
-      paymentMethod,
+      subtotal: cartSubtotal, discount: cartDiscount, total: cartTotal, paymentMethod,
       paymentStatus: 'paid',
-      transactionHash: paymentMethod.startsWith('crypto') 
+      transactionHash: paymentMethod.startsWith('crypto')
         ? `0x${Math.random().toString(16).substring(2)}${Math.random().toString(16).substring(2)}`
         : `ch_${Math.random().toString(36).substring(2, 14)}`,
       deliveryStatus: 'delivered',
       generatedSubscriptionIds: generatedSubIds,
     };
 
-    // Async write order to Firestore
+    // Write order to Firestore
+    try { await setDoc(doc(db, 'orders', orderId), newOrder); } catch (err) { console.error(err); }
+
+    // Update user stats in Firestore
     try {
-      setDoc(doc(db, 'orders', orderId), newOrder);
-    } catch (err) {
-      console.warn('Firestore order write note:', err);
-    }
+      const userRef = doc(db, 'users', user.id);
+      await updateDoc(userRef, {
+        lifetimeSpend: (user.lifetimeSpend || 0) + cartTotal,
+        activeSubscriptionsCount: (user.activeSubscriptionsCount || 0) + newSubs.length,
+      });
+    } catch { }
 
-    // Update state
-    setSubscriptions((prev) => [...newSubs, ...prev]);
-    setOrders((prev) => [newOrder, ...prev]);
     setLatestOrder(newOrder);
-    setUser((prev) => ({
-      ...prev,
-      lifetimeSpend: prev.lifetimeSpend + cartTotal,
-      activeSubscriptionsCount: prev.activeSubscriptionsCount + newSubs.length,
-    }));
-
-    // Update financial metrics
-    setFinancialMetrics((prev) => ({
-      ...prev,
-      mrr: prev.mrr + cartTotal,
-      arr: (prev.mrr + cartTotal) * 12,
-      netRevenueToday: prev.netRevenueToday + cartTotal,
-      activeSubscribers: prev.activeSubscribers + newSubs.length,
-    }));
-
-    // Add automated fulfillment email
-    const fulfillmentEmail: EmailNotification = {
-      id: generateRandomId('eml'),
-      recipientEmail: customEmail || user.email,
-      subject: `🔐 Order Confirmed & Credentials: ${orderNum}`,
-      templateType: 'order_fulfillment',
-      sentAt: new Date().toISOString(),
-      status: 'sent',
-      previewHtml: `<h3>Thank you for your order!</h3><p>Your subscription is active. Order #${orderNum} total: $${cartTotal.toFixed(2)}</p>`,
-    };
-    setEmailNotifications((prev) => [fulfillmentEmail, ...prev]);
-
     clearCart();
     return newOrder;
   };
 
-  const sendTestEmail = (recipient: string, templateType: EmailNotification['templateType']) => {
-    const newEmail: EmailNotification = {
-      id: generateRandomId('eml'),
-      recipientEmail: recipient,
-      subject: templateType === 'order_fulfillment' 
-        ? '🔐 Manual Trigger: Order Fulfillment Vault Credentials'
-        : templateType === 'renewal_reminder'
-        ? '⚠️ Auto-Renewal 3-Day Notice'
-        : '🔒 Security Alert: New Device Login',
-      templateType,
-      sentAt: new Date().toISOString(),
-      status: 'sent',
-      previewHtml: `<p>Test email payload for ${templateType} sent to ${recipient}</p>`,
-    };
-    setEmailNotifications((prev) => [newEmail, ...prev]);
-  };
-
-  const triggerRenewalCronSimulation = () => {
-    let renewedCount = 0;
-    let notifiedCount = 0;
-
-    const now = Date.now();
-
-    setSubscriptions((prev) =>
-      prev.map((sub) => {
-        const expTime = new Date(sub.expiryDate).getTime();
-        const diffDays = (expTime - now) / (1000 * 60 * 60 * 24);
-
-        if (diffDays <= 0 && sub.autoRenew) {
-          renewedCount += 1;
-          const extended = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
-          return {
-            ...sub,
-            expiryDate: extended,
-            warrantyValidUntil: extended,
-            status: 'active',
-          };
-        } else if (diffDays <= 3 && diffDays > 0) {
-          notifiedCount += 1;
-          return {
-            ...sub,
-            status: 'expiring_soon',
-          };
-        }
-        return sub;
-      })
-    );
-
-    return { renewedCount, notifiedCount };
-  };
-
-  const fastForwardSimulationDays = (days: number) => {
-    setSubscriptions((prev) =>
-      prev.map((sub) => {
-        const oldExp = new Date(sub.expiryDate).getTime();
-        const fastForwarded = new Date(oldExp - days * 24 * 60 * 60 * 1000).toISOString();
-        const isExpired = new Date(fastForwarded).getTime() < Date.now();
-        return {
-          ...sub,
-          expiryDate: fastForwarded,
-          status: isExpired ? 'expired' : 'active',
-        };
-      })
-    );
-  };
-
-  const createSupportTicket = (
-    subject: string,
-    category: SupportTicket['category'],
-    initialMessage: string
-  ): SupportTicket => {
-    const ticketId = generateRandomId('tkt');
-    const newTicket: SupportTicket = {
-      id: ticketId,
-      ticketNumber: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: user.id,
-      userEmail: user.email,
-      subject,
-      category,
-      priority: 'high',
-      status: 'open',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      messages: [
-        {
-          id: generateRandomId('msg'),
-          sender: 'user',
-          senderName: user.name,
-          content: initialMessage,
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    };
-
-    // Async write to Firestore support tickets
+  // ─── Subscription management ───────────────────────────────────────
+  const toggleAutoRenew = async (subId: string) => {
+    const sub = subscriptions.find(s => s.id === subId);
+    if (!sub) return;
+    const newAutoRenew = !sub.autoRenew;
     try {
-      setDoc(doc(db, 'support_tickets', ticketId), newTicket);
-    } catch (err) {
-      console.warn('Firestore ticket write note:', err);
+      await updateDoc(doc(db, 'subscriptions', subId), { autoRenew: newAutoRenew });
+    } catch { }
+  };
+
+  const extendSubscription = async (subId: string, additionalDays: number) => {
+    const sub = subscriptions.find(s => s.id === subId) || allSubscriptions.find(s => s.id === subId);
+    if (!sub) return;
+    const base = Math.max(new Date(sub.expiryDate).getTime(), Date.now());
+    const newExp = new Date(base + additionalDays * 86400000).toISOString();
+    try {
+      await updateDoc(doc(db, 'subscriptions', subId), { expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' });
+    } catch { }
+  };
+
+  // ─── Admin Team Management (Add/Remove Admins) ──────────────────────
+  const adminAddAdmin = async (email: string, name?: string): Promise<{ success: boolean; message: string }> => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Please enter a valid email address.' };
     }
 
-    setTickets((prev) => [newTicket, ...prev]);
+    try {
+      const docId = cleanEmail.replace(/[^a-z0-9]/g, '_');
+      const adminRef = doc(db, 'admins', docId);
+
+      const newAdmin: AdminMember = {
+        id: docId,
+        email: cleanEmail,
+        name: name || cleanEmail.split('@')[0],
+        role: 'admin',
+        addedBy: user.email || SUPERADMIN_EMAIL,
+        addedAt: new Date().toISOString(),
+      };
+
+      await setDoc(adminRef, newAdmin);
+
+      // Also if user is already in `users` collection, promote their role
+      try {
+        const userQ = query(collection(db, 'users'), where('email', '==', cleanEmail));
+        const userSnap = await getDocs(userQ);
+        for (const uDoc of userSnap.docs) {
+          await updateDoc(uDoc.ref, { role: 'admin' });
+        }
+      } catch { }
+
+      return { success: true, message: `Admin ${cleanEmail} added successfully.` };
+    } catch (err: any) {
+      console.error('adminAddAdmin error:', err);
+      return { success: false, message: err.message || 'Failed to add admin.' };
+    }
+  };
+
+  const adminRemoveAdmin = async (email: string): Promise<{ success: boolean; message: string }> => {
+    const cleanEmail = email.toLowerCase().trim();
+    if (cleanEmail === SUPERADMIN_EMAIL.toLowerCase()) {
+      return { success: false, message: 'Cannot remove the primary Superadmin.' };
+    }
+
+    try {
+      const docId = cleanEmail.replace(/[^a-z0-9]/g, '_');
+      await deleteDoc(doc(db, 'admins', docId));
+
+      // Also demote in `users` collection
+      try {
+        const userQ = query(collection(db, 'users'), where('email', '==', cleanEmail));
+        const userSnap = await getDocs(userQ);
+        for (const uDoc of userSnap.docs) {
+          await updateDoc(uDoc.ref, { role: 'customer' });
+        }
+      } catch { }
+
+      return { success: true, message: `Admin privileges removed for ${cleanEmail}.` };
+    } catch (err: any) {
+      console.error('adminRemoveAdmin error:', err);
+      return { success: false, message: err.message || 'Failed to remove admin.' };
+    }
+  };
+
+  // ─── Admin: Product CRUD ───────────────────────────────────────────
+  const adminCreateProduct = async (product: Omit<Product, 'id'>): Promise<string> => {
+    const id = generateRandomId('prod');
+    const newProduct: Product = { ...product, id };
+    try {
+      await setDoc(doc(db, 'products', id), newProduct);
+    } catch (err) {
+      console.error('adminCreateProduct error:', err);
+    }
+    return id;
+  };
+
+  const adminUpdateProduct = async (id: string, updates: Partial<Product>) => {
+    try {
+      await updateDoc(doc(db, 'products', id), updates as Record<string, unknown>);
+    } catch (err) {
+      console.error('adminUpdateProduct error:', err);
+    }
+  };
+
+  const adminDeleteProduct = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'products', id));
+    } catch (err) {
+      console.error('adminDeleteProduct error:', err);
+    }
+  };
+
+  // ─── Admin: Order management ───────────────────────────────────────
+  const adminUpdateOrderStatus = async (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { paymentStatus, deliveryStatus });
+    } catch (err) {
+      console.error('adminUpdateOrderStatus error:', err);
+    }
+  };
+
+  // ─── Admin: User management ────────────────────────────────────────
+  const adminUpdateUserRole = async (userId: string, role: 'customer' | 'admin') => {
+    try {
+      await updateDoc(doc(db, 'users', userId), { role });
+      const targetUser = allUsers.find(u => u.id === userId);
+      if (targetUser?.email) {
+        if (role === 'admin') {
+          await adminAddAdmin(targetUser.email, targetUser.name);
+        } else {
+          await adminRemoveAdmin(targetUser.email);
+        }
+      }
+    } catch (err) {
+      console.error('adminUpdateUserRole error:', err);
+    }
+  };
+
+  // ─── Admin: Subscription management ───────────────────────────────
+  const adminUpdateSubscriptionCredentials = async (subId: string, credentials: Partial<UserSubscription['credentials']>) => {
+    try {
+      const subRef = doc(db, 'subscriptions', subId);
+      const subSnap = await getDoc(subRef);
+      const existing = subSnap.exists() ? (subSnap.data() as UserSubscription).credentials : {};
+      await updateDoc(subRef, { credentials: { ...existing, ...credentials } });
+    } catch (err) {
+      console.error('adminUpdateSubscriptionCredentials error:', err);
+    }
+  };
+
+  const adminUpdateSubscriptionStatus = async (subId: string, status: UserSubscription['status']) => {
+    try {
+      await updateDoc(doc(db, 'subscriptions', subId), { status });
+    } catch (err) {
+      console.error('adminUpdateSubscriptionStatus error:', err);
+    }
+  };
+
+  // ─── Admin: Coupon CRUD ────────────────────────────────────────────
+  const adminCreateCoupon = async (coupon: Coupon) => {
+    try {
+      await setDoc(doc(db, 'coupons', coupon.code.toUpperCase()), {
+        ...coupon,
+        code: coupon.code.toUpperCase(),
+      });
+    } catch (err) {
+      console.error('adminCreateCoupon error:', err);
+    }
+  };
+
+  const adminDeleteCoupon = async (code: string) => {
+    try {
+      await deleteDoc(doc(db, 'coupons', code.toUpperCase()));
+    } catch (err) {
+      console.error('adminDeleteCoupon error:', err);
+    }
+  };
+
+  // ─── Admin: Ticket management ──────────────────────────────────────
+  const adminReplyToTicket = async (ticketId: string, message: string) => {
+    const msg = {
+      id: generateRandomId('msg'), sender: 'agent' as const,
+      senderName: user.name || 'SubNexus Support Ops', content: message, timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const snap = await getDoc(doc(db, 'support_tickets', ticketId));
+      if (snap.exists()) {
+        const data = snap.data() as SupportTicket;
+        await updateDoc(doc(db, 'support_tickets', ticketId), {
+          status: 'in_progress',
+          updatedAt: msg.timestamp,
+          messages: [...data.messages, msg],
+        });
+      }
+    } catch (err) {
+      console.error('adminReplyToTicket error:', err);
+    }
+  };
+
+  const adminCloseTicket = async (ticketId: string) => {
+    try {
+      await updateDoc(doc(db, 'support_tickets', ticketId), { status: 'closed' });
+    } catch (err) {
+      console.error('adminCloseTicket error:', err);
+    }
+  };
+
+  // ─── User: Create ticket ───────────────────────────────────────────
+  const createSupportTicket = (subject: string, category: SupportTicket['category'], initialMessage: string): SupportTicket => {
+    const ticketId = generateRandomId('tkt');
+    const newTicket: SupportTicket = {
+      id: ticketId, ticketNumber: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: user.id, userEmail: user.email, subject, category,
+      priority: 'high', status: 'open', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      messages: [{ id: generateRandomId('msg'), sender: 'user', senderName: user.name, content: initialMessage, timestamp: new Date().toISOString() }],
+    };
+    try { setDoc(doc(db, 'support_tickets', ticketId), newTicket); } catch { }
     return newTicket;
   };
 
-  const replyToTicket = (ticketId: string, content: string, sender: 'user' | 'agent') => {
-    setTickets((prev) =>
-      prev.map((ticket) => {
-        if (ticket.id !== ticketId) return ticket;
-        const newMsg = {
-          id: generateRandomId('msg'),
-          sender,
-          senderName: sender === 'user' ? user.name : 'SubNexus Support Ops',
-          content,
-          timestamp: new Date().toISOString(),
-        };
-        const updatedTicket = {
-          ...ticket,
-          updatedAt: new Date().toISOString(),
-          messages: [...ticket.messages, newMsg],
-        };
+  const replyToTicket = async (ticketId: string, content: string, sender: 'user' | 'agent') => {
+    const msg = { id: generateRandomId('msg'), sender, senderName: sender === 'user' ? user.name : 'Support', content, timestamp: new Date().toISOString() };
+    try {
+      const snap = await getDoc(doc(db, 'support_tickets', ticketId));
+      if (snap.exists()) {
+        const data = snap.data() as SupportTicket;
+        await updateDoc(doc(db, 'support_tickets', ticketId), {
+          updatedAt: msg.timestamp,
+          messages: [...data.messages, msg],
+        });
+      }
+    } catch { }
+  };
 
-        // Async sync reply to Firestore
-        try {
-          setDoc(doc(db, 'support_tickets', ticketId), updatedTicket, { merge: true });
-        } catch (err) {
-          console.warn('Firestore ticket reply sync note:', err);
-        }
+  // ─── Admin simulation utilities ────────────────────────────────────
+  const toggleUserRole = () => setUser(prev => ({ ...prev, role: prev.role === 'customer' ? 'admin' : 'customer' }));
 
-        return updatedTicket;
-      })
-    );
+  const sendTestEmail = (recipient: string, templateType: EmailNotification['templateType']) => {
+    setEmailNotifications(prev => [{
+      id: generateRandomId('eml'), recipientEmail: recipient,
+      subject: `Test: ${templateType}`, templateType,
+      sentAt: new Date().toISOString(), status: 'sent', previewHtml: `<p>Test ${templateType} sent to ${recipient}</p>`,
+    }, ...prev]);
+  };
+
+  const triggerRenewalCronSimulation = () => {
+    let renewed = 0, notified = 0;
+    const now = Date.now();
+    for (const sub of allSubscriptions.length > 0 ? allSubscriptions : subscriptions) {
+      const diff = (new Date(sub.expiryDate).getTime() - now) / 86400000;
+      if (diff <= 0 && sub.autoRenew) {
+        renewed++;
+        const exp = new Date(now + 30 * 86400000).toISOString();
+        try { updateDoc(doc(db, 'subscriptions', sub.id), { expiryDate: exp, status: 'active' }); } catch { }
+      }
+      if (diff > 0 && diff <= 3) {
+        notified++;
+        try { updateDoc(doc(db, 'subscriptions', sub.id), { status: 'expiring_soon' }); } catch { }
+      }
+    }
+    return { renewedCount: renewed, notifiedCount: notified };
+  };
+
+  const fastForwardSimulationDays = (days: number) => {
+    const targetSubs = allSubscriptions.length > 0 ? allSubscriptions : subscriptions;
+    for (const sub of targetSubs) {
+      const newExp = new Date(new Date(sub.expiryDate).getTime() - days * 86400000).toISOString();
+      const newStatus = new Date(newExp).getTime() < Date.now() ? 'expired' : 'active';
+      try { updateDoc(doc(db, 'subscriptions', sub.id), { expiryDate: newExp, status: newStatus }); } catch { }
+    }
   };
 
   return (
-    <AppContext.Provider
-      value={{
-        products,
-        selectedProduct,
-        setSelectedProduct,
-        cart,
-        addToCart,
-        removeFromCart,
-        updateCartItemQuantity,
-        clearCart,
-        appliedCoupon,
-        applyCoupon,
-        removeCoupon,
-        cartSubtotal,
-        cartDiscount,
-        cartTotal,
-        isCartOpen,
-        setIsCartOpen,
-        isCheckoutOpen,
-        setIsCheckoutOpen,
-        processCheckout,
-        orders,
-        latestOrder,
-        setLatestOrder,
-        subscriptions,
-        toggleAutoRenew,
-        extendSubscription,
-        activeVaultSub,
-        setActiveVaultSub,
-        user,
-        setUser,
-        toggleUserRole,
-        firebaseUser,
-        isAuthModalOpen,
-        setIsAuthModalOpen,
-        logout,
-        financialMetrics,
-        emailNotifications,
-        sendTestEmail,
-        triggerRenewalCronSimulation,
-        fastForwardSimulationDays,
-        tickets,
-        createSupportTicket,
-        replyToTicket,
-        activeSearchQuery,
-        setActiveSearchQuery,
-        activeCategoryFilter,
-        setActiveCategoryFilter,
-      }}
-    >
+    <AppContext.Provider value={{
+      products, selectedProduct, setSelectedProduct,
+      cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart,
+      appliedCoupon, applyCoupon, removeCoupon, cartSubtotal, cartDiscount, cartTotal,
+      isCartOpen, setIsCartOpen, isCheckoutOpen, setIsCheckoutOpen,
+      processCheckout, orders, latestOrder, setLatestOrder,
+      subscriptions, toggleAutoRenew, extendSubscription, activeVaultSub, setActiveVaultSub,
+      user, setUser, toggleUserRole, firebaseUser, isAuthModalOpen, setIsAuthModalOpen,
+      logout: async () => { try { await signOut(auth); } catch { } },
+      isAdmin,
+      isSuperAdmin,
+      adminList,
+      adminAddAdmin,
+      adminRemoveAdmin,
+      adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
+      allOrders, adminUpdateOrderStatus,
+      allUsers, adminUpdateUserRole,
+      allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
+      coupons, adminCreateCoupon, adminDeleteCoupon,
+      allTickets, adminReplyToTicket, adminCloseTicket,
+      financialMetrics, emailNotifications, sendTestEmail,
+      triggerRenewalCronSimulation, fastForwardSimulationDays,
+      refreshAllData, isSyncing,
+      tickets, createSupportTicket, replyToTicket,
+      activeSearchQuery, setActiveSearchQuery, activeCategoryFilter, setActiveCategoryFilter,
+    }}>
       {children}
     </AppContext.Provider>
   );
 };
 
 export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
-  return context;
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useApp must be used within AppProvider');
+  return ctx;
 };

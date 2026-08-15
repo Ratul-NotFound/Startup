@@ -1,27 +1,19 @@
 import { MetadataRoute } from 'next';
 
+const BASE_URL = 'https://subnexus.io';
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://subnexus.io';
-  const currentDate = new Date().toISOString();
+  const now = new Date().toISOString();
 
   return [
+    // ─── Public pages only ─────────────────────────────────────
     {
-      url: baseUrl,
-      lastModified: currentDate,
+      url: BASE_URL,
+      lastModified: now,
       changeFrequency: 'daily',
       priority: 1.0,
     },
-    {
-      url: `${baseUrl}/dashboard`,
-      lastModified: currentDate,
-      changeFrequency: 'daily',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/admin`,
-      lastModified: currentDate,
-      changeFrequency: 'weekly',
-      priority: 0.5,
-    },
+    // NOTE: /dashboard and /admin are intentionally excluded —
+    // they are private, auth-gated, and marked noindex in headers.
   ];
 }

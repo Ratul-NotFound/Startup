@@ -1,53 +1,46 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { PaymentMethod } from '@/types';
 import {
-  X,
-  ShieldCheck,
-  CreditCard,
-  QrCode,
-  Zap,
-  CheckCircle2,
-  Lock,
-  Loader2,
-  Copy,
-  Check,
-  ArrowRight,
-  Sparkles,
-  Wallet,
+  X, ShieldCheck, CreditCard, QrCode, Zap, CheckCircle2,
+  Lock, Loader2, Copy, Check, ArrowRight, Wallet, LogIn,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export const CheckoutModal: React.FC = () => {
   const {
-    isCheckoutOpen,
-    setIsCheckoutOpen,
-    cart,
-    cartTotal,
-    appliedCoupon,
-    processCheckout,
-    user,
-    setActiveVaultSub,
-    subscriptions,
+    isCheckoutOpen, setIsCheckoutOpen, cart, cartSubtotal, cartDiscount, cartTotal,
+    appliedCoupon, processCheckout, user, firebaseUser,
+    setActiveVaultSub, subscriptions, setIsAuthModalOpen,
   } = useApp();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('crypto_usdt');
-  const [emailInput, setEmailInput] = useState(user.email);
-  const [cardNumber, setCardNumber] = useState('4242 •••• •••• 9941');
-  const [cardExp, setCardExp] = useState('12/28');
-  const [cardCvc, setCardCvc] = useState('884');
+  const [emailInput, setEmailInput] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExp, setCardExp] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
   const [copiedAddress, setCopiedAddress] = useState(false);
-
-  // States
   const [isProcessing, setIsProcessing] = useState(false);
-  const [step, setStep] = useState<'details' | 'processing' | 'success'>('details');
-  const [completedOrderId, setCompletedOrderId] = useState<string | null>(null);
+  const [step, setStep] = useState<'auth_required' | 'details' | 'processing' | 'success'>('details');
+  const [latestOrderNumber, setLatestOrderNumber] = useState<string | null>(null);
+
+  // Keep email synced with logged-in user
+  useEffect(() => {
+    if (firebaseUser?.email) setEmailInput(firebaseUser.email);
+  }, [firebaseUser]);
+
+  // If modal opens and user not logged in, show auth prompt
+  useEffect(() => {
+    if (isCheckoutOpen) {
+      setStep(firebaseUser ? 'details' : 'auth_required');
+    }
+  }, [isCheckoutOpen, firebaseUser]);
 
   if (!isCheckoutOpen) return null;
 
-  const cryptoAddress = 'TYs98mXxKz817hqaB10N99281Xn9941USDT_TRC20';
+  const cryptoAddress = 'TK9GTW2xvXBjmv6FTcNtBDxRuMp7fQ3Q5x';
 
   const handleCopyCrypto = () => {
     navigator.clipboard.writeText(cryptoAddress);
@@ -56,42 +49,35 @@ export const CheckoutModal: React.FC = () => {
   };
 
   const handlePayNow = async () => {
+    if (!firebaseUser) { setStep('auth_required'); return; }
     setIsProcessing(true);
     setStep('processing');
-
-    // Simulate 2 seconds of high-security blockchain/gateway confirmation & bot vault allocation
     setTimeout(async () => {
-      const order = await processCheckout(paymentMethod, emailInput);
-      setCompletedOrderId(order.id);
-      setIsProcessing(false);
-      setStep('success');
-
-      // Trigger confetti celebration
       try {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#6366f1', '#06b6d4', '#10b981', '#f59e0b'],
-        });
+        const order = await processCheckout(paymentMethod, emailInput);
+        setLatestOrderNumber(order.orderNumber);
+        setStep('success');
+        try {
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#6366f1', '#06b6d4', '#10b981', '#f59e0b'] });
+        } catch { }
       } catch {
-        // ignore
+        setStep('details');
+      } finally {
+        setIsProcessing(false);
       }
-    }, 1800);
+    }, 2000);
   };
 
-  const handleViewDeliveredCredentials = () => {
+  const handleViewCredentials = () => {
     setIsCheckoutOpen(false);
-    // Open the latest subscription vault
-    if (subscriptions.length > 0) {
-      setActiveVaultSub(subscriptions[0]);
-    }
+    setStep('details');
+    if (subscriptions.length > 0) setActiveVaultSub(subscriptions[0]);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-xl rounded-3xl bg-obsidian-900 border border-white/10 p-6 sm:p-8 shadow-2xl space-y-6 my-6">
-        
+      <div className="relative w-full max-w-xl rounded-3xl bg-zinc-900 border border-white/10 p-6 sm:p-8 shadow-2xl space-y-6 my-6">
+
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
           <div className="flex items-center gap-2.5">
@@ -99,115 +85,98 @@ export const CheckoutModal: React.FC = () => {
               <Lock className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">Encrypted Fast Checkout</h3>
-              <p className="text-xs text-slate-400">Instant Bot Fulfillment & Credential Dispatch</p>
+              <h3 className="text-lg font-black text-white">Secure Checkout</h3>
+              <p className="text-xs text-slate-400">{cart.length} item{cart.length !== 1 ? 's' : ''} · ${cartTotal.toFixed(2)} total</p>
             </div>
           </div>
           {step !== 'processing' && (
             <button
-              onClick={() => setIsCheckoutOpen(false)}
-              className="p-2 rounded-xl bg-obsidian-800 hover:bg-obsidian-700 text-slate-400 hover:text-white"
+              onClick={() => { setIsCheckoutOpen(false); setStep('details'); }}
+              className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-400 hover:text-white"
             >
               <X className="h-5 w-5" />
             </button>
           )}
         </div>
 
-        {/* STEP 1: PAYMENT METHOD SELECTION & DETAILS */}
+        {/* AUTH REQUIRED */}
+        {step === 'auth_required' && (
+          <div className="py-10 text-center space-y-5">
+            <div className="h-16 w-16 mx-auto rounded-full bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
+              <LogIn className="h-8 w-8 text-blue-400" />
+            </div>
+            <div>
+              <h4 className="text-xl font-black text-white">Sign in to continue</h4>
+              <p className="text-sm text-slate-400 mt-1 max-w-xs mx-auto">
+                You need to be signed in to complete your purchase and receive your subscription credentials.
+              </p>
+            </div>
+            <button
+              onClick={() => { setIsCheckoutOpen(false); setIsAuthModalOpen(true); }}
+              className="mx-auto flex items-center gap-2 px-8 py-3 rounded-xl bg-white text-zinc-950 font-bold text-sm hover:bg-zinc-100 transition-all"
+            >
+              <LogIn className="h-4 w-4" />
+              Sign In / Create Account
+            </button>
+          </div>
+        )}
+
+        {/* STEP 1: PAYMENT DETAILS */}
         {step === 'details' && (
           <div className="space-y-5">
-            
-            {/* Target Delivery Email */}
+
+            {/* Delivery email */}
             <div>
               <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
-                Delivery Email Address
+                Delivery Email
               </label>
               <input
                 type="email"
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl bg-obsidian-850 border border-white/[0.1] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
-                placeholder="your.email@gmail.com"
+                className="w-full px-4 py-2.5 rounded-xl bg-zinc-950 border border-white/[0.1] text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                placeholder="your@email.com"
               />
-              <span className="text-[11px] text-slate-400 mt-1 block">
-                Credentials & invoice will be dispatched immediately to this email.
-              </span>
+              <p className="text-[11px] text-slate-500 mt-1">Credentials and receipt will be sent to this email.</p>
             </div>
 
-            {/* Payment Method Selector */}
+            {/* Payment method */}
             <div>
               <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2.5">
-                Choose Payment Method
+                Payment Method
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('crypto_usdt')}
-                  className={`p-3 rounded-2xl border text-center transition-all ${
-                    paymentMethod === 'crypto_usdt'
-                      ? 'border-cyan-500 bg-cyan-950/40 text-cyan-300 shadow-glow-cyan'
-                      : 'border-white/[0.08] bg-obsidian-850 hover:bg-obsidian-800 text-slate-400'
-                  }`}
-                >
-                  <Wallet className="h-5 w-5 mx-auto mb-1 text-emerald-400" />
-                  <span className="text-xs font-bold block">USDT TRC20</span>
-                  <span className="text-[9px] text-slate-400">Zero Fee</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('card_stripe')}
-                  className={`p-3 rounded-2xl border text-center transition-all ${
-                    paymentMethod === 'card_stripe'
-                      ? 'border-brand-500 bg-brand-950/40 text-brand-300 shadow-glow'
-                      : 'border-white/[0.08] bg-obsidian-850 hover:bg-obsidian-800 text-slate-400'
-                  }`}
-                >
-                  <CreditCard className="h-5 w-5 mx-auto mb-1 text-indigo-400" />
-                  <span className="text-xs font-bold block">Credit Card</span>
-                  <span className="text-[9px] text-slate-400">Instant</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('crypto_btc')}
-                  className={`p-3 rounded-2xl border text-center transition-all ${
-                    paymentMethod === 'crypto_btc'
-                      ? 'border-amber-500 bg-amber-950/40 text-amber-300'
-                      : 'border-white/[0.08] bg-obsidian-850 hover:bg-obsidian-800 text-slate-400'
-                  }`}
-                >
-                  <QrCode className="h-5 w-5 mx-auto mb-1 text-amber-400" />
-                  <span className="text-xs font-bold block">Bitcoin</span>
-                  <span className="text-[9px] text-slate-400">Lightning</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('paypal')}
-                  className={`p-3 rounded-2xl border text-center transition-all ${
-                    paymentMethod === 'paypal'
-                      ? 'border-blue-500 bg-blue-950/40 text-blue-300'
-                      : 'border-white/[0.08] bg-obsidian-850 hover:bg-obsidian-800 text-slate-400'
-                  }`}
-                >
-                  <Zap className="h-5 w-5 mx-auto mb-1 text-blue-400" />
-                  <span className="text-xs font-bold block">PayPal</span>
-                  <span className="text-[9px] text-slate-400">Buyer Protect</span>
-                </button>
-
+                {[
+                  { method: 'crypto_usdt' as PaymentMethod, icon: <Wallet className="h-5 w-5 mx-auto mb-1 text-emerald-400" />, label: 'USDT', sub: 'Zero Fee' },
+                  { method: 'card_stripe' as PaymentMethod, icon: <CreditCard className="h-5 w-5 mx-auto mb-1 text-indigo-400" />, label: 'Card', sub: 'Instant' },
+                  { method: 'crypto_btc' as PaymentMethod, icon: <QrCode className="h-5 w-5 mx-auto mb-1 text-amber-400" />, label: 'Bitcoin', sub: 'Lightning' },
+                  { method: 'paypal' as PaymentMethod, icon: <Zap className="h-5 w-5 mx-auto mb-1 text-blue-400" />, label: 'PayPal', sub: 'Protected' },
+                ].map(({ method, icon, label, sub }) => (
+                  <button
+                    key={method}
+                    onClick={() => setPaymentMethod(method)}
+                    className={`p-3 rounded-2xl border text-center transition-all ${
+                      paymentMethod === method
+                        ? 'border-cyan-500 bg-cyan-950/40 text-cyan-300'
+                        : 'border-white/[0.08] bg-zinc-850 hover:bg-zinc-800 text-slate-400'
+                    }`}
+                  >
+                    {icon}
+                    <span className="text-xs font-bold block">{label}</span>
+                    <span className="text-[9px] text-slate-400">{sub}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Gateway Interactive View */}
+            {/* Payment details panel */}
             {paymentMethod === 'crypto_usdt' && (
-              <div className="p-4 rounded-2xl bg-obsidian-950 border border-cyan-500/30 space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-cyan-300">Tether USD (TRC-20 Network)</span>
+              <div className="p-4 rounded-2xl bg-zinc-950 border border-cyan-500/30 space-y-3">
+                <div className="flex justify-between text-xs">
+                  <span className="font-bold text-cyan-300">USDT TRC-20</span>
                   <span className="font-mono text-emerald-400 font-bold">${cartTotal.toFixed(2)} USDT</span>
                 </div>
-                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-obsidian-850 border border-white/[0.08]">
+                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-900 border border-white/[0.08]">
                   <span className="text-xs font-mono text-slate-300 flex-1 truncate">{cryptoAddress}</span>
                   <button
                     onClick={handleCopyCrypto}
@@ -217,24 +186,20 @@ export const CheckoutModal: React.FC = () => {
                     <span>{copiedAddress ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
-                <p className="text-[10px] text-slate-400">
-                  ⚡ Automatic bot webhook monitors this blockchain address. Payment verifies within 15 seconds.
-                </p>
+                <p className="text-[10px] text-slate-400">Send exact amount to the address above, then click Confirm Order.</p>
               </div>
             )}
 
             {paymentMethod === 'card_stripe' && (
-              <div className="p-4 rounded-2xl bg-obsidian-950 border border-brand-500/30 space-y-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-200">Stripe 256-bit Encrypted Card Gateway</span>
-                  <span className="text-emerald-400 font-bold">3D Secure Active</span>
-                </div>
+              <div className="p-4 rounded-2xl bg-zinc-950 border border-blue-500/30 space-y-3">
+                <span className="text-xs font-bold text-slate-200">Card Details</span>
                 <div className="space-y-2">
                   <input
                     type="text"
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-obsidian-850 border border-white/[0.1] text-xs font-mono text-white focus:outline-none focus:border-brand-500"
+                    maxLength={19}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/[0.1] text-xs font-mono text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
                     placeholder="Card Number"
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -242,14 +207,15 @@ export const CheckoutModal: React.FC = () => {
                       type="text"
                       value={cardExp}
                       onChange={(e) => setCardExp(e.target.value)}
-                      className="px-3 py-2 rounded-xl bg-obsidian-850 border border-white/[0.1] text-xs font-mono text-white focus:outline-none focus:border-brand-500"
+                      className="px-3 py-2 rounded-xl bg-zinc-900 border border-white/[0.1] text-xs font-mono text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
                       placeholder="MM/YY"
                     />
                     <input
                       type="text"
                       value={cardCvc}
                       onChange={(e) => setCardCvc(e.target.value)}
-                      className="px-3 py-2 rounded-xl bg-obsidian-850 border border-white/[0.1] text-xs font-mono text-white focus:outline-none focus:border-brand-500"
+                      maxLength={4}
+                      className="px-3 py-2 rounded-xl bg-zinc-900 border border-white/[0.1] text-xs font-mono text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
                       placeholder="CVC"
                     />
                   </div>
@@ -257,88 +223,87 @@ export const CheckoutModal: React.FC = () => {
               </div>
             )}
 
-            {/* Summary Row */}
-            <div className="p-4 rounded-2xl bg-obsidian-850 border border-white/[0.06] flex items-center justify-between">
-              <div>
-                <span className="text-xs text-slate-400 block">Total Due ({cart.length} subscription item)</span>
-                <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-cyan-400">
-                  ${cartTotal.toFixed(2)}
-                </span>
+            {/* Order summary */}
+            <div className="p-4 rounded-2xl bg-zinc-950 border border-white/[0.06] space-y-2 text-xs text-slate-300">
+              <div className="flex justify-between"><span>Subtotal</span><span>${cartSubtotal.toFixed(2)}</span></div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-emerald-400">
+                  <span>Discount ({appliedCoupon.discountPercent}%)</span>
+                  <span>-${(cartSubtotal * appliedCoupon.discountPercent / 100).toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-black text-white border-t border-white/[0.06] pt-2">
+                <span>Total</span>
+                <span className="text-cyan-400">${cartTotal.toFixed(2)}</span>
               </div>
-              <button
-                onClick={handlePayNow}
-                className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-obsidian-950 font-black text-sm shadow-glow-emerald transition-all flex items-center gap-2"
-              >
-                <Zap className="h-4 w-4" />
-                <span>Simulate Complete Payment</span>
-              </button>
             </div>
+
+            {/* Pay button */}
+            <button
+              onClick={handlePayNow}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-zinc-950 font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2"
+            >
+              <Lock className="h-4 w-4" />
+              <span>Confirm Order · ${cartTotal.toFixed(2)}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
 
             <div className="flex items-center justify-center gap-2 text-xs text-slate-400">
               <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span>Full 100% Replacement Warranty. Auto-assigned Vault Slot.</span>
+              <span>100% Replacement Warranty · Instant Delivery</span>
             </div>
-
           </div>
         )}
 
-        {/* STEP 2: PROCESSING & BOT GENERATION SIMULATION */}
+        {/* STEP 2: PROCESSING */}
         {step === 'processing' && (
-          <div className="py-12 text-center space-y-4">
-            <Loader2 className="h-12 w-12 text-cyan-400 animate-spin mx-auto" />
-            <h4 className="text-lg font-bold text-white">Verifying Transaction & Allocating Credentials...</h4>
-            <div className="space-y-1 text-xs text-slate-400 font-mono">
-              <p>✓ Payment Gateway Acknowledged</p>
-              <p>✓ Automated Wholesale Slot Dispatched</p>
-              <p>✓ Encrypting AES-256 Vault Keys</p>
+          <div className="py-14 text-center space-y-5">
+            <Loader2 className="h-14 w-14 text-cyan-400 animate-spin mx-auto" />
+            <h4 className="text-xl font-bold text-white">Processing your order…</h4>
+            <div className="space-y-2 text-sm text-slate-400">
+              <p>✓ Payment received</p>
+              <p>✓ Preparing your subscription</p>
+              <p className="text-cyan-400">⟳ Activating credentials…</p>
             </div>
           </div>
         )}
 
-        {/* STEP 3: SUCCESSFUL DISPATCH & VAULT REVEAL */}
+        {/* STEP 3: SUCCESS */}
         {step === 'success' && (
-          <div className="py-6 text-center space-y-5">
-            <div className="h-16 w-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center mx-auto shadow-glow-emerald animate-bounce">
-              <CheckCircle2 className="h-10 w-10" />
+          <div className="py-8 text-center space-y-5">
+            <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="h-10 w-10 text-emerald-400" />
             </div>
-
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">
-                Payment Verified & Dispatched
-              </span>
-              <h3 className="text-2xl font-black text-white mt-1">Your Subscription is Live!</h3>
-              <p className="text-xs text-slate-300 mt-1 max-w-sm mx-auto">
-                Credentials have been securely written to your personal Vault and dispatched to{' '}
-                <strong>{emailInput}</strong>.
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">Order Confirmed</span>
+              <h3 className="text-2xl font-black text-white mt-1">You're all set!</h3>
+              <p className="text-sm text-slate-300 mt-1 max-w-sm mx-auto">
+                Your subscription is active. Credentials sent to <strong>{emailInput}</strong>.
               </p>
             </div>
-
-            <div className="p-4 rounded-2xl bg-obsidian-950 border border-emerald-500/30 text-left space-y-2">
-              <div className="flex justify-between text-xs text-slate-300">
-                <span>Order Reference:</span>
-                <span className="font-mono font-bold text-white">SN-{new Date().getFullYear()}-VIP</span>
+            {latestOrderNumber && (
+              <div className="p-4 rounded-2xl bg-zinc-950 border border-emerald-500/30 space-y-2 text-xs text-left">
+                <div className="flex justify-between text-slate-300">
+                  <span>Order Number:</span>
+                  <span className="font-mono font-bold text-white">{latestOrderNumber}</span>
+                </div>
+                <div className="flex justify-between text-slate-300">
+                  <span>Status:</span>
+                  <span className="text-emerald-400 font-bold">Delivered</span>
+                </div>
               </div>
-              <div className="flex justify-between text-xs text-slate-300">
-                <span>Warranty Status:</span>
-                <span className="font-bold text-emerald-400">100% Active Replacement Protection</span>
-              </div>
-              <div className="flex justify-between text-xs text-slate-300">
-                <span>Automated Renewal:</span>
-                <span className="font-bold text-cyan-400">Enabled (Adjust anytime in Dashboard)</span>
-              </div>
-            </div>
-
-            <div className="pt-2 flex flex-col sm:flex-row gap-3">
+            )}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
-                onClick={handleViewDeliveredCredentials}
-                className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 hover:from-brand-500 hover:to-cyan-400 text-white font-extrabold text-sm shadow-glow transition-all flex items-center justify-center gap-2"
+                onClick={handleViewCredentials}
+                className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all"
               >
                 <Lock className="h-4 w-4" />
-                <span>Open Secure Credential Vault</span>
+                View My Credentials
               </button>
               <button
-                onClick={() => setIsCheckoutOpen(false)}
-                className="px-5 py-3.5 rounded-xl bg-obsidian-800 hover:bg-obsidian-700 text-slate-300 font-bold text-sm transition-all"
+                onClick={() => { setIsCheckoutOpen(false); setStep('details'); }}
+                className="px-5 py-3.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-sm transition-all"
               >
                 Continue Shopping
               </button>

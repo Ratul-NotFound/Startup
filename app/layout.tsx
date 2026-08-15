@@ -52,6 +52,14 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <JsonLd />
+        {/* Security meta tags */}
+        <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="referrer" content="strict-origin-when-cross-origin" />
+        {/* Prevent phone/email detection */}
+        <meta name="format-detection" content="telephone=no, email=no, address=no" />
+        {/* Canonical URL */}
+        <link rel="canonical" href="https://subnexus.io" />
+        {/* Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
