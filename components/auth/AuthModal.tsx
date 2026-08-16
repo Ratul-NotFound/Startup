@@ -34,17 +34,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      // Use redirect flow — works on all browsers/devices, avoids popup COOP issues
-      await signInWithRedirect(auth, googleProvider);
-      // Page will reload and AppContext picks up the result via getRedirectResult
+      await signInWithPopup(auth, googleProvider);
+      setSuccessMsg('Signed in successfully with Google!');
+      setTimeout(() => onClose(), 800);
     } catch (err: any) {
       const code: string = err?.code ?? '';
 
-      if (code === 'auth/unauthorized-domain') {
-        setError(
-          'This domain is not authorized in Firebase. Please contact support or try email sign-in below.'
-        );
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
         setLoading(false);
+        return;
+      }
+
+      if (code === 'auth/unauthorized-domain') {
+        setError('This domain is not authorized in Firebase. Please try email sign-in.');
+        setLoading(false);
+        return;
+      }
+
+      if (code === 'auth/popup-blocked') {
+        // Browser blocked the popup — fall back to redirect
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch (redirectErr: any) {
+          setError(redirectErr.message || 'Sign-in failed. Please try again.');
+          setLoading(false);
+        }
         return;
       }
 
