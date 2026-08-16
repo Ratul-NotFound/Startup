@@ -114,6 +114,8 @@ export interface UserSubscription {
   warrantyValidUntil: string;
   assignedSlot?: string;
   paymentMethod: PaymentMethod;
+  userId?: string;
+  userEmail?: string;
 }
 
 export interface Order {

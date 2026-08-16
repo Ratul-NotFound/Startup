@@ -527,23 +527,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setUser(profile);
         }
 
-        // Live User Orders Listener
-        const unsubUserOrders = onSnapshot(
+        // Live User Orders Listener (matches UID and Email)
+        const unsubUserOrdersUid = onSnapshot(
           query(collection(db, 'orders'), where('userId', '==', fbUser.uid)),
           (snapshot) => {
             const uOrders = snapshot.docs.map(d => d.data() as Order);
-            setOrders(uOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setOrders(prev => {
+              const combined = [...uOrders, ...prev.filter(p => !uOrders.some(u => u.id === p.id))];
+              return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
           }
         );
 
-        // Live User Subscriptions Listener
-        const unsubUserSubs = onSnapshot(
+        let unsubUserOrdersEmail = () => {};
+        if (fbUser.email) {
+          unsubUserOrdersEmail = onSnapshot(
+            query(collection(db, 'orders'), where('userEmail', '==', fbUser.email)),
+            (snapshot) => {
+              const uOrders = snapshot.docs.map(d => d.data() as Order);
+              setOrders(prev => {
+                const combined = [...uOrders, ...prev.filter(p => !uOrders.some(u => u.id === p.id))];
+                return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              });
+            }
+          );
+        }
+
+        // Live User Subscriptions Listener (matches UID and Email)
+        const unsubUserSubsUid = onSnapshot(
           query(collection(db, 'subscriptions'), where('userId', '==', fbUser.uid)),
           (snapshot) => {
             const uSubs = snapshot.docs.map(d => d.data() as UserSubscription);
-            setSubscriptions(uSubs);
+            setSubscriptions(prev => {
+              const combined = [...uSubs, ...prev.filter(p => !uSubs.some(u => u.id === p.id))];
+              return combined;
+            });
           }
         );
+
+        let unsubUserSubsEmail = () => {};
+        if (fbUser.email) {
+          unsubUserSubsEmail = onSnapshot(
+            query(collection(db, 'subscriptions'), where('credentials.email', '==', fbUser.email)),
+            (snapshot) => {
+              const uSubs = snapshot.docs.map(d => d.data() as UserSubscription);
+              setSubscriptions(prev => {
+                const combined = [...uSubs, ...prev.filter(p => !uSubs.some(u => u.id === p.id))];
+                return combined;
+              });
+            }
+          );
+        }
 
         // Live User Tickets Listener
         const unsubUserTickets = onSnapshot(
@@ -554,7 +588,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         );
 
-        unsubscribersRef.current.push(unsubUserOrders, unsubUserSubs, unsubUserTickets);
+        unsubscribersRef.current.push(
+          unsubUserOrdersUid,
+          unsubUserOrdersEmail,
+          unsubUserSubsUid,
+          unsubUserSubsEmail,
+          unsubUserTickets
+        );
 
         // If admin or superadmin, activate full real-time database listeners
         if (isUserAdmin) {
@@ -713,12 +753,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const orderNum = generateOrderNumber();
     const isBangladesh = ['bkash', 'nagad', 'rocket', 'upay', 'custom'].includes(paymentMethod);
 
+    const currentUid = firebaseUser ? firebaseUser.uid : user.id;
+    const currentEmail = customEmail || (firebaseUser ? firebaseUser.email : user.email) || user.email;
+
     const newOrder: Order = {
       id: orderId,
       orderNumber: orderNum,
       createdAt: new Date().toISOString(),
-      userId: user.id,
-      userEmail: customEmail || user.email,
+      userId: currentUid,
+      userEmail: currentEmail,
       items: cart.map(item => ({
         productId: item.product.id,
         productName: item.product.name,
@@ -952,8 +995,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             warrantyValidUntil: expiryDate,
             paymentMethod: ord.paymentMethod,
             credentials: creds,
-            // @ts-ignore
             userId: ord.userId,
+            userEmail: ord.userEmail,
           };
 
           await setDoc(doc(db, 'subscriptions', subId), sub);
