@@ -104,6 +104,22 @@ const nextConfig = {
     ];
   },
 
+  // ─── Reverse proxy: serve Firebase auth handler under custom domain ─
+  // This makes subnexus.vercel.app/__/auth/handler work instead of
+  // showing 404 when authDomain is set to subnexus.vercel.app
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: 'https://rflix-91ab8.firebaseapp.com/__/auth/:path*',
+      },
+      {
+        source: '/__/firebase/:path*',
+        destination: 'https://rflix-91ab8.firebaseapp.com/__/firebase/:path*',
+      },
+    ];
+  },
+
   // ─── Redirects: secure admin access ───────────────────────────────
   async redirects() {
     return [];
