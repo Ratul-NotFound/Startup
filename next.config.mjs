@@ -21,10 +21,10 @@ const nextConfig = {
         // Apply to every route
         source: '/:path*',
         headers: [
-          // Prevent clickjacking
+          // Prevent clickjacking while allowing self/Firebase Auth frame communication
           {
             key: 'X-Frame-Options',
-            value: 'DENY',
+            value: 'SAMEORIGIN',
           },
           // Prevent MIME sniffing
           {
