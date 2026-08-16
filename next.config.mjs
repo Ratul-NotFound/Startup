@@ -104,16 +104,6 @@ const nextConfig = {
     ];
   },
 
-  // ─── Reverse Proxy for Custom Branded Authentication Domain ────────
-  async rewrites() {
-    return [
-      {
-        source: '/__/auth/:path*',
-        destination: 'https://rflix-91ab8.firebaseapp.com/__/auth/:path*',
-      },
-    ];
-  },
-
   // ─── Redirects: secure admin access ───────────────────────────────
   async redirects() {
     return [];
