@@ -60,10 +60,10 @@ const nextConfig = {
               "font-src 'self' https://fonts.gstatic.com",
               // Images: allow self + known CDNs
               "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://www.googletagmanager.com https://i.giphy.com https://media.giphy.com https://*.giphy.com",
-              // Connect: Firebase, Google APIs
-              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com",
-              // Frames: Google sign-in popup
-              "frame-src https://*.firebaseapp.com https://accounts.google.com",
+              // Connect: Firebase, Google APIs, Google Analytics
+              "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://www.google.com",
+              // Frames: Google sign-in popup & auth handlers
+              "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://subnexus.vercel.app",
               // Block all object embeds
               "object-src 'none'",
               // Block all base-tag overrides
@@ -79,12 +79,8 @@ const nextConfig = {
           },
           // Cross-origin policies
           {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups', // Needed for Google OAuth popup
-          },
-          {
             key: 'Cross-Origin-Resource-Policy',
-            value: 'same-site',
+            value: 'cross-origin',
           },
         ],
       },
