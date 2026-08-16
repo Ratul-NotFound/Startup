@@ -38,14 +38,14 @@ export default function HomePage() {
       </div>
 
       {/* 4. Customer Reviews Section — Fully Dynamic & Synced */}
-      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4" suppressHydrationWarning>
+      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 content-auto" suppressHydrationWarning>
         <Scroll3DReveal direction="up" rotateXAmount={16} delay={0.1}>
           <CustomerReviewsSection />
         </Scroll3DReveal>
       </div>
 
       {/* 5. Simple Clean FAQ */}
-      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4" suppressHydrationWarning>
+      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 content-auto" suppressHydrationWarning>
         <Scroll3DReveal direction="up" rotateXAmount={18} delay={0.1}>
           <TrustAndFaq />
         </Scroll3DReveal>

@@ -38,7 +38,6 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
           opacity: 0,
           y: initialY,
           x: initialX,
-          z: -80,
           scale: scaleAmount,
           rotateX: rotateXAmount,
           rotateY: rotateYAmount,
@@ -47,21 +46,23 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
           opacity: 1,
           y: 0,
           x: 0,
-          z: 0,
           scale: 1,
           rotateX: 0,
           rotateY: 0,
         }}
-        viewport={{ once: true, margin: '-50px' }}
+        viewport={{ once: true, margin: '-40px' }}
         transition={{
-          duration: 0.85,
+          duration: 0.7,
           delay,
           ease: [0.16, 1, 0.3, 1],
         }}
         style={{
           transformStyle: 'preserve-3d',
+          transform: 'translateZ(0)',
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
         }}
-        className="w-full h-full will-change-transform"
+        className="w-full h-full"
       >
         {children}
       </motion.div>
