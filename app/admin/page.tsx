@@ -7,13 +7,14 @@ import {
   Headphones, ShoppingBag, Plus, Edit2, Trash2, Save, X,
   CheckCircle2, AlertCircle, Clock, Search, RefreshCw, Eye, EyeOff,
   BarChart2, MessageSquare, Lock, LogIn, UserPlus, UserCheck,
-  UserX, Sparkles, AlertTriangle, ArrowUpRight,
+  UserX, Sparkles, AlertTriangle, ArrowUpRight, Star, ThumbsUp,
+  CreditCard, QrCode, Image as ImageIcon, Check,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { Product, Coupon, UserSubscription, Order, AdminMember } from '@/types';
+import { Product, Coupon, UserSubscription, Order, AdminMember, Review, BangladeshPaymentMethod } from '@/types';
 
 // ─── Blank product template ─────────────────────────────────────────
 const blankProduct = (): Omit<Product, 'id'> => ({
@@ -36,18 +37,40 @@ export default function AdminPortalPage() {
   const {
     firebaseUser, isAdmin, isSuperAdmin, setIsAuthModalOpen,
     products, adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
-    allOrders, adminUpdateOrderStatus,
+    allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
     allUsers, adminUpdateUserRole,
     allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
+    paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     allTickets, adminReplyToTicket, adminCloseTicket,
     adminList, adminAddAdmin, adminRemoveAdmin,
     financialMetrics, triggerRenewalCronSimulation, fastForwardSimulationDays,
     refreshAllData, isSyncing,
+    reviews, deleteReview, adminCreateReview, adminResetReviews,
   } = useApp();
 
-  const [tab, setTab] = useState<'overview' | 'products' | 'orders' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets'>('overview');
+  const [tab, setTab] = useState<'overview' | 'orders' | 'payments' | 'products' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets' | 'reviews'>('overview');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'paid' | 'failed'>('all');
+  const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<(BangladeshPaymentMethod & { isNew?: boolean }) | null>(null);
+  const [reviewSearch, setReviewSearch] = useState('');
+  const [showAdminReviewForm, setShowAdminReviewForm] = useState(false);
+  const [newAdminReview, setNewAdminReview] = useState<{
+    userName: string;
+    productId: string;
+    rating: number;
+    title: string;
+    comment: string;
+    planDuration: string;
+  }>({
+    userName: '',
+    productId: '',
+    rating: 5,
+    title: '',
+    comment: '',
+    planDuration: '12 Months',
+  });
 
   // Products state
   const [editingProduct, setEditingProduct] = useState<(Product & { isNew?: boolean }) | null>(null);
@@ -156,16 +179,24 @@ export default function AdminPortalPage() {
     );
   }
 
+  const pendingOrdersCount = allOrders.filter(o => o.paymentStatus === 'pending').length;
+
   // ─── ADMIN TAB NAVIGATION ─────────────────────────────────────────
   const navTabs = [
     { id: 'overview', label: 'Overview', icon: <BarChart2 className="h-4 w-4" /> },
+    {
+      id: 'orders',
+      label: pendingOrdersCount > 0 ? `Orders (${pendingOrdersCount} Pending)` : `Orders (${allOrders.length})`,
+      icon: <ShoppingBag className={`h-4 w-4 ${pendingOrdersCount > 0 ? 'text-amber-400 animate-pulse' : ''}`} />,
+    },
+    { id: 'payments', label: `Payment Gateways (${paymentMethods.length})`, icon: <CreditCard className="h-4 w-4 text-emerald-400" /> },
     { id: 'products', label: `Products (${products.length})`, icon: <Package className="h-4 w-4" /> },
-    { id: 'orders', label: `Orders (${allOrders.length})`, icon: <ShoppingBag className="h-4 w-4" /> },
     { id: 'users', label: `Users (${allUsers.length})`, icon: <Users className="h-4 w-4" /> },
     { id: 'admins', label: `Admin Team (${adminList.length})`, icon: <Shield className="h-4 w-4 text-red-400" /> },
     { id: 'subscriptions', label: `Subscriptions (${allSubscriptions.length})`, icon: <Shield className="h-4 w-4" /> },
     { id: 'coupons', label: `Coupons (${coupons.length})`, icon: <Tag className="h-4 w-4" /> },
     { id: 'tickets', label: `Tickets (${allTickets.length})`, icon: <Headphones className="h-4 w-4" /> },
+    { id: 'reviews', label: `Reviews (${reviews.length})`, icon: <Star className="h-4 w-4 text-amber-400" /> },
   ] as const;
 
   // ─── PRODUCT HANDLERS ─────────────────────────────────────────────
@@ -790,92 +821,485 @@ export default function AdminPortalPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════ */}
-      {/* ORDERS TAB */}
+      {/* ORDERS & PAYMENT VERIFICATION TAB                            */}
       {/* ═══════════════════════════════════════════════════════════ */}
       {tab === 'orders' && (
         <div className="space-y-5">
-          <div className="relative max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input value={orderSearch} onChange={e => setOrderSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
-              placeholder="Search by email or order #…" />
+          {/* Top Filter and Search Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {(['all', 'pending', 'paid', 'failed'] as const).map(st => (
+                <button
+                  key={st}
+                  onClick={() => setOrderStatusFilter(st)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-colors ${
+                    orderStatusFilter === st
+                      ? 'bg-white text-zinc-950 shadow-sm'
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-slate-400'
+                  }`}
+                >
+                  {st === 'pending' ? 'Pending Proofs' : st === 'paid' ? 'Paid & Delivered' : st === 'failed' ? 'Rejected' : 'All Orders'}
+                  {st === 'pending' && (
+                    <span className="ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-300 font-mono">
+                      {allOrders.filter(o => o.paymentStatus === 'pending').length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative max-w-xs w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <input
+                value={orderSearch}
+                onChange={e => setOrderSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white/30 placeholder-zinc-500"
+                placeholder="Search TrxID, sender number, email, order #…"
+              />
+            </div>
           </div>
 
           <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06]">
+                <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06] text-[10px] font-bold tracking-wider">
                   <tr>
-                    <th className="p-4">Order #</th>
-                    <th className="p-4">Customer</th>
-                    <th className="p-4">Items Ordered</th>
-                    <th className="p-4">Date</th>
-                    <th className="p-4">Total</th>
-                    <th className="p-4">Payment</th>
-                    <th className="p-4">Delivery</th>
-                    <th className="p-4">Update Status</th>
+                    <th className="p-4">Order & Customer</th>
+                    <th className="p-4">Items</th>
+                    <th className="p-4">Amount & Method</th>
+                    <th className="p-4">Sender Phone</th>
+                    <th className="p-4">TrxID / Reference</th>
+                    <th className="p-4">Screenshot Proof</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Verification Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04]">
-                  {filteredOrders.map(o => (
-                    <React.Fragment key={o.id}>
-                      <tr className="hover:bg-white/[0.02] transition-colors">
-                        <td className="p-4 font-mono font-bold text-white">{o.orderNumber}</td>
-                        <td className="p-4 text-slate-300 font-medium">{o.userEmail}</td>
-                        <td className="p-4 text-slate-400">{o.items.map(i => `${i.productName} (${i.durationLabel})`).join(', ')}</td>
-                        <td className="p-4 text-slate-400">{new Date(o.createdAt).toLocaleDateString()}</td>
-                        <td className="p-4 font-bold text-white">${o.total.toFixed(2)}</td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                            o.paymentStatus === 'paid' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
-                            'bg-amber-950/60 text-amber-400 border-amber-500/30'
-                          }`}>{o.paymentStatus}</span>
-                        </td>
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                            o.deliveryStatus === 'delivered' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
-                            'bg-blue-950/60 text-blue-400 border-blue-500/30'
-                          }`}>{o.deliveryStatus}</span>
-                        </td>
-                        <td className="p-4">
-                          <button onClick={() => setEditingOrderId(editingOrderId === o.id ? null : o.id)}
-                            className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-cyan-400 transition-colors">
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                      {editingOrderId === o.id && (
-                        <tr>
-                          <td colSpan={8} className="px-4 pb-4 bg-zinc-950/80">
-                            <div className="flex items-center gap-4 pt-3">
-                              <div>
-                                <label className="text-[11px] text-slate-400 font-bold block mb-1">Payment Status</label>
-                                <select defaultValue={o.paymentStatus}
-                                  onChange={e => adminUpdateOrderStatus(o.id, e.target.value as any, o.deliveryStatus).then(() => showFeedback('success', 'Order updated.'))}
-                                  className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none">
-                                  {['paid', 'pending', 'failed', 'refunded'].map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-[11px] text-slate-400 font-bold block mb-1">Delivery Status</label>
-                                <select defaultValue={o.deliveryStatus}
-                                  onChange={e => adminUpdateOrderStatus(o.id, o.paymentStatus, e.target.value as any).then(() => showFeedback('success', 'Order updated.'))}
-                                  className="px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none">
-                                  {['delivered', 'processing', 'failed'].map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                              </div>
+                  {allOrders
+                    .filter(o => {
+                      if (orderStatusFilter !== 'all' && o.paymentStatus !== orderStatusFilter) return false;
+                      const q = orderSearch.toLowerCase();
+                      return (
+                        o.orderNumber.toLowerCase().includes(q) ||
+                        o.userEmail.toLowerCase().includes(q) ||
+                        (o.transactionId && o.transactionId.toLowerCase().includes(q)) ||
+                        (o.senderNumber && o.senderNumber.toLowerCase().includes(q))
+                      );
+                    })
+                    .map(o => {
+                      const isPending = o.paymentStatus === 'pending';
+
+                      return (
+                        <tr key={o.id} className="hover:bg-white/[0.02] transition-colors">
+                          <td className="p-4">
+                            <div className="font-mono font-bold text-white text-xs">#{o.orderNumber}</div>
+                            <div className="text-[11px] text-slate-400">{o.userEmail}</div>
+                            <div className="text-[10px] text-slate-500">{new Date(o.createdAt).toLocaleString()}</div>
+                          </td>
+
+                          <td className="p-4 max-w-[200px]">
+                            <div className="space-y-1">
+                              {o.items.map((i, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5 text-slate-200">
+                                  <span className="font-bold">{i.quantity}x</span>
+                                  <span className="truncate">{i.productName}</span>
+                                  <span className="text-[10px] text-cyan-400 font-mono">({i.durationLabel})</span>
+                                </div>
+                              ))}
                             </div>
                           </td>
+
+                          <td className="p-4">
+                            <div className="font-black text-white font-mono text-xs">
+                              {o.totalBdt ? `৳${o.totalBdt.toLocaleString()} BDT` : `$${o.total.toFixed(2)}`}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium capitalize">
+                              {o.paymentMethodName || o.paymentMethod}
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            {o.senderNumber ? (
+                              <span className="font-mono text-emerald-400 font-bold text-xs bg-emerald-950/40 px-2 py-0.5 rounded-lg border border-emerald-500/20">
+                                {o.senderNumber}
+                              </span>
+                            ) : (
+                              <span className="text-slate-600 italic text-[11px]">N/A</span>
+                            )}
+                          </td>
+
+                          <td className="p-4">
+                            {o.transactionId ? (
+                              <span className="font-mono text-cyan-300 font-bold text-xs bg-cyan-950/40 px-2 py-0.5 rounded-lg border border-cyan-500/20 uppercase tracking-wider">
+                                {o.transactionId}
+                              </span>
+                            ) : (
+                              <span className="text-slate-600 italic text-[11px]">N/A</span>
+                            )}
+                          </td>
+
+                          <td className="p-4">
+                            {o.screenshotUrl ? (
+                              <button
+                                onClick={() => setPreviewScreenshotUrl(o.screenshotUrl!)}
+                                className="group relative rounded-xl overflow-hidden border border-white/15 block hover:border-cyan-400 transition-all"
+                                title="Click to view full screenshot proof"
+                              >
+                                <img
+                                  src={o.screenshotUrl}
+                                  alt="Proof"
+                                  className="h-10 w-10 object-cover group-hover:scale-110 transition-transform"
+                                />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Eye className="h-3.5 w-3.5 text-white" />
+                                </div>
+                              </button>
+                            ) : (
+                              <span className="text-slate-600 text-[11px]">No image</span>
+                            )}
+                          </td>
+
+                          <td className="p-4">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+                              o.paymentStatus === 'paid'
+                                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/30'
+                                : o.paymentStatus === 'pending'
+                                ? 'bg-amber-950/80 text-amber-400 border-amber-500/30 animate-pulse'
+                                : 'bg-red-950/80 text-red-400 border-red-500/30'
+                            }`}>
+                              {o.paymentStatus}
+                            </span>
+                          </td>
+
+                          <td className="p-4 text-right">
+                            {isPending ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={async () => {
+                                    await adminApproveAndDeliverOrder(o.id);
+                                    showFeedback('success', `Order #${o.orderNumber} approved and credentials delivered to Vault!`);
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition-all shadow-md"
+                                  title="Approve payment and automatically provision subscriptions"
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                  <span>Approve & Deliver</span>
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const reason = prompt('Reason for rejection (e.g. Invalid TrxID or amount mismatch):');
+                                    if (reason !== null) {
+                                      await adminRejectOrder(o.id, reason);
+                                      showFeedback('error', `Order #${o.orderNumber} rejected.`);
+                                    }
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 font-bold text-xs transition-colors"
+                                  title="Reject order"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="text-[11px] text-slate-500 font-semibold">
+                                {o.deliveryStatus === 'delivered' ? '✓ Delivered' : o.deliveryStatus}
+                              </div>
+                            )}
+                          </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {filteredOrders.length === 0 && (
-                    <tr><td colSpan={8} className="p-8 text-center text-slate-500">No orders found.</td></tr>
+                      );
+                    })}
+                  {allOrders.length === 0 && (
+                    <tr><td colSpan={8} className="p-8 text-center text-slate-500">No orders recorded yet.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* BANGLADESH PAYMENT METHODS MANAGEMENT TAB                     */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'payments' && (
+        <div className="space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-black text-white">Bangladesh Payment Gateways</h2>
+              <p className="text-xs text-slate-400">Configure bKash, Nagad, Rocket numbers, QR codes, and BDT exchange rates.</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  await adminResetPaymentMethods();
+                  showFeedback('success', 'Reset payment methods to defaults.');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-slate-300 text-xs font-bold border border-white/10 transition-colors"
+              >
+                Reset Default Methods
+              </button>
+
+              <button
+                onClick={() => setEditingPaymentMethod({
+                  id: '',
+                  name: 'bKash Merchant',
+                  type: 'bkash',
+                  accountNumber: '01700-000000',
+                  accountType: 'Personal',
+                  qrCodeImage: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=01700000000',
+                  instructions: 'Send Money to this number and copy TrxID.',
+                  bdtRate: 125,
+                  isActive: true,
+                  color: '#e2136e',
+                  isNew: true,
+                })}
+                className="px-4 py-2 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-100 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Payment Gateway
+              </button>
+            </div>
+          </div>
+
+          {/* Payment Methods Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paymentMethods.map(pm => (
+              <div
+                key={pm.id}
+                className="p-5 rounded-3xl bg-zinc-900 border border-white/10 space-y-4 relative flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-3 w-3 rounded-full" style={{ backgroundColor: pm.color || '#06b6d4' }} />
+                      <h3 className="font-bold text-sm text-white">{pm.name}</h3>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      pm.isActive
+                        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-zinc-800 text-slate-500'
+                    }`}>
+                      {pm.isActive ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-zinc-950 border border-white/5 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Account Number:</span>
+                      <span className="font-mono font-bold text-white">{pm.accountNumber}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Account Type:</span>
+                      <span className="font-bold text-cyan-400">{pm.accountType}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400">Exchange Rate:</span>
+                      <span className="font-mono font-bold text-emerald-400">1 USD = ৳{pm.bdtRate} BDT</span>
+                    </div>
+                  </div>
+
+                  {pm.qrCodeImage && (
+                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-zinc-950/60 border border-white/5">
+                      <img src={pm.qrCodeImage} alt="QR Code" className="h-12 w-12 rounded-lg bg-white p-0.5 object-contain" />
+                      <div className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                        {pm.instructions}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+                  <button
+                    onClick={async () => {
+                      await adminUpdatePaymentMethod(pm.id, { isActive: !pm.isActive });
+                      showFeedback('success', `Payment method ${pm.isActive ? 'disabled' : 'activated'}.`);
+                    }}
+                    className="text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                  >
+                    {pm.isActive ? 'Turn Off' : 'Turn On'}
+                  </button>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setEditingPaymentMethod(pm)}
+                      className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 transition-colors"
+                      title="Edit method"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (confirm(`Delete ${pm.name}?`)) {
+                          await adminDeletePaymentMethod(pm.id);
+                          showFeedback('success', 'Payment method deleted.');
+                        }
+                      }}
+                      className="p-1.5 rounded-lg bg-zinc-800 hover:bg-red-950 text-slate-400 hover:text-red-400 transition-colors"
+                      title="Delete method"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Edit / Create Payment Method Modal */}
+          {editingPaymentMethod && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+              <div className="w-full max-w-lg rounded-3xl bg-zinc-900 border border-white/15 p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-base text-white">
+                    {editingPaymentMethod.isNew ? 'Add Payment Gateway' : `Edit ${editingPaymentMethod.name}`}
+                  </h3>
+                  <button onClick={() => setEditingPaymentMethod(null)} className="text-slate-400 hover:text-white">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">Method Name</label>
+                    <input
+                      type="text"
+                      value={editingPaymentMethod.name}
+                      onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, name: e.target.value } : null)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">Provider Type</label>
+                    <select
+                      value={editingPaymentMethod.type}
+                      onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, type: e.target.value as any } : null)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                    >
+                      <option value="bkash">bKash</option>
+                      <option value="nagad">Nagad</option>
+                      <option value="rocket">Rocket</option>
+                      <option value="upay">Upay</option>
+                      <option value="custom">Custom Bank</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">Account Number</label>
+                    <input
+                      type="text"
+                      value={editingPaymentMethod.accountNumber}
+                      onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, accountNumber: e.target.value } : null)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">Account Type</label>
+                    <select
+                      value={editingPaymentMethod.accountType}
+                      onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, accountType: e.target.value as any } : null)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                    >
+                      <option value="Personal">Personal</option>
+                      <option value="Merchant">Merchant</option>
+                      <option value="Agent">Agent</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">BDT Rate (1 USD = ? BDT)</label>
+                    <input
+                      type="number"
+                      value={editingPaymentMethod.bdtRate}
+                      onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, bdtRate: Number(e.target.value) } : null)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300">Brand Color Hex</label>
+                    <input
+                      type="text"
+                      value={editingPaymentMethod.color || '#06b6d4'}
+                      onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, color: e.target.value } : null)}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <label className="font-bold text-slate-300">QR Code Image URL</label>
+                  <input
+                    type="text"
+                    value={editingPaymentMethod.qrCodeImage || ''}
+                    onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, qrCodeImage: e.target.value } : null)}
+                    placeholder="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=..."
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <label className="font-bold text-slate-300">Customer Payment Instructions</label>
+                  <textarea
+                    rows={2}
+                    value={editingPaymentMethod.instructions || ''}
+                    onChange={e => setEditingPaymentMethod(prev => prev ? { ...prev, instructions: e.target.value } : null)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 text-xs pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingPaymentMethod(null)}
+                    className="px-4 py-2 rounded-xl text-slate-400 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!editingPaymentMethod) return;
+                      if (editingPaymentMethod.isNew) {
+                        const { isNew, id, ...rest } = editingPaymentMethod;
+                        await adminCreatePaymentMethod(rest);
+                        showFeedback('success', 'Payment gateway created.');
+                      } else {
+                        await adminUpdatePaymentMethod(editingPaymentMethod.id, editingPaymentMethod);
+                        showFeedback('success', 'Payment gateway updated.');
+                      }
+                      setEditingPaymentMethod(null);
+                    }}
+                    className="px-5 py-2 rounded-xl bg-white text-zinc-950 font-bold hover:bg-zinc-100"
+                  >
+                    Save Gateway
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Screenshot Full Lightbox Modal */}
+      {previewScreenshotUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+          onClick={() => setPreviewScreenshotUrl(null)}
+        >
+          <div className="relative max-w-2xl max-h-[85vh] rounded-3xl overflow-hidden bg-zinc-900 border border-white/20 p-2 shadow-2xl">
+            <button
+              onClick={() => setPreviewScreenshotUrl(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-black/80 text-white hover:bg-zinc-800 z-10"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={previewScreenshotUrl}
+              alt="Proof Full View"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-2xl"
+            />
           </div>
         </div>
       )}
@@ -1211,6 +1635,270 @@ export default function AdminPortalPage() {
                 Select a ticket to view the conversation.
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* 9. REVIEWS MODERATION TAB                                   */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'reviews' && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by customer name, product, review title…"
+                value={reviewSearch}
+                onChange={e => setReviewSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-white/30"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  await adminResetReviews();
+                  showFeedback('success', 'Reset reviews to 8 default verified reviews.');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-slate-300 text-xs font-bold border border-white/10 transition-colors"
+                title="Reset to 8 default mock reviews"
+              >
+                Reset Default Reviews
+              </button>
+
+              <button
+                onClick={() => {
+                  setNewAdminReview({
+                    userName: '',
+                    productId: products[0]?.id || 'chatgpt-plus',
+                    rating: 5,
+                    title: '',
+                    comment: '',
+                    planDuration: '12 Months',
+                  });
+                  setShowAdminReviewForm(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-100 transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Review</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Admin Add Review Inline Modal */}
+          {showAdminReviewForm && (
+            <div className="p-5 rounded-3xl bg-zinc-900 border border-white/15 space-y-4 max-w-xl">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm text-white">Create New Customer / Mock Review</h3>
+                <button onClick={() => setShowAdminReviewForm(false)} className="text-slate-400 hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-300">Customer Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jordan Reed"
+                    value={newAdminReview.userName}
+                    onChange={e => setNewAdminReview(prev => ({ ...prev, userName: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-300">Product</label>
+                  <select
+                    value={newAdminReview.productId}
+                    onChange={e => setNewAdminReview(prev => ({ ...prev, productId: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                  >
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-300">Star Rating (1-5)</label>
+                  <select
+                    value={newAdminReview.rating}
+                    onChange={e => setNewAdminReview(prev => ({ ...prev, rating: Number(e.target.value) }))}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                  >
+                    <option value={5}>5 Stars ★★★★★</option>
+                    <option value={4}>4 Stars ★★★★☆</option>
+                    <option value={3}>3 Stars ★★★☆☆</option>
+                    <option value={2}>2 Stars ★★☆☆☆</option>
+                    <option value={1}>1 Star ★☆☆☆☆</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-300">Plan Duration</label>
+                  <select
+                    value={newAdminReview.planDuration}
+                    onChange={e => setNewAdminReview(prev => ({ ...prev, planDuration: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                  >
+                    <option value="1 Month">1 Month</option>
+                    <option value="3 Months">3 Months</option>
+                    <option value="6 Months">6 Months</option>
+                    <option value="12 Months">12 Months</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1 text-xs">
+                <label className="font-bold text-slate-300">Review Headline</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Instant credentials and flawless streaming"
+                  value={newAdminReview.title}
+                  onChange={e => setNewAdminReview(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white"
+                />
+              </div>
+
+              <div className="space-y-1 text-xs">
+                <label className="font-bold text-slate-300">Review Text</label>
+                <textarea
+                  rows={3}
+                  placeholder="Write the detailed review body…"
+                  value={newAdminReview.comment}
+                  onChange={e => setNewAdminReview(prev => ({ ...prev, comment: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 text-xs">
+                <button
+                  onClick={() => setShowAdminReviewForm(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!newAdminReview.title || !newAdminReview.comment) return;
+                    const prod = products.find(p => p.id === newAdminReview.productId) || products[0];
+                    await adminCreateReview({
+                      userId: 'usr_admin_gen',
+                      userName: newAdminReview.userName.trim() || 'Verified Customer',
+                      userAvatar: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 50)}?w=150&auto=format&fit=crop&q=80`,
+                      productId: prod.id,
+                      productName: prod.name,
+                      productLogo: prod.logo,
+                      rating: newAdminReview.rating,
+                      title: newAdminReview.title.trim(),
+                      comment: newAdminReview.comment.trim(),
+                      verifiedPurchase: true,
+                      planDuration: newAdminReview.planDuration,
+                    });
+                    setShowAdminReviewForm(false);
+                    showFeedback('success', 'New review created and published live.');
+                  }}
+                  className="px-5 py-2 rounded-xl bg-white text-zinc-950 font-bold hover:bg-zinc-100"
+                >
+                  Publish Review
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-950 border-b border-white/[0.06] text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                  <tr>
+                    <th className="px-5 py-3.5">Customer</th>
+                    <th className="px-5 py-3.5">Product</th>
+                    <th className="px-5 py-3.5">Rating</th>
+                    <th className="px-5 py-3.5">Review Headline & Feedback</th>
+                    <th className="px-5 py-3.5">Likes</th>
+                    <th className="px-5 py-3.5">Date</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.04]">
+                  {reviews
+                    .filter(r =>
+                      r.userName.toLowerCase().includes(reviewSearch.toLowerCase()) ||
+                      r.productName.toLowerCase().includes(reviewSearch.toLowerCase()) ||
+                      r.title.toLowerCase().includes(reviewSearch.toLowerCase()) ||
+                      r.comment.toLowerCase().includes(reviewSearch.toLowerCase())
+                    )
+                    .map(rev => (
+                      <tr key={rev.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2.5">
+                            <img
+                              src={rev.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
+                              alt={rev.userName}
+                              className="h-8 w-8 rounded-full object-cover border border-white/10"
+                            />
+                            <div>
+                              <p className="font-bold text-white text-xs">{rev.userName}</p>
+                              {rev.verifiedPurchase && (
+                                <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-1 py-0.2 rounded-full">
+                                  Verified Buyer
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 font-bold text-slate-200">
+                          <div className="flex items-center gap-1.5">
+                            {rev.productLogo && (
+                              <img src={rev.productLogo} alt={rev.productName} className="h-4 w-4 rounded object-cover" />
+                            )}
+                            <span>{rev.productName}</span>
+                          </div>
+                          {rev.planDuration && (
+                            <span className="text-[10px] text-cyan-400 font-medium">{rev.planDuration}</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-0.5 text-amber-400">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} className={`h-3.5 w-3.5 ${s <= rev.rating ? 'fill-amber-400' : 'text-zinc-700'}`} />
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 max-w-xs">
+                          <p className="font-bold text-white text-xs line-clamp-1">{rev.title}</p>
+                          <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{rev.comment}</p>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1 text-slate-300 font-bold text-xs">
+                            <ThumbsUp className="h-3 w-3 text-cyan-400" />
+                            <span>{rev.likes || 0}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-[11px] text-slate-400">
+                          {new Date(rev.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            onClick={async () => {
+                              await deleteReview(rev.id);
+                              showFeedback('success', 'Review deleted from database.');
+                            }}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-950/40 transition-all"
+                            title="Delete review"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

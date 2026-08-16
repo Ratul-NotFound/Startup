@@ -84,5 +84,26 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
       allow delete: if isSuperAdmin();
     }
+
+    // 8. Reviews Collection (Customer Ratings & Reviews)
+    // Public read so all visitors can see authentic verified reviews
+    // Authenticated users can create reviews and toggle likes
+    // Review authors or Admins can delete
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAdmin() || isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+    }
+
+    // 9. Payment Methods Collection (Bangladesh bKash, Nagad, Rocket numbers & QR codes)
+    // Public read for checkout payment display
+    // Admin only create/update/delete
+    match /payment_methods/{methodId} {
+      allow read: if true;
+      allow write: if isAdmin() || isSuperAdmin();
+    }
   }
 }
+
+

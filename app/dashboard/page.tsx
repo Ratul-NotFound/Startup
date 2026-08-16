@@ -302,7 +302,10 @@ export default function CustomerDashboardPage() {
       {/* ─── ORDERS TAB ─────────────────────────────────────────── */}
       {activeTab === 'orders' && (
         <div className="space-y-5">
-          <h2 className="text-xl font-bold text-white">Order History</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Order History & Payment Tracking</h2>
+            <span className="text-xs text-slate-400 font-semibold">{orders.length} total orders</span>
+          </div>
 
           {orders.length === 0 ? (
             <div className="py-20 text-center space-y-4 rounded-3xl border border-white/[0.06] bg-zinc-900/40">
@@ -314,44 +317,59 @@ export default function CustomerDashboardPage() {
             <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-slate-400 uppercase font-semibold border-b border-white/[0.06]">
+                  <thead className="bg-zinc-950 text-slate-400 uppercase font-semibold border-b border-white/[0.06] text-[10px] tracking-wider">
                     <tr>
                       <th className="p-4">Order #</th>
                       <th className="p-4">Items</th>
                       <th className="p-4">Date</th>
-                      <th className="p-4">Payment</th>
-                      <th className="p-4">Total</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Invoice</th>
+                      <th className="p-4">Payment Method</th>
+                      <th className="p-4">Total Amount</th>
+                      <th className="p-4">TrxID / Status</th>
+                      <th className="p-4 text-right">Details</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.05] text-slate-300">
                     {orders.map(order => (
                       <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="p-4 font-mono font-bold text-white">{order.orderNumber}</td>
+                        <td className="p-4 font-mono font-bold text-white">#{order.orderNumber}</td>
                         <td className="p-4">
                           <div className="space-y-0.5">
                             {order.items.map((i, idx) => (
-                              <div key={idx} className="text-slate-200">{i.productName} · {i.durationLabel}</div>
+                              <div key={idx} className="text-slate-200">
+                                <span className="font-semibold">{i.productName}</span> · <span className="text-cyan-400 text-[11px] font-mono">{i.durationLabel}</span>
+                              </div>
                             ))}
                           </div>
                         </td>
                         <td className="p-4 text-slate-400">{new Date(order.createdAt).toLocaleDateString()}</td>
-                        <td className="p-4 font-mono uppercase text-slate-300">{order.paymentMethod.replace(/_/g, ' ')}</td>
-                        <td className="p-4 font-bold text-white">${order.total.toFixed(2)}</td>
+                        <td className="p-4 capitalize font-bold text-white">
+                          {order.paymentMethodName || order.paymentMethod.replace(/_/g, ' ')}
+                        </td>
+                        <td className="p-4 font-bold text-white font-mono">
+                          {order.totalBdt ? `৳${order.totalBdt.toLocaleString()} BDT` : `$${order.total.toFixed(2)}`}
+                        </td>
                         <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                            order.paymentStatus === 'paid' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
-                            order.paymentStatus === 'pending' ? 'bg-amber-950/60 text-amber-400 border-amber-500/30' :
-                            'bg-red-950/60 text-red-400 border-red-500/30'
-                          }`}>
-                            {order.paymentStatus}
-                          </span>
+                          <div className="space-y-1">
+                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border block w-fit ${
+                              order.paymentStatus === 'paid'
+                                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/30'
+                                : order.paymentStatus === 'pending'
+                                ? 'bg-amber-950/80 text-amber-400 border-amber-500/30 animate-pulse'
+                                : 'bg-red-950/80 text-red-400 border-red-500/30'
+                            }`}>
+                              {order.paymentStatus === 'pending' ? '● Pending Verification' : order.paymentStatus}
+                            </span>
+                            {order.transactionId && (
+                              <span className="text-[10px] text-slate-500 font-mono block">
+                                TrxID: {order.transactionId}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4 text-right">
                           <button
                             onClick={() => setViewingInvoice(order)}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-slate-200 border border-white/[0.1] inline-flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-slate-200 border border-white/[0.1] inline-flex items-center gap-1.5 transition-colors"
                           >
                             <FileText className="h-3.5 w-3.5 text-cyan-400" /> View
                           </button>
@@ -449,17 +467,17 @@ export default function CustomerDashboardPage() {
                 <form onSubmit={handleSendReply} className="p-4 bg-zinc-950 border-t border-white/[0.06] flex gap-2">
                   <input
                     type="text" value={replyInput} onChange={e => setReplyInput(e.target.value)}
-                    placeholder="Type a reply…"
-                    className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+                    placeholder="Type your reply…"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-blue-500"
                   />
-                  <button type="submit" className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all">
-                    <Send className="h-3.5 w-3.5" />
+                  <button type="submit" className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all">
+                    Send
                   </button>
                 </form>
               </div>
             ) : (
-              <div className="h-72 rounded-3xl bg-zinc-900 border border-white/[0.08] flex items-center justify-center text-slate-500 text-sm">
-                Select a ticket to view the conversation
+              <div className="h-64 rounded-3xl bg-zinc-900 border border-white/[0.08] flex items-center justify-center text-slate-500 text-sm">
+                Select a ticket to view messages.
               </div>
             )}
           </div>
@@ -482,7 +500,7 @@ export default function CustomerDashboardPage() {
             {[
               { label: 'Auto-Renew Enabled', value: user.autoRenewEnabled ? 'On' : 'Off', color: user.autoRenewEnabled ? 'text-emerald-400' : 'text-slate-400' },
               { label: 'Email Alerts', value: user.emailAlertsEnabled ? 'On' : 'Off', color: user.emailAlertsEnabled ? 'text-emerald-400' : 'text-slate-400' },
-              { label: 'Preferred Currency', value: user.preferredCurrency, color: 'text-slate-300' },
+              { label: 'Preferred Currency', value: 'BDT (৳) / USD ($)', color: 'text-slate-300' },
               { label: 'Account Role', value: user.role === 'admin' ? 'Admin' : 'Customer', color: user.role === 'admin' ? 'text-blue-400' : 'text-slate-300' },
             ].map(item => (
               <div key={item.label} className="flex justify-between items-center p-3.5 rounded-2xl bg-zinc-950 border border-white/[0.05]">
@@ -497,24 +515,52 @@ export default function CustomerDashboardPage() {
       {/* Invoice Modal */}
       {viewingInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="relative w-full max-w-lg rounded-3xl bg-zinc-900 border border-white/10 p-6 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-white/[0.08] pb-4 mb-4">
-              <h3 className="text-base font-black text-white">Invoice #{viewingInvoice.orderNumber}</h3>
-              <button onClick={() => setViewingInvoice(null)} className="p-1.5 rounded-lg bg-zinc-800 text-slate-400 hover:text-white"><X className="h-4 w-4" /></button>
+          <div className="relative w-full max-w-lg rounded-3xl bg-zinc-900 border border-white/10 p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-white/[0.08] pb-3">
+              <div>
+                <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">OFFICIAL RECEIPT</span>
+                <h3 className="text-base font-black text-white">Invoice #{viewingInvoice.orderNumber}</h3>
+              </div>
+              <button onClick={() => setViewingInvoice(null)} className="p-1.5 rounded-lg bg-zinc-800 text-slate-400 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <div className="space-y-2 text-xs text-slate-300 mb-4">
-              {[
-                { l: 'Customer', v: viewingInvoice.userEmail },
-                { l: 'Date', v: new Date(viewingInvoice.createdAt).toLocaleDateString() },
-                { l: 'Payment', v: viewingInvoice.paymentMethod.replace(/_/g, ' ').toUpperCase() },
-                { l: 'Tx Hash', v: viewingInvoice.transactionHash?.substring(0, 24) + '...' || 'N/A' },
-              ].map(r => (
-                <div key={r.l} className="flex justify-between p-2.5 rounded-xl bg-zinc-950 border border-white/[0.05]">
-                  <span className="text-slate-400">{r.l}</span>
-                  <span className="font-mono text-white truncate max-w-[200px]">{r.v}</span>
+
+            <div className="space-y-2 text-xs text-slate-300">
+              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-950 border border-white/[0.05]">
+                <span className="text-slate-400">Customer</span>
+                <span className="font-mono text-white truncate max-w-[200px]">{viewingInvoice.userEmail}</span>
+              </div>
+              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-950 border border-white/[0.05]">
+                <span className="text-slate-400">Order Date</span>
+                <span className="text-white">{new Date(viewingInvoice.createdAt).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-950 border border-white/[0.05]">
+                <span className="text-slate-400">Payment Gateway</span>
+                <span className="font-bold text-white capitalize">{viewingInvoice.paymentMethodName || viewingInvoice.paymentMethod}</span>
+              </div>
+              {viewingInvoice.senderNumber && (
+                <div className="flex justify-between p-2.5 rounded-xl bg-zinc-950 border border-white/[0.05]">
+                  <span className="text-slate-400">Sender Phone</span>
+                  <span className="font-mono font-bold text-emerald-400">{viewingInvoice.senderNumber}</span>
                 </div>
-              ))}
+              )}
+              {viewingInvoice.transactionId && (
+                <div className="flex justify-between p-2.5 rounded-xl bg-zinc-950 border border-white/[0.05]">
+                  <span className="text-slate-400">TrxID / Reference</span>
+                  <span className="font-mono font-bold text-cyan-400 uppercase">{viewingInvoice.transactionId}</span>
+                </div>
+              )}
+              <div className="flex justify-between p-2.5 rounded-xl bg-zinc-950 border border-white/[0.05]">
+                <span className="text-slate-400">Verification Status</span>
+                <span className={`font-bold capitalize ${
+                  viewingInvoice.paymentStatus === 'paid' ? 'text-emerald-400' : 'text-amber-400'
+                }`}>
+                  {viewingInvoice.paymentStatus === 'pending' ? 'Pending Admin Approval' : viewingInvoice.paymentStatus}
+                </span>
+              </div>
             </div>
+
             <div className="border-t border-white/[0.06] pt-3 space-y-1.5 text-xs">
               {viewingInvoice.items.map((item, i) => (
                 <div key={i} className="flex justify-between text-slate-300">
@@ -523,8 +569,10 @@ export default function CustomerDashboardPage() {
                 </div>
               ))}
               <div className="flex justify-between text-sm font-black text-white border-t border-white/[0.06] pt-2 mt-2">
-                <span>Total Paid</span>
-                <span className="text-emerald-400">${viewingInvoice.total.toFixed(2)}</span>
+                <span>Total Amount</span>
+                <span className="text-emerald-400 font-mono">
+                  {viewingInvoice.totalBdt ? `৳${viewingInvoice.totalBdt.toLocaleString()} BDT` : `$${viewingInvoice.total.toFixed(2)}`}
+                </span>
               </div>
             </div>
           </div>

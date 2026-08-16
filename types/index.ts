@@ -66,7 +66,21 @@ export interface Coupon {
   minOrderAmount?: number;
 }
 
-export type PaymentMethod = 'crypto_usdt' | 'crypto_btc' | 'card_stripe' | 'paypal' | 'apple_pay';
+export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'crypto_usdt' | 'card_stripe' | 'custom';
+
+export interface BangladeshPaymentMethod {
+  id: string;
+  name: string; // e.g. "bKash Personal", "Nagad Personal", "Rocket"
+  type: 'bkash' | 'nagad' | 'rocket' | 'upay' | 'custom';
+  accountNumber: string; // e.g. "017XXXXXXXX"
+  accountType: 'Personal' | 'Merchant' | 'Agent';
+  qrCodeImage?: string; // image URL or compressed Base64
+  instructions?: string; // e.g. "Send Money (Personal) to this number and enter your Transaction ID"
+  bdtRate: number; // e.g. 125 BDT per USD
+  isActive: boolean;
+  color?: string; // Brand accent color e.g. "#e2136e" for bkash, "#f7931e" for nagad, "#8c3494" for rocket
+  updatedAt?: string;
+}
 
 export type SubscriptionStatus = 'active' | 'expiring_soon' | 'expired' | 'renewing' | 'paused';
 
@@ -120,11 +134,19 @@ export interface Order {
   subtotal: number;
   discount: number;
   total: number;
+  totalBdt?: number;
   paymentMethod: PaymentMethod;
+  paymentMethodName?: string;
   paymentStatus: 'paid' | 'pending' | 'failed' | 'refunded';
-  transactionHash?: string;
   deliveryStatus: 'delivered' | 'processing' | 'failed';
   generatedSubscriptionIds: string[];
+  // Bangladesh Payment Verification Fields
+  senderNumber?: string; // Phone number from which money was sent
+  transactionId?: string; // TrxID from bKash/Nagad/Rocket SMS
+  screenshotUrl?: string; // Compressed screenshot proof
+  adminNotes?: string;
+  verifiedAt?: string;
+  verifiedBy?: string;
 }
 
 export interface CustomerProfile {
@@ -189,4 +211,23 @@ export interface AdminMember {
   role: 'superadmin' | 'admin';
   addedBy: string;
   addedAt: string;
+}
+
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  userEmail?: string;
+  productId: string;
+  productName: string;
+  productLogo?: string;
+  rating: number; // 1 to 5
+  title: string;
+  comment: string;
+  verifiedPurchase: boolean;
+  createdAt: string; // ISO date
+  likes: number;
+  likedBy?: string[];
+  planDuration?: string;
 }

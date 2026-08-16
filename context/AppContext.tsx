@@ -4,11 +4,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
-  AdminMember,
+  AdminMember, Review, BangladeshPaymentMethod,
 } from '@/types';
 import {
   MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
-  INITIAL_FINANCIAL_METRICS,
+  INITIAL_FINANCIAL_METRICS, MOCK_REVIEWS, MOCK_PAYMENT_METHODS,
 } from '@/lib/mock-data';
 import { generateOrderNumber, generateRandomId, generateMockCredentials } from '@/lib/utils';
 import { auth, db, initAnalytics } from '@/lib/firebase';
@@ -46,10 +46,27 @@ interface AppContextType {
   // Checkout & Orders
   isCheckoutOpen: boolean;
   setIsCheckoutOpen: (open: boolean) => void;
-  processCheckout: (paymentMethod: PaymentMethod, customEmail?: string) => Promise<Order>;
+  processCheckout: (
+    paymentMethod: PaymentMethod,
+    customEmail?: string,
+    paymentProof?: {
+      senderNumber: string;
+      transactionId: string;
+      screenshotUrl?: string;
+      paymentMethodName?: string;
+      totalBdt?: number;
+    }
+  ) => Promise<Order>;
   orders: Order[];
   latestOrder: Order | null;
   setLatestOrder: (order: Order | null) => void;
+
+  // Bangladesh Dynamic Payment Methods
+  paymentMethods: BangladeshPaymentMethod[];
+  adminCreatePaymentMethod: (pm: Omit<BangladeshPaymentMethod, 'id' | 'updatedAt'>) => Promise<string>;
+  adminUpdatePaymentMethod: (id: string, updates: Partial<BangladeshPaymentMethod>) => Promise<void>;
+  adminDeletePaymentMethod: (id: string) => Promise<void>;
+  adminResetPaymentMethods: () => Promise<void>;
 
   // Subscriptions
   subscriptions: UserSubscription[];
@@ -79,9 +96,11 @@ interface AppContextType {
   adminUpdateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   adminDeleteProduct: (id: string) => Promise<void>;
 
-  // Admin: Order management
+  // Admin: Order management & Approval
   allOrders: Order[];
   adminUpdateOrderStatus: (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => Promise<void>;
+  adminApproveAndDeliverOrder: (orderId: string) => Promise<void>;
+  adminRejectOrder: (orderId: string, reason?: string) => Promise<void>;
 
   // Admin: User management
   allUsers: CustomerProfile[];
@@ -116,6 +135,19 @@ interface AppContextType {
   createSupportTicket: (subject: string, category: SupportTicket['category'], initialMessage: string) => SupportTicket;
   replyToTicket: (ticketId: string, content: string, sender: 'user' | 'agent') => void;
 
+  // Reviews System
+  reviews: Review[];
+  addReview: (reviewData: Omit<Review, 'id' | 'createdAt' | 'likes' | 'likedBy'>) => Promise<string>;
+  likeReview: (reviewId: string) => Promise<void>;
+  deleteReview: (reviewId: string) => Promise<void>;
+  adminCreateReview: (reviewData: Omit<Review, 'id' | 'createdAt' | 'likes' | 'likedBy'>) => Promise<void>;
+  adminUpdateReview: (reviewId: string, updates: Partial<Review>) => Promise<void>;
+  adminResetReviews: () => Promise<void>;
+  isWriteReviewOpen: boolean;
+  setIsWriteReviewOpen: (open: boolean) => void;
+  targetReviewProduct: Product | null;
+  setTargetReviewProduct: (p: Product | null) => void;
+
   // Global UI
   activeSearchQuery: string;
   setActiveSearchQuery: (query: string) => void;
@@ -134,6 +166,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
+  // Reviews State
+  const [reviews, setReviews] = useState<Review[]>(MOCK_REVIEWS);
+  const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
+  const [targetReviewProduct, setTargetReviewProduct] = useState<Product | null>(null);
+
+  // Bangladesh Payment Methods State
+  const [paymentMethods, setPaymentMethods] = useState<BangladeshPaymentMethod[]>(MOCK_PAYMENT_METHODS);
 
   // Auth & Roles
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -173,14 +213,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { initAnalytics(); }, []);
 
   // ─── Handle Google redirect sign-in result ─────────────────────────
-  // getRedirectResult MUST run at the top level (not inside the modal)
-  // because after signInWithRedirect the page reloads and the modal is closed.
   useEffect(() => {
-    getRedirectResult(auth).catch(() => {
-      // No redirect in progress — ignore silently
-    });
-    // onAuthStateChanged below will pick up the signed-in user automatically
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    getRedirectResult(auth).catch(() => {});
+  }, []);
 
   // ─── Auto-seed Firestore if empty on startup ──────────────────────
   const seedFirestoreIfEmpty = useCallback(async () => {
@@ -196,7 +231,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         await batch.commit();
       } else {
-        // Ensure all existing Firestore product docs have latest topic-relevant images array
         for (const docSnap of prodSnap.docs) {
           const fallback = MOCK_PRODUCTS.find(p => p.id === docSnap.id);
           if (fallback?.images) {
@@ -217,7 +251,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await batch.commit();
       }
 
-      // 3. Ensure superadmin doc exists in admins collection
+      // 3. Seed reviews if empty
+      const reviewSnap = await getDocs(collection(db, 'reviews'));
+      if (reviewSnap.empty) {
+        console.log('[Firestore] Seeding initial customer reviews...');
+        const batch = writeBatch(db);
+        for (const rev of MOCK_REVIEWS) {
+          const docRef = doc(db, 'reviews', rev.id);
+          batch.set(docRef, rev);
+        }
+        await batch.commit();
+      }
+
+      // 4. Seed Bangladesh payment methods if empty
+      const pmSnap = await getDocs(collection(db, 'payment_methods'));
+      if (pmSnap.empty) {
+        console.log('[Firestore] Seeding initial Bangladesh payment methods...');
+        const batch = writeBatch(db);
+        for (const pm of MOCK_PAYMENT_METHODS) {
+          const docRef = doc(db, 'payment_methods', pm.id);
+          batch.set(docRef, pm);
+        }
+        await batch.commit();
+      }
+
+      // 5. Ensure superadmin doc exists in admins collection
       const superAdminRef = doc(db, 'admins', SUPERADMIN_EMAIL.toLowerCase().replace(/[^a-z0-9]/g, '_'));
       const superAdminSnap = await getDoc(superAdminRef);
       if (!superAdminSnap.exists()) {
@@ -237,7 +295,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // ─── Global Real-time Listeners (Products & Coupons & Admin List) ─
+  // ─── Global Real-time Listeners (Products & Coupons & Reviews & Payment Methods & Admin List) ─
   useEffect(() => {
     seedFirestoreIfEmpty();
 
@@ -279,7 +337,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // 3. Real-time admin list listener (only if authenticated/permitted)
+    // 3. Real-time customer reviews listener (available to all users)
+    const unsubReviews = onSnapshot(collection(db, 'reviews'), (snapshot) => {
+      if (!snapshot.empty) {
+        const revs = snapshot.docs.map(d => ({
+          ...d.data(),
+          id: d.id,
+        } as Review));
+        revs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setReviews(revs);
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[Firestore] Reviews listener error:', err);
+      }
+    });
+
+    // 4. Real-time Bangladesh payment methods listener (available to all users)
+    const unsubPaymentMethods = onSnapshot(collection(db, 'payment_methods'), (snapshot) => {
+      if (!snapshot.empty) {
+        const pms = snapshot.docs.map(d => ({
+          ...d.data(),
+          id: d.id,
+        } as BangladeshPaymentMethod));
+        setPaymentMethods(pms);
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[Firestore] Payment methods listener error:', err);
+      }
+    });
+
+    // 5. Real-time admin list listener (only if authenticated/permitted)
     const unsubAdmins = onSnapshot(collection(db, 'admins'), (snapshot) => {
       if (!snapshot.empty) {
         const admins = snapshot.docs.map(d => d.data() as AdminMember);
@@ -295,7 +384,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }]);
       }
     }, (_err) => {
-      // Unauthenticated visitors do not have permission to view internal admins list
       setAdminList([{
         id: 'superadmin',
         email: SUPERADMIN_EMAIL,
@@ -309,6 +397,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       unsubProducts();
       unsubCoupons();
+      unsubReviews();
+      unsubPaymentMethods();
       unsubAdmins();
     };
   }, [seedFirestoreIfEmpty]);
@@ -595,66 +685,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeCoupon = () => setAppliedCoupon(null);
 
   // ─── Checkout ──────────────────────────────────────────────────────
-  const processCheckout = async (paymentMethod: PaymentMethod, customEmail?: string): Promise<Order> => {
+  const processCheckout = async (
+    paymentMethod: PaymentMethod,
+    customEmail?: string,
+    paymentProof?: {
+      senderNumber: string;
+      transactionId: string;
+      screenshotUrl?: string;
+      paymentMethodName?: string;
+      totalBdt?: number;
+    }
+  ): Promise<Order> => {
     const orderId = generateRandomId('ord');
     const orderNum = generateOrderNumber();
-    const newSubs: UserSubscription[] = [];
-    const generatedSubIds: string[] = [];
-
-    for (const item of cart) {
-      for (let i = 0; i < item.quantity; i++) {
-        const subId = generateRandomId('sub');
-        generatedSubIds.push(subId);
-        const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
-        const durationDays = daysMap[item.selectedPlan.duration] || 30;
-        const startDate = new Date().toISOString();
-        const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
-        const creds = generateMockCredentials(item.product.name, item.product.accountType, customEmail || user.email);
-        const sub: UserSubscription = {
-          id: subId, orderId,
-          productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
-          planDuration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
-          pricePaid: item.selectedPlan.price, status: 'active', startDate, expiryDate,
-          autoRenew: true, autoRenewReminderDays: 3, accountType: item.product.accountType,
-          warrantyValidUntil: expiryDate, paymentMethod, credentials: creds,
-          // @ts-ignore – store userId for Firestore queries
-          userId: user.id,
-        };
-        newSubs.push(sub);
-        // Write to Firestore
-        try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
-      }
-    }
+    const isBangladesh = ['bkash', 'nagad', 'rocket', 'upay', 'custom'].includes(paymentMethod);
 
     const newOrder: Order = {
-      id: orderId, orderNumber: orderNum, createdAt: new Date().toISOString(),
-      userId: user.id, userEmail: customEmail || user.email,
+      id: orderId,
+      orderNumber: orderNum,
+      createdAt: new Date().toISOString(),
+      userId: user.id,
+      userEmail: customEmail || user.email,
       items: cart.map(item => ({
-        productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
-        duration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
-        price: item.selectedPlan.price, quantity: item.quantity,
+        productId: item.product.id,
+        productName: item.product.name,
+        productLogo: item.product.logo,
+        duration: item.selectedPlan.duration,
+        durationLabel: item.selectedPlan.label,
+        price: item.selectedPlan.price,
+        quantity: item.quantity,
       })),
-      subtotal: cartSubtotal, discount: cartDiscount, total: cartTotal, paymentMethod,
-      paymentStatus: 'paid',
-      transactionHash: paymentMethod.startsWith('crypto')
-        ? `0x${Math.random().toString(16).substring(2)}${Math.random().toString(16).substring(2)}`
-        : `ch_${Math.random().toString(36).substring(2, 14)}`,
-      deliveryStatus: 'delivered',
-      generatedSubscriptionIds: generatedSubIds,
+      subtotal: cartSubtotal,
+      discount: cartDiscount,
+      total: cartTotal,
+      totalBdt: paymentProof?.totalBdt || (cartTotal * 125),
+      paymentMethod,
+      paymentMethodName: paymentProof?.paymentMethodName || paymentMethod.toUpperCase(),
+      paymentStatus: isBangladesh ? 'pending' : 'paid',
+      deliveryStatus: isBangladesh ? 'processing' : 'delivered',
+      generatedSubscriptionIds: [],
+      senderNumber: paymentProof?.senderNumber || '',
+      transactionId: paymentProof?.transactionId || '',
+      screenshotUrl: paymentProof?.screenshotUrl || '',
     };
 
+    // If auto-verified / instant test card
+    if (!isBangladesh) {
+      const generatedSubIds: string[] = [];
+      for (const item of cart) {
+        for (let i = 0; i < item.quantity; i++) {
+          const subId = generateRandomId('sub');
+          generatedSubIds.push(subId);
+          const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+          const durationDays = daysMap[item.selectedPlan.duration] || 30;
+          const startDate = new Date().toISOString();
+          const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
+          const creds = generateMockCredentials(item.product.name, item.product.accountType, customEmail || user.email);
+          const sub: UserSubscription = {
+            id: subId, orderId,
+            productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
+            planDuration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
+            pricePaid: item.selectedPlan.price, status: 'active', startDate, expiryDate,
+            autoRenew: true, autoRenewReminderDays: 3, accountType: item.product.accountType,
+            warrantyValidUntil: expiryDate, paymentMethod, credentials: creds,
+            // @ts-ignore – store userId for Firestore queries
+            userId: user.id,
+          };
+          try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
+        }
+      }
+      newOrder.generatedSubscriptionIds = generatedSubIds;
+
+      // Update user stats in Firestore for instant payment
+      try {
+        const userRef = doc(db, 'users', user.id);
+        await updateDoc(userRef, {
+          lifetimeSpend: (user.lifetimeSpend || 0) + cartTotal,
+          activeSubscriptionsCount: (user.activeSubscriptionsCount || 0) + generatedSubIds.length,
+        });
+      } catch { }
+    }
+
     // Write order to Firestore
-    try { await setDoc(doc(db, 'orders', orderId), newOrder); } catch (err) { console.error(err); }
-
-    // Update user stats in Firestore
     try {
-      const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, {
-        lifetimeSpend: (user.lifetimeSpend || 0) + cartTotal,
-        activeSubscriptionsCount: (user.activeSubscriptionsCount || 0) + newSubs.length,
-      });
-    } catch { }
+      await setDoc(doc(db, 'orders', orderId), newOrder);
+    } catch (err) {
+      console.error('[Firestore] Order creation error:', err);
+    }
 
+    // Optimistically update local orders list
+    setOrders(prev => [newOrder, ...prev]);
     setLatestOrder(newOrder);
     clearCart();
     return newOrder;
@@ -772,12 +892,164 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: Order management ───────────────────────────────────────
+  // ─── Admin: Order management & Verification ───────────────────────
   const adminUpdateOrderStatus = async (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => {
     try {
       await updateDoc(doc(db, 'orders', orderId), { paymentStatus, deliveryStatus });
+      setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentStatus, deliveryStatus } : o));
     } catch (err) {
       console.error('adminUpdateOrderStatus error:', err);
+    }
+  };
+
+  const adminApproveAndDeliverOrder = async (orderId: string) => {
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      const snap = await getDoc(orderRef);
+      if (!snap.exists()) return;
+      const ord = snap.data() as Order;
+
+      const generatedSubIds: string[] = [];
+      const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+
+      for (const item of ord.items) {
+        for (let i = 0; i < (item.quantity || 1); i++) {
+          const subId = generateRandomId('sub');
+          generatedSubIds.push(subId);
+          const durationDays = daysMap[item.duration] || 30;
+          const startDate = new Date().toISOString();
+          const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
+          const creds = generateMockCredentials(item.productName, 'private_account', ord.userEmail);
+
+          const sub: UserSubscription = {
+            id: subId,
+            orderId,
+            productId: item.productId,
+            productName: item.productName,
+            productLogo: item.productLogo,
+            planDuration: item.duration,
+            durationLabel: item.durationLabel || '1 Month',
+            pricePaid: item.price,
+            status: 'active',
+            startDate,
+            expiryDate,
+            autoRenew: true,
+            autoRenewReminderDays: 3,
+            accountType: 'private_account',
+            warrantyValidUntil: expiryDate,
+            paymentMethod: ord.paymentMethod,
+            credentials: creds,
+            // @ts-ignore
+            userId: ord.userId,
+          };
+
+          await setDoc(doc(db, 'subscriptions', subId), sub);
+        }
+      }
+
+      await updateDoc(orderRef, {
+        paymentStatus: 'paid',
+        deliveryStatus: 'delivered',
+        generatedSubscriptionIds: generatedSubIds,
+        verifiedAt: new Date().toISOString(),
+        verifiedBy: user.email || 'Admin',
+      });
+
+      // Update user lifetime spend and subscription count
+      try {
+        const usrRef = doc(db, 'users', ord.userId);
+        const usrSnap = await getDoc(usrRef);
+        if (usrSnap.exists()) {
+          const uData = usrSnap.data();
+          await updateDoc(usrRef, {
+            lifetimeSpend: (uData.lifetimeSpend || 0) + ord.total,
+            activeSubscriptionsCount: (uData.activeSubscriptionsCount || 0) + generatedSubIds.length,
+          });
+        }
+      } catch {}
+
+      // Update local state
+      setAllOrders(prev => prev.map(o => o.id === orderId ? {
+        ...o,
+        paymentStatus: 'paid',
+        deliveryStatus: 'delivered',
+        generatedSubscriptionIds: generatedSubIds,
+      } : o));
+    } catch (err) {
+      console.error('adminApproveAndDeliverOrder error:', err);
+    }
+  };
+
+  const adminRejectOrder = async (orderId: string, reason?: string) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), {
+        paymentStatus: 'failed',
+        deliveryStatus: 'failed',
+        adminNotes: reason || 'Payment not received or invalid TrxID.',
+      });
+      setAllOrders(prev => prev.map(o => o.id === orderId ? {
+        ...o,
+        paymentStatus: 'failed',
+        deliveryStatus: 'failed',
+        adminNotes: reason || 'Payment not received or invalid TrxID.',
+      } : o));
+    } catch (err) {
+      console.error('adminRejectOrder error:', err);
+    }
+  };
+
+  // ─── Admin: Payment Methods CRUD ───────────────────────────────────
+  const adminCreatePaymentMethod = async (pm: Omit<BangladeshPaymentMethod, 'id' | 'updatedAt'>): Promise<string> => {
+    const id = generateRandomId('pm');
+    const newPm: BangladeshPaymentMethod = {
+      ...pm,
+      id,
+      updatedAt: new Date().toISOString(),
+    };
+    setPaymentMethods(prev => [...prev, newPm]);
+    try {
+      await setDoc(doc(db, 'payment_methods', id), newPm);
+    } catch (err) {
+      console.error('adminCreatePaymentMethod error:', err);
+    }
+    return id;
+  };
+
+  const adminUpdatePaymentMethod = async (id: string, updates: Partial<BangladeshPaymentMethod>) => {
+    setPaymentMethods(prev => prev.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p));
+    try {
+      await updateDoc(doc(db, 'payment_methods', id), {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('adminUpdatePaymentMethod error:', err);
+    }
+  };
+
+  const adminDeletePaymentMethod = async (id: string) => {
+    setPaymentMethods(prev => prev.filter(p => p.id !== id));
+    try {
+      await deleteDoc(doc(db, 'payment_methods', id));
+    } catch (err) {
+      console.error('adminDeletePaymentMethod error:', err);
+    }
+  };
+
+  const adminResetPaymentMethods = async () => {
+    setPaymentMethods(MOCK_PAYMENT_METHODS);
+    try {
+      const snap = await getDocs(collection(db, 'payment_methods'));
+      const batch = writeBatch(db);
+      for (const d of snap.docs) {
+        batch.delete(d.ref);
+      }
+      for (const pm of MOCK_PAYMENT_METHODS) {
+        batch.set(doc(db, 'payment_methods', pm.id), pm);
+      }
+      await batch.commit();
+    } catch (err) {
+      console.error('adminResetPaymentMethods error:', err);
     }
   };
 
@@ -933,6 +1205,112 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ─── Customer Reviews System Methods ──────────────────────────────
+  const addReview = async (reviewData: Omit<Review, 'id' | 'createdAt' | 'likes' | 'likedBy'>): Promise<string> => {
+    const revId = generateRandomId('rev');
+    const newRev: Review = {
+      ...reviewData,
+      id: revId,
+      createdAt: new Date().toISOString(),
+      likes: 0,
+      likedBy: [],
+    };
+
+    // Optimistic local update
+    setReviews(prev => [newRev, ...prev]);
+
+    try {
+      await setDoc(doc(db, 'reviews', revId), newRev);
+    } catch (err) {
+      console.warn('[Firestore] Error adding review to firestore:', err);
+    }
+
+    return revId;
+  };
+
+  const likeReview = async (reviewId: string) => {
+    const currentUserId = user.id || 'anonymous_user';
+    setReviews(prev => prev.map(rev => {
+      if (rev.id === reviewId) {
+        const alreadyLiked = rev.likedBy?.includes(currentUserId);
+        const newLikes = alreadyLiked ? Math.max(0, rev.likes - 1) : rev.likes + 1;
+        const newLikedBy = alreadyLiked
+          ? (rev.likedBy || []).filter(id => id !== currentUserId)
+          : [...(rev.likedBy || []), currentUserId];
+        return { ...rev, likes: newLikes, likedBy: newLikedBy };
+      }
+      return rev;
+    }));
+
+    try {
+      const revRef = doc(db, 'reviews', reviewId);
+      const snap = await getDoc(revRef);
+      if (snap.exists()) {
+        const data = snap.data() as Review;
+        const alreadyLiked = data.likedBy?.includes(currentUserId);
+        const newLikes = alreadyLiked ? Math.max(0, (data.likes || 0) - 1) : (data.likes || 0) + 1;
+        const newLikedBy = alreadyLiked
+          ? (data.likedBy || []).filter(id => id !== currentUserId)
+          : [...(data.likedBy || []), currentUserId];
+        await updateDoc(revRef, { likes: newLikes, likedBy: newLikedBy });
+      }
+    } catch (err) {
+      console.warn('[Firestore] Error toggling review like:', err);
+    }
+  };
+
+  const deleteReview = async (reviewId: string) => {
+    setReviews(prev => prev.filter(r => r.id !== reviewId));
+    try {
+      await deleteDoc(doc(db, 'reviews', reviewId));
+    } catch (err) {
+      console.warn('[Firestore] Error deleting review:', err);
+    }
+  };
+
+  const adminCreateReview = async (reviewData: Omit<Review, 'id' | 'createdAt' | 'likes' | 'likedBy'>) => {
+    const revId = generateRandomId('rev');
+    const newRev: Review = {
+      ...reviewData,
+      id: revId,
+      createdAt: new Date().toISOString(),
+      likes: Math.floor(10 + Math.random() * 40),
+      likedBy: [],
+    };
+    setReviews(prev => [newRev, ...prev]);
+    try {
+      await setDoc(doc(db, 'reviews', revId), newRev);
+    } catch (err) {
+      console.warn('[Firestore] Admin review create error:', err);
+    }
+  };
+
+  const adminUpdateReview = async (reviewId: string, updates: Partial<Review>) => {
+    setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, ...updates } : r));
+    try {
+      await updateDoc(doc(db, 'reviews', reviewId), updates);
+    } catch (err) {
+      console.warn('[Firestore] Admin review update error:', err);
+    }
+  };
+
+  const adminResetReviews = async () => {
+    setReviews(MOCK_REVIEWS);
+    try {
+      const snap = await getDocs(collection(db, 'reviews'));
+      const batch = writeBatch(db);
+      for (const d of snap.docs) {
+        batch.delete(d.ref);
+      }
+      for (const rev of MOCK_REVIEWS) {
+        batch.set(doc(db, 'reviews', rev.id), rev);
+      }
+      await batch.commit();
+    } catch (err) {
+      console.warn('[Firestore] Admin reset reviews error:', err);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       products, selectedProduct, setSelectedProduct,
@@ -949,15 +1327,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       adminAddAdmin,
       adminRemoveAdmin,
       adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
-      allOrders, adminUpdateOrderStatus,
+      allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
       allUsers, adminUpdateUserRole,
       allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
       coupons, adminCreateCoupon, adminDeleteCoupon,
+      paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
       allTickets, adminReplyToTicket, adminCloseTicket,
       financialMetrics, emailNotifications, sendTestEmail,
       triggerRenewalCronSimulation, fastForwardSimulationDays,
       refreshAllData, isSyncing,
       tickets, createSupportTicket, replyToTicket,
+      reviews, addReview, likeReview, deleteReview,
+      adminCreateReview, adminUpdateReview, adminResetReviews,
+      isWriteReviewOpen, setIsWriteReviewOpen,
+      targetReviewProduct, setTargetReviewProduct,
       activeSearchQuery, setActiveSearchQuery, activeCategoryFilter, setActiveCategoryFilter,
     }}>
       {children}

@@ -52,6 +52,7 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { href: '/', label: 'Subscriptions' },
+    { href: '/#reviews-section', label: 'Customer Reviews' },
     // Dashboard only shown when logged in
     ...(firebaseUser ? [{ href: '/dashboard', label: 'My Account' }] : []),
   ];

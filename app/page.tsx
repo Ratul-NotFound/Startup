@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { HeroBanner } from '@/components/hero/HeroBanner';
 import { BrandTicker } from '@/components/hero/BrandTicker';
 import { ProductCatalog } from '@/components/store/ProductCatalog';
+import { CustomerReviewsSection } from '@/components/reviews/CustomerReviewsSection';
 import { TrustAndFaq } from '@/components/trust/TrustAndFaq';
 import { Scroll3DReveal } from '@/components/ui/Scroll3DReveal';
 
@@ -36,7 +37,14 @@ export default function HomePage() {
         </Scroll3DReveal>
       </div>
 
-      {/* 4. Simple Clean FAQ */}
+      {/* 4. Customer Reviews Section — Fully Dynamic & Synced */}
+      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4" suppressHydrationWarning>
+        <Scroll3DReveal direction="up" rotateXAmount={16} delay={0.1}>
+          <CustomerReviewsSection />
+        </Scroll3DReveal>
+      </div>
+
+      {/* 5. Simple Clean FAQ */}
       <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4" suppressHydrationWarning>
         <Scroll3DReveal direction="up" rotateXAmount={18} delay={0.1}>
           <TrustAndFaq />
