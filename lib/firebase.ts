@@ -2,19 +2,9 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
-const getAuthDomain = () => {
-  if (process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) {
-    return process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  }
-  if (typeof window !== 'undefined' && window.location.hostname && !window.location.hostname.includes('localhost')) {
-    return window.location.host;
-  }
-  return "rflix-91ab8.firebaseapp.com";
-};
-
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBE8M11pu50TRfRx-s7khgdys6X1zkj44M",
-  authDomain: getAuthDomain(),
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "subnexus.vercel.app",
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "rflix-91ab8",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "rflix-91ab8.firebasestorage.app",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "844475180177",

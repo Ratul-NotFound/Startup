@@ -108,7 +108,7 @@ const nextConfig = {
     ];
   },
 
-  // ─── Custom Domain Auth Proxy (Hide firebaseapp.com) ──────────────
+  // ─── Reverse Proxy for Custom Branded Authentication Domain ────────
   async rewrites() {
     return [
       {
