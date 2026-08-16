@@ -1,8 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
+import { useInView } from 'framer-motion';
 
 export const BrandTicker: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(containerRef, { margin: '100px 0px 100px 0px', once: false });
+
   const brandList = [
     {
       name: 'OpenAI',
@@ -97,7 +101,7 @@ export const BrandTicker: React.FC = () => {
   const marqueeItems = [...brandList, ...brandList, ...brandList];
 
   return (
-    <div className="relative overflow-hidden py-6 sm:py-8 bg-transparent" style={{ transform: 'translateZ(0)' }}>
+    <div ref={containerRef} className="relative overflow-hidden py-6 sm:py-8 bg-transparent" style={{ transform: 'translateZ(0)' }}>
       
       {/* Soft Edge Fade Masks matching page background */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
@@ -105,7 +109,10 @@ export const BrandTicker: React.FC = () => {
 
       {/* Hero-Sized Floating Brand Marquee */}
       <div className="overflow-hidden select-none">
-        <div className="animate-marquee gap-8 sm:gap-12 items-center will-change-transform">
+        <div
+          className="animate-marquee gap-8 sm:gap-12 items-center will-change-transform"
+          style={{ animationPlayState: isInView ? 'running' : 'paused' }}
+        >
           {marqueeItems.map((brand, idx) => (
             <div
               key={idx}

@@ -97,8 +97,8 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
         }}
         style={{
           transformStyle: 'preserve-3d',
-          rotateX,
-          rotateY,
+          rotateX: isHovered ? rotateX : 0,
+          rotateY: isHovered ? rotateY : 0,
           transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',

@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { ArrowRight, Zap } from 'lucide-react';
 import { MagneticButton } from '@/components/ui/MagneticButton';
 
 export const HeroBanner: React.FC = () => {
+  const containerRef = useRef<HTMLElement>(null);
+  const isInView = useInView(containerRef, { margin: '200px 0px 200px 0px', once: false });
   const [activeSlide, setActiveSlide] = useState(0);
 
   const backgroundSlides = [
@@ -36,31 +38,34 @@ export const HeroBanner: React.FC = () => {
   ];
 
   useEffect(() => {
+    if (!isInView) return;
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % backgroundSlides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, [backgroundSlides.length]);
+  }, [backgroundSlides.length, isInView]);
 
   const current = backgroundSlides[activeSlide];
 
   return (
-    <section className="relative min-h-[86vh] sm:min-h-[92vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12" suppressHydrationWarning>
+    <section ref={containerRef} className="relative min-h-[86vh] sm:min-h-[92vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12" suppressHydrationWarning>
       
       {/* 100% Full-Viewport Responsive 4-Slide Background Carousel */}
-      <div className="absolute inset-0 z-0 overflow-hidden" suppressHydrationWarning>
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ transform: 'translateZ(0)' }} suppressHydrationWarning>
         {backgroundSlides.map((slide, idx) => (
           <div
             key={idx}
             suppressHydrationWarning
-            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
+            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out will-change-[opacity] ${
               idx === activeSlide ? 'opacity-100' : 'opacity-0'
             }`}
           >
             <img
               src={slide.bgImage}
               alt="Cinematic Background"
-              className={`w-full h-full object-cover object-center transition-transform duration-[8000ms] ease-out ${
+              loading={idx === 0 ? 'eager' : 'lazy'}
+              decoding="async"
+              className={`w-full h-full object-cover object-center transition-transform duration-[8000ms] ease-out will-change-transform ${
                 idx === activeSlide ? 'scale-108' : 'scale-100'
               }`}
             />

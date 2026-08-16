@@ -172,6 +172,8 @@ export const CustomerReviewsSection: React.FC = () => {
                         <img
                           src={rev.userAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'}
                           alt={rev.userName}
+                          loading="lazy"
+                          decoding="async"
                           className="h-8 w-8 rounded-full object-cover border border-white/10"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
@@ -203,7 +205,7 @@ export const CustomerReviewsSection: React.FC = () => {
                     {/* Product Chip */}
                     <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-zinc-800/80 border border-white/5 text-[11px] text-zinc-300">
                       {rev.productLogo && (
-                        <img src={rev.productLogo} alt={rev.productName} className="h-3.5 w-3.5 rounded object-cover" />
+                        <img src={rev.productLogo} alt={rev.productName} loading="lazy" decoding="async" className="h-3.5 w-3.5 rounded object-cover" />
                       )}
                       <span className="font-semibold">{rev.productName}</span>
                       {rev.planDuration && (

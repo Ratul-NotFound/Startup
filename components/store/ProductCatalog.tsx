@@ -199,7 +199,7 @@ export const ProductCatalog: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 0.6, delay: groupIdx * 0.08, ease: [0.16, 1, 0.3, 1] }}
-            className="space-y-4"
+            className="space-y-4 content-auto"
           >
             {/* Category Header */}
             <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
