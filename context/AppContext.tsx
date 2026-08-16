@@ -214,7 +214,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Handle Google redirect sign-in result ─────────────────────────
   useEffect(() => {
-    getRedirectResult(auth).catch(() => {});
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          // User just came back from Google redirect — onAuthStateChanged will
+          // fire and set the user automatically, nothing else needed here.
+          console.log('[Auth] Redirect sign-in successful:', result.user.email);
+        }
+      })
+      .catch((err) => {
+        // Ignore errors silently (e.g. no redirect was in progress)
+        if (err?.code !== 'auth/no-auth-event') {
+          console.warn('[Auth] getRedirectResult error:', err?.code);
+        }
+      });
   }, []);
 
   // ─── Auto-seed Firestore if empty on startup ──────────────────────
