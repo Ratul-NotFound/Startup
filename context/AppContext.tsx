@@ -13,7 +13,7 @@ import {
 import { generateOrderNumber, generateRandomId, generateMockCredentials } from '@/lib/utils';
 import { auth, db, initAnalytics } from '@/lib/firebase';
 import {
-  onAuthStateChanged, signOut, User as FirebaseUser,
+  onAuthStateChanged, signOut, User as FirebaseUser, getRedirectResult,
 } from 'firebase/auth';
 import {
   doc, setDoc, getDoc, collection, getDocs, addDoc, updateDoc,
@@ -171,6 +171,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Analytics init ────────────────────────────────────────────────
   useEffect(() => { initAnalytics(); }, []);
+
+  // ─── Handle Google redirect sign-in result ─────────────────────────
+  // getRedirectResult MUST run at the top level (not inside the modal)
+  // because after signInWithRedirect the page reloads and the modal is closed.
+  useEffect(() => {
+    getRedirectResult(auth).catch(() => {
+      // No redirect in progress — ignore silently
+    });
+    // onAuthStateChanged below will pick up the signed-in user automatically
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Auto-seed Firestore if empty on startup ──────────────────────
   const seedFirestoreIfEmpty = useCallback(async () => {

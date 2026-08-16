@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   signInWithPopup,
   signInWithRedirect,
-  getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
@@ -28,18 +27,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-
-  // Handle redirect result (fires after signInWithRedirect returns)
-  useEffect(() => {
-    getRedirectResult(auth)
-      .then(result => {
-        if (result?.user) {
-          setSuccessMsg('Signed in successfully with Google!');
-          setTimeout(() => onClose(), 800);
-        }
-      })
-      .catch(() => {}); // ignore — no redirect in progress
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
 
