@@ -69,6 +69,7 @@ export interface Coupon {
   offerTitle?: string;
   expiryDate?: string;
   type?: 'discount' | 'giveaway' | 'special_deal' | 'bundle_offer';
+  isRecurringDiscount?: boolean;
 }
 
 export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'crypto_usdt' | 'card_stripe' | 'custom';
@@ -110,6 +111,10 @@ export interface UserSubscription {
   planDuration: PlanDuration;
   durationLabel: string;
   pricePaid: number;
+  renewalPrice?: number;
+  appliedCouponCode?: string;
+  initialDiscountPercent?: number;
+  isGiveaway?: boolean;
   status: SubscriptionStatus;
   startDate: string; // ISO date
   expiryDate: string; // ISO date

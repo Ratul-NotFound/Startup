@@ -1317,6 +1317,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const startDate = new Date().toISOString();
         const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
 
+        const pricePaid = item.price * (item.quantity || 1);
+        const isGiveaway = pricePaid === 0 || (ord.discount > 0 && ord.total === 0);
+        const renewalPrice = isGiveaway ? (item.price > 0 ? item.price : 9.99) : pricePaid;
+
         const sub: UserSubscription = {
           id: subId,
           orderId,
@@ -1326,11 +1330,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           productLogo: item.productLogo,
           planDuration: item.duration,
           durationLabel: item.durationLabel || '1 Month',
-          pricePaid: item.price * (item.quantity || 1),
+          pricePaid,
+          renewalPrice,
+          isGiveaway,
           status: 'active',
           startDate,
           expiryDate,
-          autoRenew: true,
+          autoRenew: !isGiveaway,
           autoRenewReminderDays: 3,
           accountType: item.accountType || 'private_account',
           warrantyValidUntil: expiryDate,
@@ -1844,6 +1850,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const targetUserId = sub.userId || user.id || 'usr_auto';
           const targetUserEmail = sub.userEmail || user.email || 'customer@subnexus.com';
 
+          const renewalAmount = sub.renewalPrice ?? (sub.pricePaid > 0 ? sub.pricePaid : 9.99);
+
           const renewalOrder: Order = {
             id: renewalOrderId,
             orderNumber: renewalOrderNumber,
@@ -1856,14 +1864,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 productLogo: sub.productLogo,
                 duration: sub.planDuration,
                 durationLabel: sub.durationLabel,
-                price: sub.pricePaid,
+                price: renewalAmount,
                 quantity: 1,
               },
             ],
-            subtotal: sub.pricePaid,
+            subtotal: renewalAmount,
             discount: 0,
-            total: sub.pricePaid,
-            totalBdt: Math.round(sub.pricePaid * 125),
+            total: renewalAmount,
+            totalBdt: Math.round(renewalAmount * 125),
             paymentMethod: sub.paymentMethod || 'bKash',
             paymentStatus: 'paid',
             deliveryStatus: 'delivered',
@@ -1883,7 +1891,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               targetUserId,
               targetUserEmail,
               `Auto-Renewal Successful: ${sub.productName}`,
-              `🎉 Your ${sub.productName} plan (${sub.durationLabel}) has been automatically renewed until ${new Date(newExp).toLocaleDateString()}. Your vault credentials remain unchanged and active.`
+              `🎉 Your ${sub.productName} plan (${sub.durationLabel}) has been automatically renewed until ${new Date(newExp).toLocaleDateString()} at $${renewalAmount.toFixed(2)} (৳${Math.round(renewalAmount * 125).toLocaleString()}). Your vault credentials remain active.`
             );
           } catch { }
         } else {

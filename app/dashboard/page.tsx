@@ -500,6 +500,16 @@ export default function CustomerDashboardPage() {
                       </div>
                     </div>
 
+                    {/* Auto-Renewal Price Info Badge */}
+                    <div className="flex items-center justify-between text-[10px] p-2 rounded-xl bg-zinc-950/80 border border-white/[0.05]">
+                      <span className="text-slate-400 font-medium">Auto-Renew Rate:</span>
+                      <span className="font-mono font-bold text-cyan-300">
+                        {sub.isGiveaway
+                          ? `🎁 Free Giveaway ($${(sub.renewalPrice || 9.99).toFixed(2)} on paid renewal)`
+                          : `$${(sub.renewalPrice || sub.pricePaid).toFixed(2)} / ৳${Math.round((sub.renewalPrice || sub.pricePaid) * 125).toLocaleString()}`}
+                      </span>
+                    </div>
+
                     {/* Actions: Auto-Renew, Extend, & Warranty */}
                     <div className="space-y-2 pt-2 border-t border-white/[0.05]">
                       <div className="grid grid-cols-2 gap-2">
