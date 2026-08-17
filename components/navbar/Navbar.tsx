@@ -76,31 +76,34 @@ export const Navbar: React.FC = () => {
 
             {/* Brand Logo & Favicon Badge */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0 group" suppressHydrationWarning>
-              {brandSettings?.faviconUrl ? (
-                <img
-                  src={brandSettings.faviconUrl}
-                  alt="Brand Badge Icon"
-                  className="h-8 w-8 rounded-lg object-contain bg-zinc-900 border border-white/10 p-1"
-                />
-              ) : (
-                <div
-                  suppressHydrationWarning
-                  className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/25 transition-colors"
-                >
-                  <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                  </svg>
-                </div>
-              )}
-
               {brandSettings?.navbarLogoUrl ? (
+                /* Primary Custom Navbar Logo Image */
                 <img
                   src={brandSettings.navbarLogoUrl}
                   alt={brandSettings.brandName || 'Keyoon'}
-                  className="h-7 max-w-[180px] object-contain"
+                  className="h-8 max-w-[220px] object-contain"
                 />
               ) : (
-                <span className="text-base font-bold tracking-tight text-white">{brandSettings?.brandName || 'Keyoon'}</span>
+                /* Fallback Icon Badge + Brand Text */
+                <>
+                  {brandSettings?.faviconUrl ? (
+                    <img
+                      src={brandSettings.faviconUrl}
+                      alt="Brand Badge Icon"
+                      className="h-8 w-8 rounded-lg object-contain bg-zinc-900 border border-white/10 p-1"
+                    />
+                  ) : (
+                    <div
+                      suppressHydrationWarning
+                      className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/25 transition-colors"
+                    >
+                      <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                      </svg>
+                    </div>
+                  )}
+                  <span className="text-base font-bold tracking-tight text-white">{brandSettings?.brandName || 'Keyoon'}</span>
+                </>
               )}
             </Link>
 

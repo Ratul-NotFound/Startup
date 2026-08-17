@@ -7,13 +7,16 @@ export const compressImageToDataUrl = (
   file: File,
   maxWidth = 750,
   maxHeight = 750,
-  quality = 0.65
+  quality = 0.75,
+  preserveTransparency = false
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     if (!file.type.startsWith('image/')) {
       reject(new Error('File is not an image'));
       return;
     }
+
+    const isPngOrWebp = preserveTransparency || file.type.includes('png') || file.type.includes('webp') || file.type.includes('svg');
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -49,13 +52,19 @@ export const compressImageToDataUrl = (
           return;
         }
 
-        // Draw image onto canvas
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, width, height);
+        // Draw image onto canvas (preserve transparency for PNG/WEBP/SVG)
+        if (!isPngOrWebp) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+        } else {
+          ctx.clearRect(0, 0, width, height);
+        }
+
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Export as compressed JPEG
-        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        // Export as compressed PNG for transparent formats, or JPEG otherwise
+        const mimeType = isPngOrWebp ? 'image/png' : 'image/jpeg';
+        const compressedBase64 = canvas.toDataURL(mimeType, quality);
         resolve(compressedBase64);
       };
 

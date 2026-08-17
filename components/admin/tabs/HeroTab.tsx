@@ -57,9 +57,9 @@ export function HeroTab({
 
     setIsUploadingFavicon(true);
     try {
-      const compressedDataUrl = await compressImageToDataUrl(file, 200, 200, 0.9);
+      const compressedDataUrl = await compressImageToDataUrl(file, 250, 250, 0.9, true);
       setFormFavicon(compressedDataUrl);
-      showFeedback('success', 'Favicon icon uploaded and compressed successfully.');
+      showFeedback('success', 'Favicon icon uploaded with transparent PNG support.');
     } catch {
       showFeedback('error', 'Failed to compress favicon image file.');
     } finally {
@@ -74,9 +74,9 @@ export function HeroTab({
 
     setIsUploadingNavbarLogo(true);
     try {
-      const compressedDataUrl = await compressImageToDataUrl(file, 600, 300, 0.85);
+      const compressedDataUrl = await compressImageToDataUrl(file, 800, 400, 0.9, true);
       setFormNavbarLogo(compressedDataUrl);
-      showFeedback('success', 'Navbar logo image uploaded and compressed successfully.');
+      showFeedback('success', 'Navbar logo image uploaded with transparent PNG support.');
     } catch {
       showFeedback('error', 'Failed to compress navbar logo file.');
     } finally {
