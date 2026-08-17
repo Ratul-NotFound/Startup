@@ -660,22 +660,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [seedFirestoreIfEmpty]);
 
-  // Automated background Auto-Renewal Engine runner (runs periodically)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      triggerRenewalCronSimulation();
-    }, 5000);
-
-    const interval = setInterval(() => {
-      triggerRenewalCronSimulation();
-    }, 10 * 60 * 1000);
-
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
-  }, [allSubscriptions.length, subscriptions.length]);
-
   // ─── Real-time Admin Data Listeners ─────────────────────────────────
   const setupAdminRealtimeListeners = useCallback(() => {
     // Clear ONLY previous admin-wide listeners (never touch user-specific ones)

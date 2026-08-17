@@ -229,35 +229,20 @@ export const CredentialVaultModal: React.FC = () => {
           )}
         </div>
 
-        {/* Status and Auto-renewal toggle */}
+        {/* Expiry Date Card */}
         <div className="p-4 rounded-2xl bg-obsidian-850 border border-white/[0.06] flex items-center justify-between">
           <div className="space-y-0.5">
             <p className="text-xs font-bold text-white flex items-center gap-1.5">
-              <Calendar className="h-3.5 w-3.5 text-brand-400" />
+              <Calendar className="h-3.5 w-3.5 text-cyan-400" />
               <span>Expires on {new Date(activeVaultSub.expiryDate).toLocaleDateString()}</span>
             </p>
             <p className="text-[11px] text-slate-400">
-              Auto-renew is currently <strong>{activeVaultSub.autoRenew ? 'ACTIVE' : 'OFF'}</strong>
+              Active Warranty Protection: <strong>100% Full-Term</strong>
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => toggleAutoRenew(activeVaultSub.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                activeVaultSub.autoRenew
-                  ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-obsidian-950 text-slate-400 border border-white/[0.1]'
-              }`}
-            >
-              {activeVaultSub.autoRenew ? 'Auto-Renew: ON' : 'Auto-Renew: OFF'}
-            </button>
-            <button
-              onClick={() => extendSubscription(activeVaultSub.id, 30)}
-              className="px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-glow transition-all"
-            >
-              +30 Days
-            </button>
+          <div className="px-3 py-1 rounded-xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono">
+            {activeVaultSub.status === 'active' ? 'Active' : activeVaultSub.status}
           </div>
         </div>
 

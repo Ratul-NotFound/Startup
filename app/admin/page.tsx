@@ -488,8 +488,6 @@ export default function AdminPortalPage() {
               setChartRange={setChartRange}
               revenueChartData={revenueChartData}
               setTab={setTab}
-              triggerRenewalCronSimulation={triggerRenewalCronSimulation}
-              fastForwardSimulationDays={fastForwardSimulationDays}
               showFeedback={showFeedback}
             />
           )}

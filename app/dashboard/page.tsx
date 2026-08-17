@@ -42,7 +42,6 @@ export default function CustomerDashboardPage() {
   const [subSearch, setSubSearch] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showCredentials, setShowCredentials] = useState<Record<string, boolean>>({});
-  const [extendConfirm, setExtendConfirm] = useState<string | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<typeof orders[0] | null>(null);
 
   // Support ticket form state
@@ -527,50 +526,13 @@ export default function CustomerDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Auto-Renewal Price Info Badge */}
-                    <div className="flex items-center justify-between text-[10px] p-2 rounded-xl bg-zinc-950/80 border border-white/[0.05]">
-                      <span className="text-slate-400 font-medium">Auto-Renew Rate:</span>
-                      <span className="font-mono font-bold text-cyan-300">
-                        {sub.isGiveaway
-                          ? `🎁 Free Giveaway ($${(sub.renewalPrice || 9.99).toFixed(2)} on paid renewal)`
-                          : `$${(sub.renewalPrice || sub.pricePaid).toFixed(2)} / ৳${Math.round((sub.renewalPrice || sub.pricePaid) * 125).toLocaleString()}`}
-                      </span>
-                    </div>
-
-                    {/* Actions: Auto-Renew, Extend, & Warranty */}
+                    {/* Actions: Warranty & Support */}
                     <div className="space-y-2 pt-2 border-t border-white/[0.05]">
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          onClick={() => toggleAutoRenew(sub.id)}
-                          className={`py-2 rounded-xl text-[11px] font-bold border transition-colors cursor-pointer ${
-                            sub.autoRenew ? 'bg-emerald-950/50 border-emerald-500/30 text-emerald-300' : 'bg-zinc-800 border-white/[0.08] text-slate-400'
-                          }`}
-                        >
-                          {sub.autoRenew ? '✓ Auto-Renew On' : 'Auto-Renew Off'}
-                        </button>
-
-                        {extendConfirm === sub.id ? (
-                          <button
-                            onClick={() => { extendSubscription(sub.id, 30); setExtendConfirm(null); }}
-                            className="py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition-colors cursor-pointer"
-                          >
-                            Confirm +30d
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setExtendConfirm(sub.id)}
-                            className="py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/[0.08] text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-                          >
-                            <RefreshCw className="h-3 w-3 text-cyan-400" /> Extend
-                          </button>
-                        )}
-                      </div>
-
                       <button
                         onClick={() => handleClaimWarranty(sub)}
-                        className="w-full py-1.5 rounded-xl bg-zinc-950 hover:bg-zinc-850 border border-white/[0.06] text-slate-400 hover:text-cyan-300 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                        className="w-full py-2 rounded-xl bg-zinc-950 hover:bg-zinc-850 border border-white/[0.08] hover:border-cyan-500/30 text-slate-300 hover:text-cyan-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                       >
-                        <ShieldCheck className="h-3 w-3 text-cyan-400" />
+                        <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
                         <span>Claim 100% Replacement Warranty</span>
                       </button>
                     </div>
@@ -1086,24 +1048,6 @@ export default function CustomerDashboardPage() {
               </h3>
 
               <div className="space-y-2.5">
-                <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-950 border border-white/[0.05]">
-                  <div>
-                    <p className="text-xs font-bold text-white">Auto-Renew Default</p>
-                    <p className="text-[11px] text-slate-400">Automatically enable auto-renewal reminder for all newly provisioned subscriptions.</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => updateUserProfile({ autoRenewEnabled: !user.autoRenewEnabled })}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
-                      user.autoRenewEnabled
-                        ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-                        : 'bg-zinc-800 border-white/10 text-slate-400'
-                    }`}
-                  >
-                    {user.autoRenewEnabled ? '✓ Enabled' : 'Disabled'}
-                  </button>
-                </div>
-
                 <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-950 border border-white/[0.05]">
                   <div>
                     <p className="text-xs font-bold text-white">Instant Email & Order Alerts</p>

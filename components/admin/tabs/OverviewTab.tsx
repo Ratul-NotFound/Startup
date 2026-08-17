@@ -16,8 +16,6 @@ interface OverviewTabProps {
   setChartRange: (range: '7d' | '30d' | '6m') => void;
   revenueChartData: { label: string; revenue: number; orders: number }[];
   setTab: (tab: AdminTab) => void;
-  triggerRenewalCronSimulation: () => { renewedCount: number; notifiedCount: number; expiredCount: number };
-  fastForwardSimulationDays: (days: number) => void;
   showFeedback: (type: 'success' | 'error', msg: string) => void;
 }
 
@@ -31,8 +29,6 @@ export function OverviewTab({
   setChartRange,
   revenueChartData,
   setTab,
-  triggerRenewalCronSimulation,
-  fastForwardSimulationDays,
   showFeedback,
 }: OverviewTabProps) {
   return (
@@ -138,34 +134,6 @@ export function OverviewTab({
               <p className="text-slate-500 text-xs text-center py-10">No orders recorded in Firestore yet.</p>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Quick Simulation & Maintenance Tools */}
-      <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
-        <h3 className="text-sm font-bold text-white">Automated Engine & Tools</h3>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => {
-              const res = triggerRenewalCronSimulation();
-              showFeedback('success', `Auto-Renewal Cron: ${res.renewedCount} auto-renewed, ${res.notifiedCount} notice(s) sent, ${res.expiredCount} expired.`);
-            }}
-            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
-          >
-            <RefreshCw className="h-3.5 w-3.5" /> Run Auto-Renewal Engine
-          </button>
-          {[7, 14, 30].map(d => (
-            <button
-              key={d}
-              onClick={() => {
-                fastForwardSimulationDays(d);
-                showFeedback('success', `Simulated time forward by +${d} days.`);
-              }}
-              className="px-4 py-2.5 rounded-xl bg-zinc-800 border border-white/10 text-xs font-bold text-slate-200 hover:bg-zinc-700 transition-all cursor-pointer"
-            >
-              Fast Forward +{d} Days
-            </button>
-          ))}
         </div>
       </div>
     </div>
