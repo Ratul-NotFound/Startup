@@ -5,9 +5,9 @@ import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
 import {
   TrendingUp, DollarSign, Users, Package, Tag, Headphones, ShoppingBag,
   BarChart2, MessageSquare, Lock, Star, Sparkles, CreditCard, UserCheck,
-  CheckCircle2, AlertCircle, RefreshCw, Gift,
+  CheckCircle2, AlertCircle, RefreshCw, Gift, Activity,
 } from 'lucide-react';
-import { Product, Coupon, UserSubscription, Order, BangladeshPaymentMethod, SupportTicket, HeroSlide, QuickMessage } from '@/types';
+import { Product, Coupon, UserSubscription, Order, BangladeshPaymentMethod, SupportTicket, HeroSlide, QuickMessage, AdminActivityLog } from '@/types';
 
 // Components
 import { AdminHeader, AdminSidebar, AdminTab, NavSection } from '@/components/admin/AdminHeader';
@@ -23,6 +23,7 @@ import { SubscriptionsTab } from '@/components/admin/tabs/SubscriptionsTab';
 import { CouponsTab } from '@/components/admin/tabs/CouponsTab';
 import { TicketsTab } from '@/components/admin/tabs/TicketsTab';
 import { ReviewsTab } from '@/components/admin/tabs/ReviewsTab';
+import { AdminActivityLogsTab } from '@/components/admin/tabs/AdminActivityLogsTab';
 import { HeroTab } from '@/components/admin/tabs/HeroTab';
 import { BotTab } from '@/components/admin/tabs/BotTab';
 
@@ -52,6 +53,7 @@ export default function AdminPortalPage() {
     reviews, deleteReview, adminCreateReview, adminResetReviews,
     heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
     quickMessages, adminCreateQuickMessage, adminUpdateQuickMessage, adminDeleteQuickMessage, adminResetQuickMessages,
+    adminActivityLogs,
   } = useApp();
 
   // Navigation & UI state
@@ -383,6 +385,7 @@ export default function AdminPortalPage() {
         { id: 'overview', label: 'Command Overview', icon: <BarChart2 className="h-4 w-4" />, count: null },
         { id: 'orders', label: 'Orders & Verification', icon: <ShoppingBag className="h-4 w-4" />, count: pendingOrdersCount, isUrgent: pendingOrdersCount > 0 },
         { id: 'payments', label: 'Bangladesh Payment Gateways', icon: <CreditCard className="h-4 w-4" />, count: paymentMethods.length },
+        { id: 'logs', label: 'Admin Activity & Audit Trace', icon: <Activity className="h-4 w-4 text-emerald-400" />, count: adminActivityLogs.length },
       ],
     },
     {
@@ -664,6 +667,13 @@ export default function AdminPortalPage() {
               setQuickMessageDeleteConfirm={setQuickMessageDeleteConfirm}
               quickMessageDeleteConfirm={quickMessageDeleteConfirm}
               handleDeleteQuickMessage={handleDeleteQuickMessage}
+            />
+          )}
+
+          {tab === 'logs' && (
+            <AdminActivityLogsTab
+              logs={adminActivityLogs}
+              showFeedback={showFeedback}
             />
           )}
         </main>

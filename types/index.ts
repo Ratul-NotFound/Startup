@@ -277,3 +277,13 @@ export interface QuickMessage {
   isActive: boolean;
 }
 
+export interface AdminActivityLog {
+  id: string;
+  adminEmail: string;
+  adminName?: string;
+  action: string;
+  category: 'orders' | 'vault' | 'catalog' | 'coupons' | 'payments' | 'admins' | 'system';
+  details: string;
+  targetId?: string;
+  timestamp: string;
+}

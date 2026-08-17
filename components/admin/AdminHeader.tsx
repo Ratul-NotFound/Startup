@@ -17,7 +17,8 @@ export type AdminTab =
   | 'tickets'
   | 'reviews'
   | 'hero'
-  | 'bot';
+  | 'bot'
+  | 'logs';
 
 export interface NavSection {
   title: string;

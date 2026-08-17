@@ -107,5 +107,10 @@ service cloud.firestore {
     match /admins/{adminId} {
       allow read, write: if true;
     }
+
+    // Admin Activity Audit Trace Logs
+    match /admin_activity_logs/{logId} {
+      allow read, write: if true;
+    }
   }
 }

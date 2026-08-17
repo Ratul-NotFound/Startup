@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
-  AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage,
+  AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog,
 } from '@/types';
 import {
   MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
@@ -186,6 +186,8 @@ interface AppContextType {
   sendTestEmail: (recipient: string, templateType: EmailNotification['templateType']) => void;
   triggerRenewalCronSimulation: () => { renewedCount: number; notifiedCount: number; expiredCount: number };
   fastForwardSimulationDays: (days: number) => void;
+  adminActivityLogs: AdminActivityLog[];
+  logAdminActivity: (action: string, category: AdminActivityLog['category'], details: string, targetId?: string) => Promise<void>;
   refreshAllData: () => Promise<void>;
   isSyncing: boolean;
 
@@ -275,7 +277,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [allSubscriptions, setAllSubscriptions] = useState<UserSubscription[]>([]);
   const [allTickets, setAllTickets] = useState<SupportTicket[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>(MOCK_COUPONS);
+  const [adminActivityLogs, setAdminActivityLogs] = useState<AdminActivityLog[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // Helper to record admin activity log to Firestore
+  const logAdminActivity = async (
+    action: string,
+    category: AdminActivityLog['category'],
+    details: string,
+    targetId?: string
+  ) => {
+    const logId = generateRandomId('log');
+    const newLog: AdminActivityLog = {
+      id: logId,
+      adminEmail: firebaseUser?.email || 'admin@subnexus.com',
+      adminName: user?.name || 'Admin Officer',
+      action,
+      category,
+      details,
+      targetId,
+      timestamp: new Date().toISOString(),
+    };
+
+    setAdminActivityLogs(prev => [newLog, ...prev]);
+
+    try {
+      await setDoc(doc(db, 'admin_activity_logs', logId), newLog);
+    } catch (err) {
+      console.warn('[AppContext] Failed to write admin activity log to Firestore:', err);
+    }
+  };
 
   // Analytics
   const [financialMetrics, setFinancialMetrics] = useState<FinancialMetric>(INITIAL_FINANCIAL_METRICS);
@@ -640,6 +671,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAllTickets(tkts);
     });
     adminUnsubscribersRef.current.push(unsubTickets);
+
+    // All admin activity logs listener
+    const unsubActivityLogs = onSnapshot(collection(db, 'admin_activity_logs'), (snapshot) => {
+      const logs = snapshot.docs.map(d => d.data() as AdminActivityLog).sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+      setAdminActivityLogs(logs);
+    });
+    adminUnsubscribersRef.current.push(unsubActivityLogs);
   }, []);
 
   // ─── Auth state listener & User-specific live listeners ─────────────
@@ -1414,6 +1454,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           `🎉 Your payment for Order #${ord.orderNumber} (${ord.items.map(i => i.productName).join(', ')}) has been verified and approved! Your credentials have been provisioned to your Customer Dashboard Vault.`
         );
       } catch {}
+
+      // Record audit activity log
+      try {
+        await logAdminActivity(
+          'ORDER_APPROVED',
+          'orders',
+          `Approved order #${ord.orderNumber} for ${ord.userEmail} ($${ord.total.toFixed(2)}) and provisioned ${generatedSubs.length} subscription credentials`,
+          String(ord.orderNumber)
+        );
+      } catch {}
     } catch (err) {
       console.error('adminApproveAndDeliverOrder error:', err);
     }
@@ -2185,6 +2235,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     allTickets, adminReplyToTicket, adminCloseTicket, adminSendMessageToUser,
     financialMetrics, emailNotifications, sendTestEmail,
     triggerRenewalCronSimulation, fastForwardSimulationDays,
+    adminActivityLogs, logAdminActivity,
     refreshAllData, isSyncing,
     tickets, createSupportTicket, replyToTicket,
     reviews, addReview, likeReview, deleteReview,
@@ -2196,7 +2247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
-    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages,
+    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs,
     financialMetrics, emailNotifications, isSyncing,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
     activeSearchQuery, activeCategoryFilter,
