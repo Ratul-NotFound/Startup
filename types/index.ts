@@ -181,6 +181,7 @@ export interface SupportTicket {
     sender: 'user' | 'agent' | 'system';
     senderName: string;
     content: string;
+    imageUrl?: string;
     timestamp: string;
   }[];
 }

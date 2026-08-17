@@ -4,21 +4,23 @@ import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import {
-  X, Send, Bot, ChevronRight, Headphones,
-  CheckCheck, MessageCircle, Zap
+  X, Send, Bot, Headphones,
+  CheckCheck, MessageCircle, Zap, Image as ImageIcon,
+  Paperclip, Loader2
 } from 'lucide-react';
-import { SupportTicket } from '@/types';
+import { compressImageToDataUrl } from '@/lib/image-compression';
 
 interface LiveMessage {
   id: string;
   sender: 'user' | 'agent' | 'system';
   senderName: string;
   content: string;
+  imageUrl?: string;
   timestamp: string;
 }
 
-// ─── Memoized Message Bubble (Prevents re-renders during typing) ────────
-const MessageBubble = memo(({ msg }: { msg: LiveMessage }) => {
+// ─── Memoized Message Bubble ───────────────────────────────────────────
+const MessageBubble = memo(({ msg, onImageClick }: { msg: LiveMessage; onImageClick?: (url: string) => void }) => {
   const isUser = msg.sender === 'user';
   return (
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} transform-gpu`}>
@@ -33,13 +35,30 @@ const MessageBubble = memo(({ msg }: { msg: LiveMessage }) => {
       </div>
 
       <div
-        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed ${
+        className={`max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed space-y-2 ${
           isUser
             ? 'bg-indigo-600 text-white rounded-tr-sm shadow-[0_2px_10px_rgba(79,70,229,0.3)]'
             : 'bg-zinc-900 border border-white/10 text-zinc-200 rounded-tl-sm shadow-sm'
         }`}
       >
-        {msg.content}
+        {/* Render compressed attached image */}
+        {msg.imageUrl && (
+          <div
+            onClick={() => onImageClick?.(msg.imageUrl!)}
+            className="rounded-xl overflow-hidden border border-white/15 cursor-pointer group/img relative"
+          >
+            <img
+              src={msg.imageUrl}
+              alt="Attachment"
+              className="w-full max-h-48 object-cover group-hover/img:scale-105 transition-transform"
+            />
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-bold text-white">
+              Click to preview
+            </div>
+          </div>
+        )}
+
+        {msg.content && <p>{msg.content}</p>}
       </div>
 
       {isUser && (
@@ -78,40 +97,99 @@ const QuickChipsBar = memo(({ onSelect }: { onSelect: (query: string) => void })
 });
 QuickChipsBar.displayName = 'QuickChipsBar';
 
-// ─── Fast Input Form (Independent State to avoid re-rendering chat feed)
-const ChatInputBar = memo(({ onSend, isSending }: { onSend: (text: string) => void; isSending: boolean }) => {
+// ─── Fast Input Form with Image Compression ───────────────────────────
+const ChatInputBar = memo(({ onSend, isSending }: { onSend: (text: string, imageUrl?: string) => void; isSending: boolean }) => {
   const [text, setText] = useState('');
+  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleImagePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsCompressing(true);
+    try {
+      // Compress image client-side to compact JPEG data URL string
+      const compressedDataUrl = await compressImageToDataUrl(file, 700, 700, 0.65);
+      setAttachedImage(compressedDataUrl);
+    } catch (err) {
+      console.error('Image compression error:', err);
+    } finally {
+      setIsCompressing(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim() || isSending) return;
-    onSend(text.trim());
+    if ((!text.trim() && !attachedImage) || isSending || isCompressing) return;
+
+    onSend(text.trim(), attachedImage || undefined);
     setText('');
+    setAttachedImage(null);
     inputRef.current?.focus();
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="shrink-0 p-3 bg-zinc-900 border-t border-white/[0.08] flex items-center gap-2"
-    >
-      <input
-        ref={inputRef}
-        type="text"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Write a message..."
-        className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
-      />
-      <button
-        type="submit"
-        disabled={!text.trim() || isSending}
-        className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:opacity-40 text-white transition-transform shadow-md shrink-0 cursor-pointer"
-      >
-        <Send className="h-4 w-4" />
-      </button>
-    </form>
+    <div className="shrink-0 bg-zinc-900 border-t border-white/[0.08]">
+      {/* Thumbnail preview if image attached */}
+      {attachedImage && (
+        <div className="px-3 pt-2 pb-1 flex items-center gap-2">
+          <div className="relative inline-block rounded-xl overflow-hidden border border-white/20">
+            <img src={attachedImage} alt="Attachment Preview" className="h-12 w-12 object-cover" />
+            <button
+              type="button"
+              onClick={() => setAttachedImage(null)}
+              className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          <span className="text-[10px] text-zinc-400">Compressed image attached (stays in Firestore text)</span>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="p-3 flex items-center gap-2">
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImagePick}
+          className="hidden"
+        />
+
+        {/* Paperclip / Image Attachment Trigger */}
+        <button
+          type="button"
+          disabled={isCompressing}
+          onClick={() => fileInputRef.current?.click()}
+          className="p-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 active:scale-95 text-zinc-400 hover:text-white border border-white/[0.06] transition-all cursor-pointer shrink-0"
+          title="Attach Screenshot / Photo"
+        >
+          {isCompressing ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" /> : <ImageIcon className="h-4 w-4" />}
+        </button>
+
+        <input
+          ref={inputRef}
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={attachedImage ? 'Add a caption...' : 'Write a message...'}
+          className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+        />
+
+        <button
+          type="submit"
+          disabled={(!text.trim() && !attachedImage) || isSending || isCompressing}
+          className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:opacity-40 text-white transition-transform shadow-md shrink-0 cursor-pointer"
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </form>
+    </div>
   );
 });
 ChatInputBar.displayName = 'ChatInputBar';
@@ -129,6 +207,7 @@ export const FloatingLiveChat: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [localMessages, setLocalMessages] = useState<LiveMessage[]>([
     {
       id: 'welcome_1',
@@ -155,6 +234,7 @@ export const FloatingLiveChat: React.FC = () => {
           sender: m.sender,
           senderName: m.senderName,
           content: m.content,
+          imageUrl: m.imageUrl,
           timestamp: m.timestamp,
         }));
         setLocalMessages(mapped);
@@ -203,14 +283,15 @@ export const FloatingLiveChat: React.FC = () => {
     return `Got your message! A live SubNexus Support Specialist has been notified and will assist you right here shortly. You can also view your tickets in the Dashboard.`;
   }, [orders]);
 
-  const handleSendMessage = useCallback(async (text: string) => {
-    if (!text.trim()) return;
+  const handleSendMessage = useCallback(async (text: string, imageUrl?: string) => {
+    if (!text.trim() && !imageUrl) return;
 
     const userMsg: LiveMessage = {
       id: `usr_${Date.now()}`,
       sender: 'user',
       senderName: user?.name || 'You',
       content: text,
+      imageUrl,
       timestamp: new Date().toISOString(),
     };
 
@@ -218,9 +299,9 @@ export const FloatingLiveChat: React.FC = () => {
 
     // Save to Firestore ticket asynchronously
     if (activeTicketId) {
-      replyToTicket(activeTicketId, text, 'user');
+      replyToTicket(activeTicketId, text, 'user', imageUrl);
     } else {
-      const created = createSupportTicket('Live Chat Support', 'general', text);
+      const created = createSupportTicket('Live Chat Support', 'general', text || 'Sent an image attachment', imageUrl);
       setActiveTicketId(created.id);
     }
 
@@ -228,7 +309,7 @@ export const FloatingLiveChat: React.FC = () => {
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
-      const botReply = getSmartResponse(text);
+      const botReply = imageUrl && !text ? 'Thank you for providing the screenshot! Our admin support ops team is reviewing it.' : getSmartResponse(text);
       const replyMsg: LiveMessage = {
         id: `bot_${Date.now()}`,
         sender: 'agent',
@@ -327,13 +408,13 @@ export const FloatingLiveChat: React.FC = () => {
                   <Bot className="h-4 w-4" />
                 </div>
                 <div className="text-xs text-zinc-300 leading-relaxed">
-                  We are here to help! Type your question below or click a quick topic.
+                  We are here to help! Type your message, attach screenshots, or select a topic.
                 </div>
               </div>
 
-              {/* Chat Bubble History (Memoized items) */}
+              {/* Chat Bubble History */}
               {localMessages.map((msg) => (
-                <MessageBubble key={msg.id} msg={msg} />
+                <MessageBubble key={msg.id} msg={msg} onImageClick={setPreviewImage} />
               ))}
 
               {/* Typing Indicator */}
@@ -354,11 +435,33 @@ export const FloatingLiveChat: React.FC = () => {
             {/* Quick Action Suggested Chips */}
             <QuickChipsBar onSelect={handleSendMessage} />
 
-            {/* Bottom Live Input Bar */}
+            {/* Bottom Live Input Bar with Image Compressor */}
             <ChatInputBar onSend={handleSendMessage} isSending={isTyping} />
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── Image Zoom Lightbox Modal ──────────────────────────────── */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-2xl max-h-[85vh] rounded-3xl overflow-hidden bg-zinc-900 border border-white/20 p-2 shadow-2xl">
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-black/80 text-white hover:bg-zinc-800 z-10 cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={previewImage}
+              alt="Screenshot Preview"
+              className="w-full h-auto max-h-[80vh] object-contain rounded-2xl"
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 };

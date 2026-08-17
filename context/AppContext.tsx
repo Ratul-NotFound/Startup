@@ -118,9 +118,9 @@ interface AppContextType {
 
   // Admin: Support tickets
   allTickets: SupportTicket[];
-  adminReplyToTicket: (ticketId: string, message: string) => Promise<void>;
+  adminReplyToTicket: (ticketId: string, message: string, imageUrl?: string) => Promise<void>;
   adminCloseTicket: (ticketId: string) => Promise<void>;
-  adminSendMessageToUser: (targetUserId: string, targetUserEmail: string, subject: string, content: string, category?: SupportTicket['category']) => Promise<string>;
+  adminSendMessageToUser: (targetUserId: string, targetUserEmail: string, subject: string, content: string, category?: SupportTicket['category'], imageUrl?: string) => Promise<string>;
 
   // Analytics & Admin
   financialMetrics: FinancialMetric;
@@ -133,8 +133,8 @@ interface AppContextType {
 
   // User Support
   tickets: SupportTicket[];
-  createSupportTicket: (subject: string, category: SupportTicket['category'], initialMessage: string) => SupportTicket;
-  replyToTicket: (ticketId: string, content: string, sender: 'user' | 'agent') => void;
+  createSupportTicket: (subject: string, category: SupportTicket['category'], initialMessage: string, imageUrl?: string) => SupportTicket;
+  replyToTicket: (ticketId: string, content: string, sender: 'user' | 'agent', imageUrl?: string) => void;
 
   // Reviews System
   reviews: Review[];
@@ -1178,10 +1178,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ─── Admin: Ticket management ──────────────────────────────────────
-  const adminReplyToTicket = async (ticketId: string, message: string) => {
+  const adminReplyToTicket = async (ticketId: string, message: string, imageUrl?: string) => {
     const msg = {
-      id: generateRandomId('msg'), sender: 'agent' as const,
-      senderName: user.name || 'SubNexus Support Ops', content: message, timestamp: new Date().toISOString(),
+      id: generateRandomId('msg'),
+      sender: 'agent' as const,
+      senderName: user.name || 'SubNexus Support Ops',
+      content: message,
+      ...(imageUrl ? { imageUrl } : {}),
+      timestamp: new Date().toISOString(),
     };
 
     try {
@@ -1212,7 +1216,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetUserEmail: string,
     subject: string,
     content: string,
-    category: SupportTicket['category'] = 'general'
+    category: SupportTicket['category'] = 'general',
+    imageUrl?: string
   ): Promise<string> => {
     const ticketId = generateRandomId('tkt');
     const newTicket: SupportTicket = {
@@ -1232,6 +1237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           sender: 'agent',
           senderName: user.name || 'SubNexus Support Ops',
           content,
+          ...(imageUrl ? { imageUrl } : {}),
           timestamp: new Date().toISOString(),
         },
       ],
@@ -1247,20 +1253,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // ─── User: Create ticket ───────────────────────────────────────────
-  const createSupportTicket = (subject: string, category: SupportTicket['category'], initialMessage: string): SupportTicket => {
+  const createSupportTicket = (
+    subject: string,
+    category: SupportTicket['category'],
+    initialMessage: string,
+    imageUrl?: string
+  ): SupportTicket => {
     const ticketId = generateRandomId('tkt');
     const newTicket: SupportTicket = {
-      id: ticketId, ticketNumber: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
-      userId: user.id, userEmail: user.email, subject, category,
-      priority: 'high', status: 'open', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      messages: [{ id: generateRandomId('msg'), sender: 'user', senderName: user.name, content: initialMessage, timestamp: new Date().toISOString() }],
+      id: ticketId,
+      ticketNumber: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: user.id,
+      userEmail: user.email,
+      subject,
+      category,
+      priority: 'high',
+      status: 'open',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: [
+        {
+          id: generateRandomId('msg'),
+          sender: 'user',
+          senderName: user.name,
+          content: initialMessage,
+          ...(imageUrl ? { imageUrl } : {}),
+          timestamp: new Date().toISOString(),
+        },
+      ],
     };
     try { setDoc(doc(db, 'support_tickets', ticketId), newTicket); } catch { }
     return newTicket;
   };
 
-  const replyToTicket = async (ticketId: string, content: string, sender: 'user' | 'agent') => {
-    const msg = { id: generateRandomId('msg'), sender, senderName: sender === 'user' ? user.name : 'Support', content, timestamp: new Date().toISOString() };
+  const replyToTicket = async (ticketId: string, content: string, sender: 'user' | 'agent', imageUrl?: string) => {
+    const msg = {
+      id: generateRandomId('msg'),
+      sender,
+      senderName: sender === 'user' ? user.name : 'Support',
+      content,
+      ...(imageUrl ? { imageUrl } : {}),
+      timestamp: new Date().toISOString(),
+    };
     try {
       const snap = await getDoc(doc(db, 'support_tickets', ticketId));
       if (snap.exists()) {

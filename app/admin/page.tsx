@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
+import { compressImageToDataUrl } from '@/lib/image-compression';
 import {
   Shield, TrendingUp, DollarSign, Users, Package, Tag,
   Headphones, ShoppingBag, Plus, Edit2, Trash2, Save, X,
   CheckCircle2, AlertCircle, Clock, Search, RefreshCw, Eye, EyeOff,
   BarChart2, MessageSquare, Lock, LogIn, UserPlus, UserCheck,
   UserX, Sparkles, AlertTriangle, ArrowUpRight, Star, ThumbsUp,
-  CreditCard, QrCode, Image as ImageIcon, Check, Send,
+  CreditCard, QrCode, Image as ImageIcon, Check, Send, Loader2,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -60,6 +61,9 @@ export default function AdminPortalPage() {
   const [directMessageSubject, setDirectMessageSubject] = useState('');
   const [directMessageCategory, setDirectMessageCategory] = useState<SupportTicket['category']>('general');
   const [directMessageBody, setDirectMessageBody] = useState('');
+  const [directMessageImage, setDirectMessageImage] = useState<string | null>(null);
+  const [isCompressingDmImage, setIsCompressingDmImage] = useState(false);
+  const dmFileInputRef = useRef<HTMLInputElement>(null);
   const [isSendingDirectMessage, setIsSendingDirectMessage] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<(BangladeshPaymentMethod & { isNew?: boolean }) | null>(null);
   const [reviewSearch, setReviewSearch] = useState('');
@@ -109,6 +113,9 @@ export default function AdminPortalPage() {
 
   // Tickets state
   const [ticketReply, setTicketReply] = useState('');
+  const [ticketReplyImage, setTicketReplyImage] = useState<string | null>(null);
+  const [isCompressingTicketImage, setIsCompressingTicketImage] = useState(false);
+  const ticketFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const showFeedback = (type: 'success' | 'error', msg: string) => {
@@ -253,7 +260,7 @@ export default function AdminPortalPage() {
   // ─── DIRECT MESSAGE HANDLER ──────────────────────────────────────
   const handleSendDirectMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!directMessageTarget || !directMessageBody.trim()) return;
+    if (!directMessageTarget || (!directMessageBody.trim() && !directMessageImage)) return;
 
     setIsSendingDirectMessage(true);
     try {
@@ -262,18 +269,32 @@ export default function AdminPortalPage() {
         directMessageTarget.email,
         directMessageSubject.trim() || 'Direct Support Message from Admin',
         directMessageBody.trim(),
-        directMessageCategory
+        directMessageCategory,
+        directMessageImage || undefined
       );
       showFeedback('success', `Message dispatched to ${directMessageTarget.name} (${directMessageTarget.email}).`);
       setShowDirectMessageModal(false);
       setDirectMessageBody('');
       setDirectMessageSubject('');
+      setDirectMessageImage(null);
       setSelectedTicketId(tktId);
       setTab('tickets');
     } catch {
       showFeedback('error', 'Failed to send direct message.');
     } finally {
       setIsSendingDirectMessage(false);
+    }
+  };
+
+  const handleReplyTicket = async (ticketId: string) => {
+    if (!ticketReply.trim() && !ticketReplyImage) return;
+    try {
+      await adminReplyToTicket(ticketId, ticketReply.trim(), ticketReplyImage || undefined);
+      setTicketReply('');
+      setTicketReplyImage(null);
+      showFeedback('success', 'Reply dispatched.');
+    } catch {
+      showFeedback('error', 'Failed to send reply.');
     }
   };
 
@@ -329,14 +350,6 @@ export default function AdminPortalPage() {
     setNewCoupon({ code: '', discountPercent: 15, description: '' });
     setShowCouponForm(false);
     showFeedback('success', 'Coupon created and synced.');
-  };
-
-  // ─── TICKET HANDLERS ──────────────────────────────────────────────
-  const handleReplyTicket = async (ticketId: string) => {
-    if (!ticketReply.trim()) return;
-    await adminReplyToTicket(ticketId, ticketReply);
-    setTicketReply('');
-    showFeedback('success', 'Reply sent to user.');
   };
 
   const activeTicket = allTickets.find(t => t.id === selectedTicketId) || allTickets[0] || null;
@@ -1916,12 +1929,27 @@ export default function AdminPortalPage() {
                                   {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
-                              <div className={`p-3.5 rounded-2xl max-w-md text-xs leading-relaxed ${
+                              <div className={`p-3.5 rounded-2xl max-w-md text-xs leading-relaxed space-y-2 ${
                                 isAgent
                                   ? 'bg-blue-600 text-white rounded-tr-none shadow-md'
                                   : 'bg-zinc-800 text-slate-200 border border-white/[0.08] rounded-tl-none shadow-sm'
                               }`}>
-                                {msg.content}
+                                {msg.imageUrl && (
+                                  <div
+                                    onClick={() => setPreviewScreenshotUrl(msg.imageUrl!)}
+                                    className="rounded-xl overflow-hidden border border-white/20 cursor-pointer group/img relative"
+                                  >
+                                    <img
+                                      src={msg.imageUrl}
+                                      alt="Attachment"
+                                      className="w-full max-h-52 object-cover group-hover/img:scale-105 transition-transform"
+                                    />
+                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-[10px] font-bold text-white">
+                                      Click to enlarge proof
+                                    </div>
+                                  </div>
+                                )}
+                                {msg.content && <p>{msg.content}</p>}
                               </div>
                             </div>
                           </div>
@@ -1929,22 +1957,70 @@ export default function AdminPortalPage() {
                       })}
                     </div>
 
-                    {/* Admin Reply Bar */}
+                    {/* Admin Reply Bar with Image Attachment */}
                     {activeTicket.status !== 'closed' ? (
-                      <div className="p-4 border-t border-white/[0.06] bg-zinc-950 flex gap-2 rounded-b-3xl">
-                        <input
-                          value={ticketReply}
-                          onChange={e => setTicketReply(e.target.value)}
-                          placeholder="Type official admin reply to customer…"
-                          className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
-                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReplyTicket(activeTicket.id); } }}
-                        />
-                        <button
-                          onClick={() => handleReplyTicket(activeTicket.id)}
-                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md"
-                        >
-                          Send Reply
-                        </button>
+                      <div className="p-3.5 border-t border-white/[0.06] bg-zinc-950 rounded-b-3xl space-y-2">
+                        {ticketReplyImage && (
+                          <div className="flex items-center gap-2 px-1">
+                            <div className="relative inline-block rounded-xl overflow-hidden border border-white/20">
+                              <img src={ticketReplyImage} alt="Attachment Preview" className="h-12 w-12 object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setTicketReplyImage(null)}
+                                className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                            <span className="text-[11px] text-slate-400">Compressed image attached</span>
+                          </div>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            ref={ticketFileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              setIsCompressingTicketImage(true);
+                              try {
+                                const dataUrl = await compressImageToDataUrl(f, 750, 750, 0.65);
+                                setTicketReplyImage(dataUrl);
+                              } finally {
+                                setIsCompressingTicketImage(false);
+                                if (ticketFileInputRef.current) ticketFileInputRef.current.value = '';
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <button
+                            type="button"
+                            disabled={isCompressingTicketImage}
+                            onClick={() => ticketFileInputRef.current?.click()}
+                            className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-slate-400 hover:text-white border border-white/10 transition-colors shrink-0"
+                            title="Attach compressed image / screenshot"
+                          >
+                            {isCompressingTicketImage ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" /> : <ImageIcon className="h-4 w-4" />}
+                          </button>
+
+                          <input
+                            value={ticketReply}
+                            onChange={e => setTicketReply(e.target.value)}
+                            placeholder={ticketReplyImage ? "Add a message or send image..." : "Type official admin reply to customer…"}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+                            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReplyTicket(activeTicket.id); } }}
+                          />
+                          <button
+                            onClick={() => handleReplyTicket(activeTicket.id)}
+                            disabled={!ticketReply.trim() && !ticketReplyImage}
+                            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5"
+                          >
+                            <Send className="h-3.5 w-3.5" />
+                            <span>Send Reply</span>
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="p-3 text-center text-xs text-slate-500 bg-zinc-950 border-t border-white/[0.06] rounded-b-3xl">
@@ -2329,17 +2405,63 @@ export default function AdminPortalPage() {
                 />
               </div>
 
-              {/* Message Content */}
+              {/* Message Content & Image Attachment */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-300 block">Message Content</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={directMessageBody}
                   onChange={e => setDirectMessageBody(e.target.value)}
                   placeholder="Type your official admin message to this customer..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
-                  required
+                  required={!directMessageImage}
                 />
+              </div>
+
+              {/* Image Attachment in DM */}
+              <div className="space-y-1.5">
+                <input
+                  ref={dmFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setIsCompressingDmImage(true);
+                    try {
+                      const dataUrl = await compressImageToDataUrl(f, 750, 750, 0.65);
+                      setDirectMessageImage(dataUrl);
+                    } finally {
+                      setIsCompressingDmImage(false);
+                      if (dmFileInputRef.current) dmFileInputRef.current.value = '';
+                    }
+                  }}
+                  className="hidden"
+                />
+
+                {directMessageImage ? (
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-zinc-900 border border-white/10">
+                    <img src={directMessageImage} alt="Attachment" className="h-12 w-12 object-cover rounded-lg" />
+                    <div className="flex-1 text-[11px] text-slate-400">Compressed image attached</div>
+                    <button
+                      type="button"
+                      onClick={() => setDirectMessageImage(null)}
+                      className="p-1 rounded-lg bg-zinc-800 text-slate-400 hover:text-red-400"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={isCompressingDmImage}
+                    onClick={() => dmFileInputRef.current?.click()}
+                    className="w-full py-2 px-3 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-white/10 text-slate-300 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    {isCompressingDmImage ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" /> : <ImageIcon className="h-4 w-4" />}
+                    <span>Attach Screenshot / Image</span>
+                  </button>
+                )}
               </div>
 
               {/* Action Buttons */}
@@ -2353,7 +2475,7 @@ export default function AdminPortalPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSendingDirectMessage || !directMessageTarget || !directMessageBody.trim()}
+                  disabled={isSendingDirectMessage || !directMessageTarget || (!directMessageBody.trim() && !directMessageImage)}
                   className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
                 >
                   <Send className="h-3.5 w-3.5" />
