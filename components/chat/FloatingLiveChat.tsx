@@ -12,6 +12,7 @@ import { compressImageToDataUrl } from '@/lib/image-compression';
 import { QuickMessage } from '@/types';
 import { doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { resolveSmartAssistantResponse, interpolateDynamicVariables, DynamicChatContext } from '@/lib/chat-resolver';
 
 interface LiveMessage {
   id: string;
@@ -206,6 +207,8 @@ export const FloatingLiveChat: React.FC = () => {
     createSupportTicket,
     replyToTicket,
     orders,
+    subscriptions,
+    paymentMethods,
     quickMessages,
   } = useApp();
 
@@ -229,6 +232,15 @@ export const FloatingLiveChat: React.FC = () => {
   const activeChips = (quickMessages && quickMessages.length > 0)
     ? quickMessages.filter(q => q.isActive)
     : [];
+
+  // Build live dynamic context
+  const dynamicContext: DynamicChatContext = {
+    user,
+    orders,
+    subscriptions,
+    paymentMethods,
+    quickMessages,
+  };
 
   // Restore persistent ticket ID from localStorage on mount
   useEffect(() => {
@@ -311,43 +323,7 @@ export const FloatingLiveChat: React.FC = () => {
     ]);
   };
 
-  // Smart assistant matcher against dynamic quickMessages
-  const findMatchingAnswer = useCallback((queryText: string): string => {
-    const q = queryText.toLowerCase().trim();
-
-    // 1. Direct match on active quickMessages
-    for (const qm of activeChips) {
-      if (qm.query.toLowerCase().trim() === q || qm.label.toLowerCase().trim() === q) {
-        // Enrich order query with live user orders if available
-        if (qm.keywords?.includes('order') || qm.keywords?.includes('status') || q.includes('order')) {
-          if (orders && orders.length > 0) {
-            const latest = orders[0];
-            return `📦 Your latest order #${latest.orderNumber} is marked as [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}].\n\n${qm.answer}`;
-          }
-        }
-        return qm.answer;
-      }
-    }
-
-    // 2. Keyword overlap search
-    for (const qm of activeChips) {
-      if (qm.keywords && qm.keywords.length > 0) {
-        const matchesKeyword = qm.keywords.some(kw => q.includes(kw.toLowerCase().trim()));
-        if (matchesKeyword) {
-          if (qm.keywords.includes('order') && orders && orders.length > 0) {
-            const latest = orders[0];
-            return `📦 Your latest order #${latest.orderNumber} is marked as [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}].\n\n${qm.answer}`;
-          }
-          return qm.answer;
-        }
-      }
-    }
-
-    // 3. Fallback standard intelligent assistant response
-    return `Got your inquiry! A live Keyoon Support Specialist has been alerted and will assist you shortly right here. You can also review your orders and credentials directly in your Dashboard.`;
-  }, [activeChips, orders]);
-
-  // Handle Quick Chip selection
+  // Handle Quick Chip selection with full live data resolution
   const handleSelectQuickChip = useCallback((qm: QuickMessage) => {
     const userMsg: LiveMessage = {
       id: `usr_${Date.now()}`,
@@ -372,15 +348,11 @@ export const FloatingLiveChat: React.FC = () => {
       }
     }
 
-    // Send instant dynamic answer
+    // Send instant dynamic answer enriched with live order and store data
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
-      let answerText = qm.answer;
-      if ((qm.keywords?.includes('order') || qm.query.toLowerCase().includes('order')) && orders && orders.length > 0) {
-        const latest = orders[0];
-        answerText = `📦 Your latest order #${latest.orderNumber} is marked as [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}].\n\n${qm.answer}`;
-      }
+      const answerText = interpolateDynamicVariables(qm.answer, dynamicContext);
 
       const botReply: LiveMessage = {
         id: `bot_${Date.now()}`,
@@ -395,9 +367,9 @@ export const FloatingLiveChat: React.FC = () => {
         replyToTicket(ticketIdToUse, answerText, 'agent');
       }
     }, 350);
-  }, [activeTicketId, user, orders, createSupportTicket, replyToTicket]);
+  }, [activeTicketId, user, dynamicContext, createSupportTicket, replyToTicket]);
 
-  // Handle regular chat send
+  // Handle regular chat send with smart live resolver
   const handleSendMessage = useCallback(async (text: string, imageUrl?: string) => {
     if (!text.trim() && !imageUrl) return;
 
@@ -425,13 +397,13 @@ export const FloatingLiveChat: React.FC = () => {
       }
     }
 
-    // Dynamic response from bot
+    // Dynamic response from bot matching live real data
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
       const botResponseText = imageUrl && !text
         ? 'Thank you for the screenshot! Our operations team is reviewing it and will assist you in a moment.'
-        : findMatchingAnswer(text);
+        : resolveSmartAssistantResponse(text, dynamicContext);
 
       const replyMsg: LiveMessage = {
         id: `bot_${Date.now()}`,
@@ -446,7 +418,7 @@ export const FloatingLiveChat: React.FC = () => {
         replyToTicket(ticketIdToUse, botResponseText, 'agent');
       }
     }, 400);
-  }, [activeTicketId, user, createSupportTicket, replyToTicket, findMatchingAnswer]);
+  }, [activeTicketId, user, dynamicContext, createSupportTicket, replyToTicket]);
 
   return (
     <>

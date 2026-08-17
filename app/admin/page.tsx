@@ -4071,9 +4071,14 @@ export default function AdminPortalPage() {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">
-                  Automated Instant Response (Bot Answer)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-300 block">
+                    Automated Instant Response (Bot Answer)
+                  </label>
+                  <span className="text-[10px] text-cyan-400 font-mono font-semibold">
+                    Live Data Variables Supported
+                  </span>
+                </div>
                 <textarea
                   rows={4}
                   value={editingQuickMessage.answer}
@@ -4082,6 +4087,22 @@ export default function AdminPortalPage() {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 resize-none leading-relaxed"
                   required
                 />
+                <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[10px] text-slate-400">
+                  <span>Click to insert live data:</span>
+                  {[
+                    '{ORDER_NUMBER}', '{ORDER_STATUS}', '{ORDER_ITEMS}', '{ORDER_TOTAL}',
+                    '{TRX_ID}', '{BKASH_NUMBER}', '{NAGAD_NUMBER}', '{CUSTOMER_NAME}', '{ACTIVE_SERVICES}'
+                  ].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setEditingQuickMessage(prev => prev ? ({ ...prev, answer: `${prev.answer} ${tag}` }) : null)}
+                      className="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-cyan-300 font-mono border border-white/10 cursor-pointer"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
