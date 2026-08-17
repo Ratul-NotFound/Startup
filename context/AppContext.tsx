@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
-  AdminMember, Review, BangladeshPaymentMethod, HeroSlide,
+  AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage,
 } from '@/types';
 import {
   MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
@@ -22,6 +22,54 @@ import {
 
 // ─── Superadmin email ───────────────────────────────────────────────
 export const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
+
+export const DEFAULT_QUICK_MESSAGES: QuickMessage[] = [
+  {
+    id: 'qm_credentials',
+    label: '🔑 Get Credentials',
+    query: 'Where do I find my account login credentials after ordering?',
+    answer: '🔑 Credentials are automatically unlocked in your personal Keyoon Vault! Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.',
+    keywords: ['credential', 'credentials', 'password', 'vault', 'login', 'account', 'email', 'pin', 'key'],
+    order: 1,
+    isActive: true,
+  },
+  {
+    id: 'qm_bkash_nagad',
+    label: '💳 bKash / Nagad Help',
+    query: 'How do I complete payment using bKash, Nagad, or Rocket?',
+    answer: '💳 For bKash / Nagad / Rocket / Upay: Choose your wallet during checkout, send the BDT amount to the provided personal number, and submit your Transaction ID (TrxID). Our admin team verifies and delivers credentials in under 2 minutes!',
+    keywords: ['bkash', 'nagad', 'rocket', 'upay', 'payment', 'pay', 'send money', 'trxid', 'transaction', 'cashout', 'send'],
+    order: 2,
+    isActive: true,
+  },
+  {
+    id: 'qm_order_status',
+    label: '⚡ Order Status',
+    query: 'Can you help me check the status of my latest order?',
+    answer: '📦 Instant orders are delivered within 30 seconds to your Vault. If you submitted a mobile wallet TrxID, our admin ops approve and deliver typically within 2-5 minutes. Check your Dashboard for real-time status!',
+    keywords: ['order', 'track', 'status', 'delivery', 'pending', 'deliver', 'when', 'delay', 'process'],
+    order: 3,
+    isActive: true,
+  },
+  {
+    id: 'qm_warranty',
+    label: '🛡️ Warranty Claim',
+    query: 'How does the full replacement warranty work?',
+    answer: '🛡️ All subscriptions include a 100% Full-Term Replacement Warranty. If any login ever experiences an interruption, our automated monitoring engine or 24/7 support ops resolves or replaces your slot immediately.',
+    keywords: ['warranty', 'replacement', 'renew', 'not working', 'fix', 'broken', 'issue', 'expired', 'down', 'problem', 'screen limit'],
+    order: 4,
+    isActive: true,
+  },
+  {
+    id: 'qm_direct_upgrade',
+    label: '✨ Direct Email Upgrade',
+    query: 'Can I upgrade my existing personal email account instead of getting a new one?',
+    answer: '✨ Yes! For tiers marked as "Direct Upgrade" or "Custom Email", simply provide your email address in the checkout box, and we will apply the official premium subscription directly to your existing account without changing your password.',
+    keywords: ['upgrade', 'my email', 'personal email', 'existing account', 'custom email', 'direct', 'own account', 'invite'],
+    order: 5,
+    isActive: true,
+  },
+];
 
 interface AppContextType {
   products: Product[];
@@ -157,6 +205,13 @@ interface AppContextType {
   adminDeleteHeroSlide: (id: string) => Promise<void>;
   adminResetHeroSlides: () => Promise<void>;
 
+  // Quick Messages & Bot Auto-Replies CRUD
+  quickMessages: QuickMessage[];
+  adminCreateQuickMessage: (qm: Omit<QuickMessage, 'id'>) => Promise<string>;
+  adminUpdateQuickMessage: (id: string, updates: Partial<QuickMessage>) => Promise<void>;
+  adminDeleteQuickMessage: (id: string) => Promise<void>;
+  adminResetQuickMessages: () => Promise<void>;
+
   // Global UI
   activeSearchQuery: string;
   setActiveSearchQuery: (query: string) => void;
@@ -186,6 +241,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Hero Slides State
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(MOCK_HERO_SLIDES);
+
+  // Quick Messages & Bot Auto-Replies State
+  const [quickMessages, setQuickMessages] = useState<QuickMessage[]>(DEFAULT_QUICK_MESSAGES);
 
   // Auth & Roles
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -308,6 +366,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         for (const s of MOCK_HERO_SLIDES) {
           const docRef = doc(db, 'hero_slides', s.id);
           batch.set(docRef, s);
+        }
+        await batch.commit();
+      }
+
+      // 6. Seed Quick Messages if empty
+      const qmSnap = await getDocs(collection(db, 'quick_messages'));
+      if (qmSnap.empty) {
+        console.log('[Firestore] Seeding initial quick messages...');
+        const batch = writeBatch(db);
+        for (const qm of DEFAULT_QUICK_MESSAGES) {
+          const docRef = doc(db, 'quick_messages', qm.id);
+          batch.set(docRef, qm);
         }
         await batch.commit();
       }
@@ -460,6 +530,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setHeroSlides(MOCK_HERO_SLIDES);
     });
 
+    // 7. Real-time Quick Messages listener (available to all visitors/users)
+    const unsubQuickMessages = onSnapshot(collection(db, 'quick_messages'), (snapshot) => {
+      if (!snapshot.empty) {
+        const qms = snapshot.docs.map(d => ({
+          ...d.data(),
+          id: d.id,
+        } as QuickMessage));
+        qms.sort((a, b) => (a.order || 0) - (b.order || 0));
+        setQuickMessages(qms);
+      } else {
+        setQuickMessages(DEFAULT_QUICK_MESSAGES);
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[Firestore] Quick messages listener error:', err);
+      }
+      setQuickMessages(DEFAULT_QUICK_MESSAGES);
+    });
+
     return () => {
       unsubProducts();
       unsubCoupons();
@@ -467,6 +556,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubPaymentMethods();
       unsubAdmins();
       unsubHeroSlides();
+      unsubQuickMessages();
     };
   }, [seedFirestoreIfEmpty]);
 
@@ -1739,6 +1829,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ─── Admin Quick Messages & Bot Auto-Replies CRUD ───────────────────
+  const adminCreateQuickMessage = async (qmData: Omit<QuickMessage, 'id'>): Promise<string> => {
+    const qmId = generateRandomId('qm');
+    const newQm: QuickMessage = {
+      ...qmData,
+      id: qmId,
+      order: qmData.order ?? (quickMessages.length + 1),
+      isActive: qmData.isActive ?? true,
+    };
+    setQuickMessages(prev => [...prev, newQm]);
+    try {
+      await setDoc(doc(db, 'quick_messages', qmId), newQm);
+    } catch (err) {
+      console.warn('[Firestore] Admin quick message create error:', err);
+    }
+    return qmId;
+  };
+
+  const adminUpdateQuickMessage = async (id: string, updates: Partial<QuickMessage>) => {
+    setQuickMessages(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
+    try {
+      await updateDoc(doc(db, 'quick_messages', id), updates);
+    } catch (err) {
+      console.warn('[Firestore] Admin quick message update error:', err);
+    }
+  };
+
+  const adminDeleteQuickMessage = async (id: string) => {
+    setQuickMessages(prev => prev.filter(q => q.id !== id));
+    try {
+      await deleteDoc(doc(db, 'quick_messages', id));
+    } catch (err) {
+      console.warn('[Firestore] Admin quick message delete error:', err);
+    }
+  };
+
+  const adminResetQuickMessages = async () => {
+    setQuickMessages(DEFAULT_QUICK_MESSAGES);
+    try {
+      const snap = await getDocs(collection(db, 'quick_messages'));
+      const batch = writeBatch(db);
+      for (const d of snap.docs) {
+        batch.delete(d.ref);
+      }
+      for (const qm of DEFAULT_QUICK_MESSAGES) {
+        batch.set(doc(db, 'quick_messages', qm.id), qm);
+      }
+      await batch.commit();
+    } catch (err) {
+      console.warn('[Firestore] Admin reset quick messages error:', err);
+    }
+  };
+
   // ─── Memoize context value to prevent all-consumer re-renders ────────
   // Without this, every setState call in AppProvider re-creates the value
   // object and forces ALL useApp() consumers to re-render simultaneously.
@@ -1763,6 +1906,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     coupons, adminCreateCoupon, adminDeleteCoupon,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
+    quickMessages, adminCreateQuickMessage, adminUpdateQuickMessage, adminDeleteQuickMessage, adminResetQuickMessages,
     allTickets, adminReplyToTicket, adminCloseTicket, adminSendMessageToUser,
     financialMetrics, emailNotifications, sendTestEmail,
     triggerRenewalCronSimulation, fastForwardSimulationDays,
@@ -1777,7 +1921,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
-    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides,
+    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages,
     financialMetrics, emailNotifications, isSyncing,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
     activeSearchQuery, activeCategoryFilter,

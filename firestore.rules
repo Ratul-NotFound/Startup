@@ -100,5 +100,12 @@ service cloud.firestore {
     match /email_verifications/{verificationId} {
       allow read, write: if true;
     }
+
+    // 12. Quick Messages & Bot Auto-Replies
+    match /quick_messages/{messageId} {
+      allow read: if true;
+      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+    }
   }
 }
+

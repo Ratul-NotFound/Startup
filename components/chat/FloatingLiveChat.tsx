@@ -6,9 +6,12 @@ import { useApp } from '@/context/AppContext';
 import {
   X, Send, Bot, Headphones,
   CheckCheck, MessageCircle, Zap, Image as ImageIcon,
-  Paperclip, Loader2
+  Loader2, RotateCcw, Sparkles
 } from 'lucide-react';
 import { compressImageToDataUrl } from '@/lib/image-compression';
+import { QuickMessage } from '@/types';
+import { doc, onSnapshot, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface LiveMessage {
   id: string;
@@ -35,9 +38,9 @@ const MessageBubble = memo(({ msg, onImageClick }: { msg: LiveMessage; onImageCl
       </div>
 
       <div
-        className={`max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed space-y-2 ${
+        className={`max-w-[88%] p-3 rounded-2xl text-xs leading-relaxed space-y-2 ${
           isUser
-            ? 'bg-indigo-600 text-white rounded-tr-sm shadow-[0_2px_10px_rgba(79,70,229,0.3)]'
+            ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-tr-sm shadow-[0_2px_12px_rgba(6,182,212,0.3)]'
             : 'bg-zinc-900 border border-white/10 text-zinc-200 rounded-tl-sm shadow-sm'
         }`}
       >
@@ -58,7 +61,7 @@ const MessageBubble = memo(({ msg, onImageClick }: { msg: LiveMessage; onImageCl
           </div>
         )}
 
-        {msg.content && <p>{msg.content}</p>}
+        {msg.content && <p className="whitespace-pre-wrap">{msg.content}</p>}
       </div>
 
       {isUser && (
@@ -72,24 +75,26 @@ const MessageBubble = memo(({ msg, onImageClick }: { msg: LiveMessage; onImageCl
 });
 MessageBubble.displayName = 'MessageBubble';
 
-// ─── Memoized Quick Chips Bar ──────────────────────────────────────────
-const QuickChipsBar = memo(({ onSelect }: { onSelect: (query: string) => void }) => {
-  const quickChips = [
-    { label: '🔑 Get Credentials', query: 'Where do I find my account login credentials after ordering?' },
-    { label: '💳 bKash / Nagad Help', query: 'How do I complete payment using bKash or Nagad?' },
-    { label: '⚡ Order Status', query: 'Can you help me check the status of my latest order?' },
-    { label: '🛡️ Warranty Claim', query: 'How does the full replacement warranty work?' },
-  ];
+// ─── Memoized Dynamic Quick Chips Bar ─────────────────────────────────
+const QuickChipsBar = memo(({
+  chips,
+  onSelect
+}: {
+  chips: QuickMessage[];
+  onSelect: (qm: QuickMessage) => void;
+}) => {
+  if (!chips || chips.length === 0) return null;
 
   return (
     <div className="shrink-0 px-3 py-2 bg-zinc-950/95 border-t border-white/[0.06] overflow-x-auto flex items-center gap-1.5 scrollbar-none">
-      {quickChips.map((chip, i) => (
+      {chips.map((chip) => (
         <button
-          key={i}
-          onClick={() => onSelect(chip.query)}
-          className="shrink-0 px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-300 hover:text-white border border-white/10 text-[11px] font-medium transition-transform cursor-pointer"
+          key={chip.id}
+          type="button"
+          onClick={() => onSelect(chip)}
+          className="shrink-0 px-2.5 py-1 rounded-full bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-300 hover:text-white border border-white/10 text-[11px] font-medium transition-all cursor-pointer flex items-center gap-1 shadow-sm"
         >
-          {chip.label}
+          <span>{chip.label}</span>
         </button>
       ))}
     </div>
@@ -111,7 +116,6 @@ const ChatInputBar = memo(({ onSend, isSending }: { onSend: (text: string, image
 
     setIsCompressing(true);
     try {
-      // Compress image client-side to compact JPEG data URL string
       const compressedDataUrl = await compressImageToDataUrl(file, 700, 700, 0.65);
       setAttachedImage(compressedDataUrl);
     } catch (err) {
@@ -142,7 +146,7 @@ const ChatInputBar = memo(({ onSend, isSending }: { onSend: (text: string, image
             <button
               type="button"
               onClick={() => setAttachedImage(null)}
-              className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors"
+              className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors cursor-pointer"
             >
               <X className="h-3 w-3" />
             </button>
@@ -161,7 +165,7 @@ const ChatInputBar = memo(({ onSend, isSending }: { onSend: (text: string, image
           className="hidden"
         />
 
-        {/* Paperclip / Image Attachment Trigger */}
+        {/* Image Attachment Trigger */}
         <button
           type="button"
           disabled={isCompressing}
@@ -178,13 +182,13 @@ const ChatInputBar = memo(({ onSend, isSending }: { onSend: (text: string, image
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={attachedImage ? 'Add a caption...' : 'Write a message...'}
-          className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+          className="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors"
         />
 
         <button
           type="submit"
           disabled={(!text.trim() && !attachedImage) || isSending || isCompressing}
-          className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 disabled:opacity-40 text-white transition-transform shadow-md shrink-0 cursor-pointer"
+          className="p-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 active:scale-95 disabled:opacity-40 text-white transition-transform shadow-md shrink-0 cursor-pointer"
         >
           <Send className="h-4 w-4" />
         </button>
@@ -202,6 +206,7 @@ export const FloatingLiveChat: React.FC = () => {
     createSupportTicket,
     replyToTicket,
     orders,
+    quickMessages,
   } = useApp();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -220,29 +225,57 @@ export const FloatingLiveChat: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Sync real-time tickets from Firestore
-  useEffect(() => {
-    if (tickets.length > 0) {
-      const current = tickets.find(t => t.id === activeTicketId) ||
-        tickets.find(t => t.status === 'open' || t.status === 'in_progress') ||
-        tickets[0];
+  // Filter active quick messages
+  const activeChips = (quickMessages && quickMessages.length > 0)
+    ? quickMessages.filter(q => q.isActive)
+    : [];
 
+  // Restore persistent ticket ID from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTicketId = localStorage.getItem('keyoon_live_chat_ticket_id');
+      if (savedTicketId) {
+        setActiveTicketId(savedTicketId);
+      }
+    }
+  }, []);
+
+  // Listen directly to Firestore for activeTicketId in real-time
+  useEffect(() => {
+    if (!activeTicketId) return;
+
+    try {
+      const unsub = onSnapshot(doc(db, 'support_tickets', activeTicketId), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data && Array.isArray(data.messages)) {
+            setLocalMessages(data.messages);
+          }
+        }
+      }, (err) => {
+        console.warn('Live chat ticket listener note:', err);
+      });
+      return () => unsub();
+    } catch { }
+  }, [activeTicketId]);
+
+  // Sync real-time tickets from user tickets context
+  useEffect(() => {
+    if (tickets.length > 0 && !activeTicketId) {
+      const current = tickets.find(t => t.status === 'open' || t.status === 'in_progress') || tickets[0];
       if (current) {
         setActiveTicketId(current.id);
-        const mapped: LiveMessage[] = current.messages.map(m => ({
-          id: m.id,
-          sender: m.sender,
-          senderName: m.senderName,
-          content: m.content,
-          imageUrl: m.imageUrl,
-          timestamp: m.timestamp,
-        }));
-        setLocalMessages(mapped);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('keyoon_live_chat_ticket_id', current.id);
+        }
+        if (current.messages && current.messages.length > 0) {
+          setLocalMessages(current.messages);
+        }
       }
     }
   }, [tickets, activeTicketId]);
 
-  // Smooth low-cost scroll
+  // Smooth scroll
   const scrollToBottom = useCallback((smooth = true) => {
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
@@ -261,28 +294,110 @@ export const FloatingLiveChat: React.FC = () => {
     }
   }, [localMessages.length, isTyping, isOpen, scrollToBottom]);
 
-  // Smart instant assistant response engine
-  const getSmartResponse = useCallback((text: string): string => {
-    const q = text.toLowerCase();
-    if (q.includes('bkash') || q.includes('nagad') || q.includes('rocket') || q.includes('payment') || q.includes('pay')) {
-      return '💳 For bKash / Nagad / Rocket: Choose your wallet during checkout, send the BDT amount to the provided personal number, and submit your Transaction ID (TrxID). Our admin team verifies and delivers credentials in under 2 minutes!';
+  // Reset conversation to fresh topic
+  const handleResetTopic = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('keyoon_live_chat_ticket_id');
     }
-    if (q.includes('credential') || q.includes('password') || q.includes('vault') || q.includes('login') || q.includes('account')) {
-      return '🔑 Credentials are automatically unlocked in your personal Keyoon Vault! Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.';
-    }
-    if (q.includes('order') || q.includes('track') || q.includes('status') || q.includes('delivery')) {
-      if (orders && orders.length > 0) {
-        const latest = orders[0];
-        return `📦 Your latest order #${latest.orderNumber} is marked as [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}]. You can view full invoices in your Dashboard.`;
-      }
-      return '📦 Instant orders are delivered within 30 seconds to your Vault. If you submitted a mobile wallet TrxID, our admin ops approve and deliver typically within 2-5 minutes.';
-    }
-    if (q.includes('warranty') || q.includes('replacement') || q.includes('renew') || q.includes('not working')) {
-      return '🛡️ All subscriptions include a 100% Full-Term Replacement Warranty. If any login ever experiences an interruption, our automated monitoring engine resolves or replaces your slot immediately.';
-    }
-    return `Got your message! A live Keyoon Support Specialist has been notified and will assist you right here shortly. You can also view your tickets in the Dashboard.`;
-  }, [orders]);
+    setActiveTicketId(null);
+    setLocalMessages([
+      {
+        id: `welcome_${Date.now()}`,
+        sender: 'agent',
+        senderName: 'Keyoon Support Bot',
+        content: '👋 Conversation reset. How can we help you today with subscriptions, credentials, or payments?',
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+  };
 
+  // Smart assistant matcher against dynamic quickMessages
+  const findMatchingAnswer = useCallback((queryText: string): string => {
+    const q = queryText.toLowerCase().trim();
+
+    // 1. Direct match on active quickMessages
+    for (const qm of activeChips) {
+      if (qm.query.toLowerCase().trim() === q || qm.label.toLowerCase().trim() === q) {
+        // Enrich order query with live user orders if available
+        if (qm.keywords?.includes('order') || qm.keywords?.includes('status') || q.includes('order')) {
+          if (orders && orders.length > 0) {
+            const latest = orders[0];
+            return `📦 Your latest order #${latest.orderNumber} is marked as [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}].\n\n${qm.answer}`;
+          }
+        }
+        return qm.answer;
+      }
+    }
+
+    // 2. Keyword overlap search
+    for (const qm of activeChips) {
+      if (qm.keywords && qm.keywords.length > 0) {
+        const matchesKeyword = qm.keywords.some(kw => q.includes(kw.toLowerCase().trim()));
+        if (matchesKeyword) {
+          if (qm.keywords.includes('order') && orders && orders.length > 0) {
+            const latest = orders[0];
+            return `📦 Your latest order #${latest.orderNumber} is marked as [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}].\n\n${qm.answer}`;
+          }
+          return qm.answer;
+        }
+      }
+    }
+
+    // 3. Fallback standard intelligent assistant response
+    return `Got your inquiry! A live Keyoon Support Specialist has been alerted and will assist you shortly right here. You can also review your orders and credentials directly in your Dashboard.`;
+  }, [activeChips, orders]);
+
+  // Handle Quick Chip selection
+  const handleSelectQuickChip = useCallback((qm: QuickMessage) => {
+    const userMsg: LiveMessage = {
+      id: `usr_${Date.now()}`,
+      sender: 'user',
+      senderName: user?.name || 'You',
+      content: qm.query,
+      timestamp: new Date().toISOString(),
+    };
+
+    setLocalMessages(prev => [...prev, userMsg]);
+
+    // Save or create ticket
+    let ticketIdToUse = activeTicketId;
+    if (ticketIdToUse) {
+      replyToTicket(ticketIdToUse, qm.query, 'user');
+    } else {
+      const created = createSupportTicket(qm.label, 'general', qm.query);
+      ticketIdToUse = created.id;
+      setActiveTicketId(created.id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('keyoon_live_chat_ticket_id', created.id);
+      }
+    }
+
+    // Send instant dynamic answer
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      let answerText = qm.answer;
+      if ((qm.keywords?.includes('order') || qm.query.toLowerCase().includes('order')) && orders && orders.length > 0) {
+        const latest = orders[0];
+        answerText = `📦 Your latest order #${latest.orderNumber} is marked as [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}].\n\n${qm.answer}`;
+      }
+
+      const botReply: LiveMessage = {
+        id: `bot_${Date.now()}`,
+        sender: 'agent',
+        senderName: 'Keyoon Support Bot',
+        content: answerText,
+        timestamp: new Date().toISOString(),
+      };
+      setLocalMessages(prev => [...prev, botReply]);
+
+      if (ticketIdToUse) {
+        replyToTicket(ticketIdToUse, answerText, 'agent');
+      }
+    }, 350);
+  }, [activeTicketId, user, orders, createSupportTicket, replyToTicket]);
+
+  // Handle regular chat send
   const handleSendMessage = useCallback(async (text: string, imageUrl?: string) => {
     if (!text.trim() && !imageUrl) return;
 
@@ -297,29 +412,41 @@ export const FloatingLiveChat: React.FC = () => {
 
     setLocalMessages(prev => [...prev, userMsg]);
 
-    // Save to Firestore ticket asynchronously
-    if (activeTicketId) {
-      replyToTicket(activeTicketId, text, 'user', imageUrl);
+    // Save to Firestore ticket
+    let ticketIdToUse = activeTicketId;
+    if (ticketIdToUse) {
+      replyToTicket(ticketIdToUse, text, 'user', imageUrl);
     } else {
-      const created = createSupportTicket('Live Chat Support', 'general', text || 'Sent an image attachment', imageUrl);
+      const created = createSupportTicket('Live Chat Support', 'general', text || 'Sent image attachment', imageUrl);
+      ticketIdToUse = created.id;
       setActiveTicketId(created.id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('keyoon_live_chat_ticket_id', created.id);
+      }
     }
 
-    // Snappy smart assistant reply (400ms for instant feel)
+    // Dynamic response from bot
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
-      const botReply = imageUrl && !text ? 'Thank you for providing the screenshot! Our admin support ops team is reviewing it.' : getSmartResponse(text);
+      const botResponseText = imageUrl && !text
+        ? 'Thank you for the screenshot! Our operations team is reviewing it and will assist you in a moment.'
+        : findMatchingAnswer(text);
+
       const replyMsg: LiveMessage = {
         id: `bot_${Date.now()}`,
         sender: 'agent',
-        senderName: 'Keyoon Support Ops',
-        content: botReply,
+        senderName: 'Keyoon Support Bot',
+        content: botResponseText,
         timestamp: new Date().toISOString(),
       };
       setLocalMessages(prev => [...prev, replyMsg]);
-    }, 450);
-  }, [activeTicketId, user, createSupportTicket, replyToTicket, getSmartResponse]);
+
+      if (ticketIdToUse) {
+        replyToTicket(ticketIdToUse, botResponseText, 'agent');
+      }
+    }, 400);
+  }, [activeTicketId, user, createSupportTicket, replyToTicket, findMatchingAnswer]);
 
   return (
     <>
@@ -336,13 +463,11 @@ export const FloatingLiveChat: React.FC = () => {
               whileTap={{ scale: 0.92 }}
               onClick={() => setIsOpen(true)}
               aria-label="Open 24/7 Live Support Chat"
-              className="relative h-14 w-14 rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-indigo-950 text-white shadow-[0_10px_35px_rgba(0,0,0,0.8)] border border-indigo-500/40 flex items-center justify-center cursor-pointer group transform-gpu"
+              className="relative h-14 w-14 rounded-full bg-gradient-to-tr from-zinc-950 via-zinc-900 to-cyan-950 text-white shadow-[0_10px_35px_rgba(0,0,0,0.8)] border border-cyan-500/40 flex items-center justify-center cursor-pointer group transform-gpu"
             >
-              {/* Outer glow */}
-              <div className="absolute inset-0 rounded-full bg-indigo-500/20 blur-sm group-hover:bg-indigo-500/40 transition-colors" />
+              <div className="absolute inset-0 rounded-full bg-cyan-500/20 blur-sm group-hover:bg-cyan-500/40 transition-colors" />
 
-              {/* Chat Icon */}
-              <div className="relative z-10 text-cyan-300 group-hover:text-white transition-colors">
+              <div className="relative z-10 text-cyan-400 group-hover:text-white transition-colors">
                 <MessageCircle className="h-6 w-6 stroke-[2.2]" />
               </div>
 
@@ -364,51 +489,59 @@ export const FloatingLiveChat: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
             transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-6 right-6 z-50 w-[calc(100vw-32px)] sm:w-[385px] h-[550px] max-h-[85vh] flex flex-col rounded-[26px] bg-zinc-950 border border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden transform-gpu"
+            className="fixed bottom-6 right-6 z-50 w-[calc(100vw-32px)] sm:w-[395px] h-[560px] max-h-[85vh] flex flex-col rounded-[26px] bg-zinc-950 border border-white/[0.12] shadow-[0_20px_60px_rgba(0,0,0,0.9)] overflow-hidden transform-gpu"
             style={{ willChange: 'transform, opacity' }}
           >
             {/* Header */}
-            <div className="relative shrink-0 p-4 bg-zinc-900 border-b border-white/[0.08] flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            <div className="relative shrink-0 p-3.5 bg-zinc-900 border-b border-white/[0.08] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
                 <div className="relative">
-                  <div className="h-10 w-10 rounded-2xl bg-zinc-800 border border-indigo-500/30 flex items-center justify-center text-cyan-300 shadow-inner">
-                    <Headphones className="h-5 w-5" />
+                  <div className="h-9 w-9 rounded-2xl bg-zinc-800 border border-cyan-500/30 flex items-center justify-center text-cyan-300 shadow-inner">
+                    <Headphones className="h-4 w-4" />
                   </div>
-                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-zinc-900" />
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-zinc-900" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-black text-white tracking-tight">Keyoon Support</h3>
+                    <h3 className="text-sm font-black text-white tracking-tight">Keyoon Live Support</h3>
                     <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
                       Online
                     </span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 flex items-center gap-1 mt-0.5">
-                    <Zap className="h-3 w-3 text-cyan-400" />
-                    Instant Live Assistant & Support Ops
+                  <p className="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5">
+                    <Zap className="h-2.5 w-2.5 text-cyan-400" />
+                    Instant Bot & 24/7 Human Specialist
                   </p>
                 </div>
               </div>
 
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 active:scale-95 text-zinc-400 hover:text-white border border-white/[0.06] transition-all cursor-pointer"
-                aria-label="Close Chat"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleResetTopic}
+                  title="Start New Topic / Reset Thread"
+                  className="p-1.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 active:scale-95 text-zinc-400 hover:text-white border border-white/[0.06] transition-all cursor-pointer"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 active:scale-95 text-zinc-400 hover:text-white border border-white/[0.06] transition-all cursor-pointer"
+                  aria-label="Close Chat"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             {/* Live Message Feed */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin bg-zinc-950 overscroll-contain">
-              
               {/* Agent Welcome Card */}
               <div className="p-3 rounded-2xl bg-zinc-900/80 border border-white/[0.06] flex items-center gap-3">
-                <div className="h-8 w-8 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shrink-0">
+                <div className="h-8 w-8 rounded-xl bg-cyan-600/20 border border-cyan-500/30 text-cyan-400 flex items-center justify-center shrink-0">
                   <Bot className="h-4 w-4" />
                 </div>
                 <div className="text-xs text-zinc-300 leading-relaxed">
-                  We are here to help! Type your message, attach screenshots, or select a topic.
+                  Welcome to Keyoon! Tap any quick question below or message us directly.
                 </div>
               </div>
 
@@ -432,8 +565,8 @@ export const FloatingLiveChat: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Action Suggested Chips */}
-            <QuickChipsBar onSelect={handleSendMessage} />
+            {/* Dynamic Quick Action Suggested Chips */}
+            <QuickChipsBar chips={activeChips} onSelect={handleSelectQuickChip} />
 
             {/* Bottom Live Input Bar with Image Compressor */}
             <ChatInputBar onSend={handleSendMessage} isSending={isTyping} />

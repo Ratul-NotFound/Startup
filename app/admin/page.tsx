@@ -18,7 +18,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { Product, Coupon, UserSubscription, Order, AdminMember, Review, BangladeshPaymentMethod, SupportTicket, HeroSlide } from '@/types';
+import { Product, Coupon, UserSubscription, Order, AdminMember, Review, BangladeshPaymentMethod, SupportTicket, HeroSlide, QuickMessage } from '@/types';
 
 // ─── Blank product template ─────────────────────────────────────────
 const blankProduct = (): Omit<Product, 'id'> => ({
@@ -52,9 +52,12 @@ export default function AdminPortalPage() {
     refreshAllData, isSyncing,
     reviews, deleteReview, adminCreateReview, adminResetReviews,
     heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
+    quickMessages, adminCreateQuickMessage, adminUpdateQuickMessage, adminDeleteQuickMessage, adminResetQuickMessages,
   } = useApp();
 
-  const [tab, setTab] = useState<'overview' | 'orders' | 'payments' | 'products' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets' | 'reviews' | 'hero'>('overview');
+  const [tab, setTab] = useState<'overview' | 'orders' | 'payments' | 'products' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets' | 'reviews' | 'hero' | 'bot'>('overview');
+  const [editingQuickMessage, setEditingQuickMessage] = useState<(QuickMessage & { isNew?: boolean }) | null>(null);
+  const [quickMessageDeleteConfirm, setQuickMessageDeleteConfirm] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'paid' | 'failed'>('all');
   const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
@@ -280,6 +283,7 @@ export default function AdminPortalPage() {
       items: [
         { id: 'users', label: 'Registered Customers', icon: <Users className="h-4 w-4 text-blue-400" />, count: allUsers.length },
         { id: 'tickets', label: 'Live Support Tickets', icon: <Headphones className="h-4 w-4 text-purple-400" />, count: allTickets.length },
+        { id: 'bot', label: 'Bot & Quick Replies', icon: <MessageSquare className="h-4 w-4 text-cyan-400" />, count: quickMessages.length },
         { id: 'admins', label: 'Admin Privileges', icon: <Shield className="h-4 w-4 text-red-400" />, count: adminList.length },
       ],
     },
@@ -339,6 +343,45 @@ export default function AdminPortalPage() {
       showFeedback('success', 'Hero slide removed from storefront.');
     } catch {
       showFeedback('error', 'Failed to delete hero slide.');
+    }
+  };
+
+  // ─── QUICK MESSAGE & BOT AUTO-REPLY HANDLERS ──────────────────────
+  const handleSaveQuickMessage = async () => {
+    if (!editingQuickMessage) return;
+    try {
+      if (editingQuickMessage.isNew) {
+        const { isNew, id, ...rest } = editingQuickMessage;
+        await adminCreateQuickMessage(rest);
+        showFeedback('success', 'Bot quick question and auto-response created!');
+      } else {
+        await adminUpdateQuickMessage(editingQuickMessage.id, editingQuickMessage);
+        showFeedback('success', 'Bot quick message updated live!');
+      }
+      setEditingQuickMessage(null);
+    } catch {
+      showFeedback('error', 'Failed to save quick message.');
+    }
+  };
+
+  const handleDeleteQuickMessage = async (id: string) => {
+    try {
+      await adminDeleteQuickMessage(id);
+      setQuickMessageDeleteConfirm(null);
+      showFeedback('success', 'Quick message deleted.');
+    } catch {
+      showFeedback('error', 'Failed to delete quick message.');
+    }
+  };
+
+  const handleResetQuickMessages = async () => {
+    if (confirm('Reset all bot quick messages and auto-answers to default recommended presets?')) {
+      try {
+        await adminResetQuickMessages();
+        showFeedback('success', 'Quick messages reset to defaults.');
+      } catch {
+        showFeedback('error', 'Failed to reset quick messages.');
+      }
     }
   };
 
@@ -2933,6 +2976,117 @@ export default function AdminPortalPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════ */}
+      {/* BOT & QUICK AUTO-REPLIES TAB                              */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'bot' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-black text-white flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-cyan-400" />
+                <span>Bot Quick Questions & Smart Auto-Replies</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Full CRUD control over clickable chat prompt chips and automated AI intelligence answers.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleResetQuickMessages}
+                className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 text-xs font-bold transition-colors border border-white/10"
+              >
+                Reset to Defaults
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingQuickMessage({
+                  id: '',
+                  label: '',
+                  query: '',
+                  answer: '',
+                  keywords: [],
+                  order: quickMessages.length + 1,
+                  isActive: true,
+                  isNew: true,
+                })}
+                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Add Quick Question & Answer</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {quickMessages.map((qm) => (
+              <div
+                key={qm.id}
+                className={`p-5 rounded-3xl bg-zinc-900 border transition-all space-y-3.5 ${
+                  qm.isActive ? 'border-white/10' : 'border-white/5 opacity-60'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-lg bg-cyan-950/80 border border-cyan-500/30 text-cyan-400 font-bold text-xs">
+                        {qm.label}
+                      </span>
+                      <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border ${
+                        qm.isActive
+                          ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
+                          : 'bg-zinc-800 text-zinc-500 border-white/5'
+                      }`}>
+                        {qm.isActive ? 'Active Chip' : 'Hidden'}
+                      </span>
+                    </div>
+                    <p className="text-xs font-semibold text-white pt-1">
+                      &quot;{qm.query}&quot;
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setEditingQuickMessage({ ...qm, isNew: false })}
+                      className="p-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                      title="Edit Quick Message"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuickMessageDeleteConfirm(qm.id)}
+                      className="p-1.5 rounded-xl bg-zinc-800 hover:bg-red-950/50 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
+                      title="Delete Quick Message"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-zinc-950/80 border border-white/[0.04] text-xs text-slate-300 leading-relaxed whitespace-pre-wrap">
+                  <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block mb-1">Automated Answer:</span>
+                  {qm.answer}
+                </div>
+
+                {qm.keywords && qm.keywords.length > 0 && (
+                  <div className="flex items-center gap-1 flex-wrap pt-1">
+                    <span className="text-[10px] text-slate-500 font-medium">Keywords:</span>
+                    {qm.keywords.map((kw, i) => (
+                      <span key={i} className="px-2 py-0.5 rounded-md bg-zinc-800 text-[10px] text-slate-300 font-mono">
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
       {/* 9. REVIEWS MODERATION TAB                                   */}
       {/* ═══════════════════════════════════════════════════════════ */}
       {tab === 'reviews' && (
@@ -3845,6 +3999,180 @@ export default function AdminPortalPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* QUICK MESSAGE & BOT AUTO-REPLY EDITOR MODAL               */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {editingQuickMessage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          onClick={() => setEditingQuickMessage(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl space-y-5"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">
+                    {editingQuickMessage.isNew ? 'New Bot Quick Question & Answer' : 'Edit Quick Question & Answer'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Manage live chat suggested button & instant response</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingQuickMessage(null)}
+                className="p-1.5 rounded-xl bg-zinc-900 text-slate-400 hover:text-white border border-white/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveQuickMessage();
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Button Chip Label (with emoji)
+                </label>
+                <input
+                  type="text"
+                  value={editingQuickMessage.label}
+                  onChange={e => setEditingQuickMessage(prev => prev ? ({ ...prev, label: e.target.value }) : null)}
+                  placeholder="e.g. 🔑 Get Credentials, 💳 bKash Help"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Customer Prompt Text (sent in chat when clicked)
+                </label>
+                <input
+                  type="text"
+                  value={editingQuickMessage.query}
+                  onChange={e => setEditingQuickMessage(prev => prev ? ({ ...prev, query: e.target.value }) : null)}
+                  placeholder="e.g. Where do I find my account login credentials after ordering?"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Automated Instant Response (Bot Answer)
+                </label>
+                <textarea
+                  rows={4}
+                  value={editingQuickMessage.answer}
+                  onChange={e => setEditingQuickMessage(prev => prev ? ({ ...prev, answer: e.target.value }) : null)}
+                  placeholder="Type the exact helpful instructions or support answer..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 resize-none leading-relaxed"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Trigger Keywords (comma-separated for smart AI matching)
+                </label>
+                <input
+                  type="text"
+                  value={(editingQuickMessage.keywords || []).join(', ')}
+                  onChange={e => {
+                    const kws = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                    setEditingQuickMessage(prev => prev ? ({ ...prev, keywords: kws }) : null);
+                  }}
+                  placeholder="e.g. credential, password, vault, login, pin"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 items-center pt-1">
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Sort Order Rank</label>
+                  <input
+                    type="number"
+                    value={editingQuickMessage.order || 1}
+                    onChange={e => setEditingQuickMessage(prev => prev ? ({ ...prev, order: parseInt(e.target.value) || 1 }) : null)}
+                    className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-4">
+                  <input
+                    type="checkbox"
+                    id="qmActiveToggle"
+                    checked={editingQuickMessage.isActive}
+                    onChange={e => setEditingQuickMessage(prev => prev ? ({ ...prev, isActive: e.target.checked }) : null)}
+                    className="h-4 w-4 rounded accent-cyan-500 cursor-pointer"
+                  />
+                  <label htmlFor="qmActiveToggle" className="text-xs font-bold text-slate-200 cursor-pointer">
+                    Show on Live Chat Chips
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setEditingQuickMessage(null)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  <span>Save Quick Message</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Message Delete Confirm */}
+      {quickMessageDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-sm rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-red-950/60 border border-red-500/30 text-red-400 mx-auto flex items-center justify-center">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-black text-white text-sm">Delete Quick Message?</h3>
+              <p className="text-xs text-slate-400 mt-1">This quick chip will be removed from customer live chat.</p>
+            </div>
+            <div className="flex gap-2 justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => setQuickMessageDeleteConfirm(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-900 text-slate-300 text-xs font-bold hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteQuickMessage(quickMessageDeleteConfirm)}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

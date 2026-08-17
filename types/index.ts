@@ -245,3 +245,14 @@ export interface HeroSlide {
   ctaLink?: string;
   order?: number;
 }
+
+export interface QuickMessage {
+  id: string;
+  label: string;
+  query: string;
+  answer: string;
+  keywords?: string[];
+  order?: number;
+  isActive: boolean;
+}
+
