@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Plus, Save, Trash2, Sparkles, Star, Gift, Tag, CheckCircle2 } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Plus, Save, Trash2, Sparkles, Star, Gift, Tag, CheckCircle2, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { Coupon } from '@/types';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -28,6 +28,7 @@ export function CouponsTab({
   showFeedback,
 }: CouponsTabProps) {
   const [filterType, setFilterType] = useState<'all' | 'special' | 'giveaway'>('all');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleSpecialOffer = async (code: string, currentVal?: boolean) => {
     try {
@@ -36,6 +37,26 @@ export function CouponsTab({
     } catch {
       showFeedback('error', 'Failed to update special offer status.');
     }
+  };
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showFeedback('error', 'Image size exceeds 2MB limit.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setNewCoupon(p => ({ ...p, offerImage: result }));
+        showFeedback('success', 'Custom offer picture uploaded!');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const filteredCoupons = coupons.filter(c => {
@@ -54,7 +75,7 @@ export function CouponsTab({
             <span>Special Offers, Discounts &amp; Giveaway Manager</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Create flash sales, free giveaways, promo codes, and feature them live on the Storefront Landing Page.
+            Create flash sales, free giveaways, promo codes, custom offer pictures, and feature them live on the Storefront Landing Page.
           </p>
         </div>
 
@@ -68,6 +89,7 @@ export function CouponsTab({
                 isSpecialOffer: true,
                 offerTag: '🎁 FREE GIVEAWAY',
                 offerTitle: 'Community Monthly Premium Giveaway',
+                offerImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
                 type: 'giveaway',
               });
               setShowCouponForm(true);
@@ -88,6 +110,7 @@ export function CouponsTab({
                 isSpecialOffer: true,
                 offerTag: '⚡ FLASH SALE',
                 offerTitle: 'Instant 40% Off Storewide Flash Sale',
+                offerImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
                 type: 'special_deal',
               });
               setShowCouponForm(true);
@@ -136,7 +159,7 @@ export function CouponsTab({
 
       {/* Form Overlay */}
       {showCouponForm && (
-        <div className="p-6 rounded-3xl bg-zinc-900 border border-white/15 space-y-4 shadow-2xl">
+        <div className="p-6 rounded-3xl bg-zinc-900 border border-white/15 space-y-5 shadow-2xl">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Gift className="h-4 w-4 text-cyan-400" />
@@ -185,6 +208,71 @@ export function CouponsTab({
                 placeholder="e.g. 50% discount on annual premium AI & streaming plans"
                 className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
               />
+            </div>
+
+            {/* Custom Offer Picture Upload & URL Section */}
+            <div className="col-span-1 sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white text-xs flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-cyan-400" />
+                  <span>Custom Offer Picture Banner</span>
+                </span>
+                <span className="text-[10px] text-slate-400">Upload or paste image URL for storefront card</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2 space-y-2">
+                  <input
+                    value={newCoupon.offerImage || ''}
+                    onChange={e => setNewCoupon(p => ({ ...p, offerImage: e.target.value }))}
+                    placeholder="Paste image URL (e.g. https://... or upload below)"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-500"
+                  />
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-xs font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer transition-all"
+                    >
+                      <Upload className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>Upload Custom Picture File</span>
+                    </button>
+
+                    {newCoupon.offerImage && (
+                      <button
+                        type="button"
+                        onClick={() => setNewCoupon(p => ({ ...p, offerImage: undefined }))}
+                        className="px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
+                      >
+                        <X className="h-3.5 w-3.5" /> Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Live Image Preview Thumbnail */}
+                <div className="h-24 rounded-xl bg-zinc-900 border border-white/10 overflow-hidden relative flex items-center justify-center">
+                  {newCoupon.offerImage ? (
+                    <img
+                      src={newCoupon.offerImage}
+                      alt="Offer preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-center p-2 text-slate-500 text-[10px]">
+                      No Image Selected
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Special Offer Settings */}
@@ -257,16 +345,24 @@ export function CouponsTab({
               }`}
             >
               <div className="flex items-center gap-4">
-                <div className={`px-3.5 py-2 rounded-xl border shrink-0 font-mono font-black text-sm ${
-                  isGiveaway
-                    ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
-                    : 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
-                }`}>
-                  {c.code}
-                </div>
+                {/* Thumbnail if custom offerImage exists */}
+                {c.offerImage ? (
+                  <div className="h-12 w-16 rounded-xl border border-white/10 overflow-hidden shrink-0">
+                    <img src={c.offerImage} alt={c.code} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className={`px-3.5 py-2 rounded-xl border shrink-0 font-mono font-black text-sm ${
+                    isGiveaway
+                      ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
+                      : 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
+                  }`}>
+                    {c.code}
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono font-black text-emerald-400 text-sm">{c.code}</span>
                     <span className="text-sm font-black text-white">
                       {isGiveaway ? '🎁 100% FREE GIVEAWAY' : `${c.discountPercent}% OFF`}
                     </span>
@@ -319,7 +415,7 @@ export function CouponsTab({
 
         {filteredCoupons.length === 0 && (
           <div className="p-8 text-center text-slate-500 text-xs rounded-2xl bg-zinc-900 border border-white/[0.06]">
-            No coupons or special offers matching query. Click &quot;+ New Promo Code&quot; or &quot;🎁 New Giveaway&quot; above to create one.
+            No coupons or special offers matching query. Click &quot;+ Add Discount Code&quot; or &quot;🎁 Add New Giveaway&quot; above to create one.
           </div>
         )}
       </div>

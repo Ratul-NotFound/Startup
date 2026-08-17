@@ -67,6 +67,7 @@ export interface Coupon {
   isSpecialOffer?: boolean;
   offerTag?: string;
   offerTitle?: string;
+  offerImage?: string;
   expiryDate?: string;
   type?: 'discount' | 'giveaway' | 'special_deal' | 'bundle_offer';
   isRecurringDiscount?: boolean;

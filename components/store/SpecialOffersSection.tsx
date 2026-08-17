@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { Tag, Sparkles, Gift, Zap, Copy, Check, ArrowRight, Percent, Clock } from 'lucide-react';
+import { Tag, Sparkles, Copy, Check, ArrowRight, Clock } from 'lucide-react';
 import Link from 'next/link';
 
 export function SpecialOffersSection() {
@@ -10,7 +10,7 @@ export function SpecialOffersSection() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   // Filter coupons marked as special offers or fallback to all coupons
-  const activeOffers = coupons.filter(c => c.isSpecialOffer) ;
+  const activeOffers = coupons.filter(c => c.isSpecialOffer);
   const displayOffers = activeOffers.length > 0 ? activeOffers : coupons;
 
   const handleCopyCode = (code: string) => {
@@ -60,7 +60,7 @@ export function SpecialOffersSection() {
             return (
               <div
                 key={offer.code}
-                className={`relative rounded-3xl p-6 flex flex-col justify-between gap-5 transition-all duration-300 border shadow-xl hover:-translate-y-1 ${
+                className={`relative rounded-3xl overflow-hidden flex flex-col justify-between transition-all duration-300 border shadow-xl hover:-translate-y-1 ${
                   isGiveaway
                     ? 'bg-gradient-to-br from-amber-950/40 via-zinc-900 to-amber-950/20 border-amber-500/40 hover:border-amber-400 shadow-amber-500/10'
                     : offer.discountPercent >= 40
@@ -68,82 +68,113 @@ export function SpecialOffersSection() {
                     : 'bg-zinc-900/90 border-white/[0.08] hover:border-white/20'
                 }`}
               >
-                {/* Top Badge Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
-                    isGiveaway
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                      : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                  }`}>
-                    {offer.offerTag || (isGiveaway ? '🎁 FREE GIVEAWAY' : `⚡ ${offer.discountPercent}% OFF DEAL`)}
-                  </span>
+                {/* Optional Custom Offer Picture Banner */}
+                {offer.offerImage && (
+                  <div className="relative h-36 w-full overflow-hidden">
+                    <img
+                      src={offer.offerImage}
+                      alt={offer.offerTitle || offer.code}
+                      className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
 
-                  <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-cyan-400" /> Limited Time
-                  </span>
-                </div>
-
-                {/* Main Content */}
-                <div className="space-y-2">
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-3xl sm:text-4xl font-black ${
-                      isGiveaway ? 'text-amber-400' : 'text-emerald-400'
-                    }`}>
-                      {isGiveaway ? '100% FREE' : `${offer.discountPercent}% OFF`}
-                    </span>
-                    {offer.minOrderAmount && (
-                      <span className="text-xs text-slate-400 font-medium">
-                        (Min order ${offer.minOrderAmount})
+                    {/* Top Overlay Badge */}
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2 z-10">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-md backdrop-blur-md ${
+                        isGiveaway
+                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
+                          : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/50'
+                      }`}>
+                        {offer.offerTag || (isGiveaway ? '🎁 FREE GIVEAWAY' : `⚡ ${offer.discountPercent}% OFF DEAL`)}
                       </span>
-                    )}
-                  </div>
 
-                  <h3 className="text-base font-bold text-white leading-snug">
-                    {offer.offerTitle || offer.description || `${offer.discountPercent}% Promo Discount Code`}
-                  </h3>
-
-                  <p className="text-xs text-slate-400 leading-relaxed">
-                    {offer.description}
-                  </p>
-                </div>
-
-                {/* Coupon Code Copy & Claim Action Box */}
-                <div className="pt-3 border-t border-white/[0.08] space-y-2">
-                  <div className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-950 border border-white/10">
-                    <div className="flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-cyan-400 shrink-0" />
-                      <span className="font-mono font-black text-white text-sm tracking-wider select-all">
-                        {offer.code}
+                      <span className="text-[10px] font-mono text-white px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-cyan-400" /> Limited Time
                       </span>
                     </div>
+                  </div>
+                )}
 
-                    <button
-                      onClick={() => handleCopyCode(offer.code)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                        isCopied
-                          ? 'bg-emerald-600 text-white shadow-md'
-                          : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'
-                      }`}
-                    >
-                      {isCopied ? (
-                        <>
-                          <Check className="h-3.5 w-3.5" />
-                          <span>COPIED!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5" />
-                          <span>COPY CODE</span>
-                        </>
+                <div className="p-6 flex flex-col justify-between gap-5 flex-1">
+                  {/* Top Badge Row (if no custom offerImage) */}
+                  {!offer.offerImage && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border shadow-sm ${
+                        isGiveaway
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                      }`}>
+                        {offer.offerTag || (isGiveaway ? '🎁 FREE GIVEAWAY' : `⚡ ${offer.discountPercent}% OFF DEAL`)}
+                      </span>
+
+                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-cyan-400" /> Limited Time
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Main Content */}
+                  <div className="space-y-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className={`text-3xl sm:text-4xl font-black ${
+                        isGiveaway ? 'text-amber-400' : 'text-emerald-400'
+                      }`}>
+                        {isGiveaway ? '100% FREE' : `${offer.discountPercent}% OFF`}
+                      </span>
+                      {offer.minOrderAmount && (
+                        <span className="text-xs text-slate-400 font-medium">
+                          (Min order ${offer.minOrderAmount})
+                        </span>
                       )}
-                    </button>
+                    </div>
+
+                    <h3 className="text-base font-bold text-white leading-snug">
+                      {offer.offerTitle || offer.description || `${offer.discountPercent}% Promo Discount Code`}
+                    </h3>
+
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      {offer.description}
+                    </p>
                   </div>
 
-                  {isCopied && (
-                    <p className="text-[10px] text-emerald-400 font-bold text-center animate-in fade-in duration-200">
-                      ✓ Promo code copied to clipboard! Paste at checkout.
-                    </p>
-                  )}
+                  {/* Coupon Code Copy & Claim Action Box */}
+                  <div className="pt-3 border-t border-white/[0.08] space-y-2">
+                    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-950 border border-white/10">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-cyan-400 shrink-0" />
+                        <span className="font-mono font-black text-white text-sm tracking-wider select-all">
+                          {offer.code}
+                        </span>
+                      </div>
+
+                      <button
+                        onClick={() => handleCopyCode(offer.code)}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          isCopied
+                            ? 'bg-emerald-600 text-white shadow-md'
+                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'
+                        }`}
+                      >
+                        {isCopied ? (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            <span>COPIED!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3.5 w-3.5" />
+                            <span>COPY CODE</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {isCopied && (
+                      <p className="text-[10px] text-emerald-400 font-bold text-center animate-in fade-in duration-200">
+                        ✓ Promo code copied to clipboard! Paste at checkout.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             );
