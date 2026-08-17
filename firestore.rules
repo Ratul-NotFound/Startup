@@ -95,5 +95,10 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
     }
+
+    // 11. Email Verifications & OTPs
+    match /email_verifications/{verificationId} {
+      allow read, write: if true;
+    }
   }
 }
