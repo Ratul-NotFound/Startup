@@ -119,15 +119,29 @@ export function HeroTab({
             </p>
           </div>
 
-          <button
-            type="submit"
-            form="brand-assets-form"
-            disabled={isSavingBrand}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer shrink-0"
-          >
-            {isSavingBrand ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            <span>Save &amp; Publish Brand</span>
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setFormFavicon('/images/Fabicon.png');
+                setFormNavbarLogo('/images/One_Row_logo.png');
+                showFeedback('success', 'Reset logo inputs to transparent local PNG files (/images/Fabicon.png & /images/One_Row_logo.png)');
+              }}
+              className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-colors cursor-pointer"
+            >
+              Use Project Local PNGs
+            </button>
+
+            <button
+              type="submit"
+              form="brand-assets-form"
+              disabled={isSavingBrand}
+              className="px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+            >
+              {isSavingBrand ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              <span>Save &amp; Publish Brand</span>
+            </button>
+          </div>
         </div>
 
         {/* Hidden File Inputs */}

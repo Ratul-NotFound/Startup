@@ -62,22 +62,6 @@ export const compressImageToDataUrl = (
 
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Auto-convert white background pixels (r>230, g>230, b>230) to transparent for PNG/WEBP
-        if (isPngOrWebp) {
-          try {
-            const imgData = ctx.getImageData(0, 0, width, height);
-            const data = imgData.data;
-            for (let i = 0; i < data.length; i += 4) {
-              if (data[i] > 230 && data[i + 1] > 230 && data[i + 2] > 230) {
-                data[i + 3] = 0; // Set alpha to 0 (transparent)
-              }
-            }
-            ctx.putImageData(imgData, 0, 0);
-          } catch {
-            // Ignore security errors on cross-origin images
-          }
-        }
-
         // Export as compressed PNG for transparent formats, or JPEG otherwise
         const mimeType = isPngOrWebp ? 'image/png' : 'image/jpeg';
         const compressedBase64 = canvas.toDataURL(mimeType, quality);

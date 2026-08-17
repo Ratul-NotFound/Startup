@@ -635,12 +635,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubBrandSettings = onSnapshot(doc(db, 'settings', 'brand'), (snap) => {
       if (snap.exists()) {
         const data = snap.data() as BrandSettings;
-        setBrandSettings(prev => ({
-          ...prev,
-          ...data,
-          faviconUrl: data.faviconUrl || '/images/Fabicon.png',
-          navbarLogoUrl: data.navbarLogoUrl || '/images/One_Row_logo.png',
-        }));
+        const validFavicon = (data.faviconUrl && !data.faviconUrl.startsWith('data:image/jpeg')) ? data.faviconUrl : '/images/Fabicon.png';
+        const validNavbarLogo = (data.navbarLogoUrl && !data.navbarLogoUrl.startsWith('data:image/jpeg')) ? data.navbarLogoUrl : '/images/One_Row_logo.png';
+
+        setBrandSettings({
+          brandName: data.brandName || 'Keyoon',
+          brandTagline: data.brandTagline || 'Premium Digital Subscriptions',
+          faviconUrl: validFavicon,
+          navbarLogoUrl: validNavbarLogo,
+          updatedAt: data.updatedAt,
+        });
       }
     });
 
