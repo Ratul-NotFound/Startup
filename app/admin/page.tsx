@@ -53,7 +53,7 @@ export default function AdminPortalPage() {
     reviews, deleteReview, adminCreateReview, adminResetReviews,
     heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
     quickMessages, adminCreateQuickMessage, adminUpdateQuickMessage, adminDeleteQuickMessage, adminResetQuickMessages,
-    adminActivityLogs,
+    adminActivityLogs, brandSettings, updateBrandSettings,
   } = useApp();
 
   // Navigation & UI state
@@ -656,6 +656,8 @@ export default function AdminPortalPage() {
               setHeroDeleteConfirm={setHeroDeleteConfirm}
               handleDeleteHeroSlide={handleDeleteHeroSlide}
               showFeedback={showFeedback}
+              brandSettings={brandSettings}
+              updateBrandSettings={updateBrandSettings}
             />
           )}
 

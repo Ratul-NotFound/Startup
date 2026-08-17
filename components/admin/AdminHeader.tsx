@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Shield, Home, RefreshCw, Menu, X } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { useApp } from '@/context/AppContext';
 
 export type AdminTab =
   | 'overview'
@@ -50,16 +51,22 @@ export function AdminHeader({
   isSyncing,
   showFeedback,
 }: AdminHeaderProps) {
+  const { brandSettings } = useApp();
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-zinc-900/90 border border-white/[0.08] backdrop-blur-xl shadow-2xl">
       <div className="flex items-center justify-between w-full sm:w-auto">
         <div className="flex items-center gap-3">
-          <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-950/50">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
+          {brandSettings?.faviconUrl ? (
+            <img src={brandSettings.faviconUrl} alt="Favicon Badge" className="h-11 w-11 rounded-2xl object-contain bg-zinc-950 border border-white/15 p-1 shadow-lg shrink-0" />
+          ) : (
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-950/50 shrink-0">
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+          )}
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-black text-white">SubNexus Command Hub</h1>
+              <h1 className="text-lg font-black text-white">{brandSettings?.brandName ? `${brandSettings.brandName} Command Hub` : 'Keyoon Command Hub'}</h1>
               {isSuperAdmin ? (
                 <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-950/80 border border-red-500/40 text-red-300">
                   Superadmin

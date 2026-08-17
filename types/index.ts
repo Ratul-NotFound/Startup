@@ -287,3 +287,11 @@ export interface AdminActivityLog {
   targetId?: string;
   timestamp: string;
 }
+
+export interface BrandSettings {
+  brandName?: string;
+  brandTagline?: string;
+  navbarLogoUrl?: string;
+  faviconUrl?: string;
+  updatedAt?: string;
+}

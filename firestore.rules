@@ -112,5 +112,10 @@ service cloud.firestore {
     match /admin_activity_logs/{logId} {
       allow read, write: if true;
     }
+
+    // Global Storefront Brand Settings & Favicons
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
   }
 }

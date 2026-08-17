@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
-  AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog,
+  AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog, BrandSettings,
 } from '@/types';
 import {
   MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
@@ -188,6 +188,8 @@ interface AppContextType {
   fastForwardSimulationDays: (days: number) => void;
   adminActivityLogs: AdminActivityLog[];
   logAdminActivity: (action: string, category: AdminActivityLog['category'], details: string, targetId?: string) => Promise<void>;
+  brandSettings: BrandSettings;
+  updateBrandSettings: (settings: Partial<BrandSettings>) => Promise<void>;
   refreshAllData: () => Promise<void>;
   isSyncing: boolean;
 
@@ -278,7 +280,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [allTickets, setAllTickets] = useState<SupportTicket[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>(MOCK_COUPONS);
   const [adminActivityLogs, setAdminActivityLogs] = useState<AdminActivityLog[]>([]);
+  const [brandSettings, setBrandSettings] = useState<BrandSettings>({
+    brandName: 'Keyoon',
+    brandTagline: 'Premium Digital Subscriptions',
+  });
   const [isSyncing, setIsSyncing] = useState(false);
+
+  const updateBrandSettings = async (updates: Partial<BrandSettings>) => {
+    const nextSettings = { ...brandSettings, ...updates, updatedAt: new Date().toISOString() };
+    setBrandSettings(nextSettings);
+
+    try {
+      await setDoc(doc(db, 'settings', 'brand'), nextSettings, { merge: true });
+      await logAdminActivity('BRAND_SETTINGS_UPDATED', 'system', 'Updated brand logos, favicon icon, and navbar branding');
+    } catch (err) {
+      console.warn('[AppContext] Error updating brand settings in Firestore:', err);
+    }
+  };
 
   // Helper to record admin activity log to Firestore
   const logAdminActivity = async (
@@ -591,6 +609,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setQuickMessages(DEFAULT_QUICK_MESSAGES);
     });
 
+    // 8. Real-time Brand Settings & Favicon listener
+    const unsubBrandSettings = onSnapshot(doc(db, 'settings', 'brand'), (snap) => {
+      if (snap.exists()) {
+        setBrandSettings(snap.data() as BrandSettings);
+      }
+    });
+
     return () => {
       unsubProducts();
       unsubCoupons();
@@ -599,6 +624,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubAdmins();
       unsubHeroSlides();
       unsubQuickMessages();
+      unsubBrandSettings();
     };
   }, [seedFirestoreIfEmpty]);
 
@@ -2236,6 +2262,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     financialMetrics, emailNotifications, sendTestEmail,
     triggerRenewalCronSimulation, fastForwardSimulationDays,
     adminActivityLogs, logAdminActivity,
+    brandSettings, updateBrandSettings,
     refreshAllData, isSyncing,
     tickets, createSupportTicket, replyToTicket,
     reviews, addReview, likeReview, deleteReview,
@@ -2247,7 +2274,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
-    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs,
+    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs, brandSettings,
     financialMetrics, emailNotifications, isSyncing,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
     activeSearchQuery, activeCategoryFilter,

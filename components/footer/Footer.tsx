@@ -3,8 +3,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { Layers, ShieldCheck, Zap, Lock, Globe, ArrowUpRight } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 export const Footer: React.FC = () => {
+  const { brandSettings } = useApp();
+
   return (
     <footer className="border-t border-white/[0.08] bg-zinc-950 text-xs text-zinc-400 pt-16 pb-12">
       <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
@@ -15,15 +18,28 @@ export const Footer: React.FC = () => {
           {/* Column 1: Brand & Status */}
           <div className="lg:col-span-2 space-y-4">
             <Link href="/" className="flex items-center gap-3 group w-fit">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform">
-                <Layers className="h-5 w-5 text-white" />
-              </div>
+              {brandSettings?.faviconUrl ? (
+                <img
+                  src={brandSettings.faviconUrl}
+                  alt="Brand Badge Icon"
+                  className="h-9 w-9 rounded-xl object-contain bg-zinc-900 border border-white/10 p-1 group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform">
+                  <Layers className="h-5 w-5 text-white" />
+                </div>
+              )}
+
               <div className="flex flex-col">
-                <span className="text-base font-bold tracking-tight text-white uppercase font-sans leading-none">
-                  Key<span className="text-cyan-400">oon</span>
-                </span>
+                {brandSettings?.navbarLogoUrl ? (
+                  <img src={brandSettings.navbarLogoUrl} alt={brandSettings.brandName || 'Keyoon'} className="h-6 object-contain self-start" />
+                ) : (
+                  <span className="text-base font-bold tracking-tight text-white font-sans leading-none">
+                    {brandSettings?.brandName || 'Keyoon'}
+                  </span>
+                )}
                 <span className="text-[10px] text-zinc-500 uppercase leading-tight mt-0.5 font-medium">
-                  Premium Digital Subscriptions · keyoon.com
+                  {brandSettings?.brandTagline || 'Premium Digital Subscriptions'}
                 </span>
               </div>
             </Link>

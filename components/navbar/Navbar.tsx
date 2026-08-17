@@ -16,7 +16,7 @@ export const Navbar: React.FC = () => {
     cart, setIsCartOpen,
     user, firebaseUser, isAdmin, isSuperAdmin,
     isAuthModalOpen, setIsAuthModalOpen,
-    logout,
+    logout, brandSettings,
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -51,17 +51,19 @@ export const Navbar: React.FC = () => {
   const totalCartItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const navLinks = [
-    { href: '/', label: 'Subscriptions' },
-    { href: '/#reviews-section', label: 'Customer Reviews' },
-    // Dashboard only shown when logged in
-    ...(firebaseUser ? [{ href: '/dashboard', label: 'My Account' }] : []),
+    { href: '/', label: 'Home' },
+    { href: '/#catalog', label: 'Catalog' },
+    { href: '/dashboard', label: 'Customer Vault' },
+    { href: '/#pricing', label: 'Pricing' },
+    { href: '/#reviews', label: 'Reviews' },
   ];
 
   const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'U')}&background=6366f1&color=fff&size=80`;
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full" suppressHydrationWarning>
+      <header className="sticky top-0 z-40 w-full" suppressHydrationWarning>
+        {/* Top Navbar */}
         <div
           suppressHydrationWarning
           className={`w-full transition-all duration-300 ${
@@ -72,17 +74,34 @@ export const Navbar: React.FC = () => {
         >
           <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4" suppressHydrationWarning>
 
-            {/* Brand */}
+            {/* Brand Logo & Favicon Badge */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0 group" suppressHydrationWarning>
-              <div
-                suppressHydrationWarning
-                className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/25 transition-colors"
-              >
-                <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                </svg>
-              </div>
-              <span className="text-base font-bold tracking-tight text-white">Keyoon</span>
+              {brandSettings?.faviconUrl ? (
+                <img
+                  src={brandSettings.faviconUrl}
+                  alt="Brand Badge Icon"
+                  className="h-8 w-8 rounded-lg object-contain bg-zinc-900 border border-white/10 p-1"
+                />
+              ) : (
+                <div
+                  suppressHydrationWarning
+                  className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/25 transition-colors"
+                >
+                  <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                  </svg>
+                </div>
+              )}
+
+              {brandSettings?.navbarLogoUrl ? (
+                <img
+                  src={brandSettings.navbarLogoUrl}
+                  alt={brandSettings.brandName || 'Keyoon'}
+                  className="h-7 max-w-[180px] object-contain"
+                />
+              ) : (
+                <span className="text-base font-bold tracking-tight text-white">{brandSettings?.brandName || 'Keyoon'}</span>
+              )}
             </Link>
 
             {/* Desktop Nav */}
