@@ -74,8 +74,9 @@ export function CouponsTab({
             }}
             className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
           >
-            <Gift className="h-4 w-4" />
-            <span>🎁 New Giveaway</span>
+            <Plus className="h-4 w-4 text-amber-400" />
+            <Gift className="h-3.5 w-3.5" />
+            <span>+ Add New Giveaway</span>
           </button>
 
           <button
@@ -93,8 +94,9 @@ export function CouponsTab({
             }}
             className="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
           >
-            <Sparkles className="h-4 w-4" />
-            <span>⚡ New Special Deal</span>
+            <Plus className="h-4 w-4 text-cyan-400" />
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>+ Add Special Offer</span>
           </button>
 
           <button
@@ -105,7 +107,8 @@ export function CouponsTab({
             className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
           >
             <Plus className="h-4 w-4" />
-            <span>+ New Promo Code</span>
+            <Tag className="h-3.5 w-3.5" />
+            <span>+ Add Discount Code</span>
           </button>
         </div>
       </div>
