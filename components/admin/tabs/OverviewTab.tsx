@@ -16,7 +16,7 @@ interface OverviewTabProps {
   setChartRange: (range: '7d' | '30d' | '6m') => void;
   revenueChartData: { label: string; revenue: number; orders: number }[];
   setTab: (tab: AdminTab) => void;
-  triggerRenewalCronSimulation: () => { renewedCount: number; notifiedCount: number };
+  triggerRenewalCronSimulation: () => { renewedCount: number; notifiedCount: number; expiredCount: number };
   fastForwardSimulationDays: (days: number) => void;
   showFeedback: (type: 'success' | 'error', msg: string) => void;
 }
@@ -148,7 +148,7 @@ export function OverviewTab({
           <button
             onClick={() => {
               const res = triggerRenewalCronSimulation();
-              showFeedback('success', `Cron executed: ${res.renewedCount} renewed, ${res.notifiedCount} notices sent.`);
+              showFeedback('success', `Auto-Renewal Cron: ${res.renewedCount} auto-renewed, ${res.notifiedCount} notice(s) sent, ${res.expiredCount} expired.`);
             }}
             className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 transition-all cursor-pointer"
           >

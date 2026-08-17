@@ -184,7 +184,7 @@ interface AppContextType {
   financialMetrics: FinancialMetric;
   emailNotifications: EmailNotification[];
   sendTestEmail: (recipient: string, templateType: EmailNotification['templateType']) => void;
-  triggerRenewalCronSimulation: () => { renewedCount: number; notifiedCount: number };
+  triggerRenewalCronSimulation: () => { renewedCount: number; notifiedCount: number; expiredCount: number };
   fastForwardSimulationDays: (days: number) => void;
   refreshAllData: () => Promise<void>;
   isSyncing: boolean;
@@ -570,6 +570,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubQuickMessages();
     };
   }, [seedFirestoreIfEmpty]);
+
+  // Automated background Auto-Renewal Engine runner (runs periodically)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      triggerRenewalCronSimulation();
+    }, 5000);
+
+    const interval = setInterval(() => {
+      triggerRenewalCronSimulation();
+    }, 10 * 60 * 1000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [allSubscriptions.length, subscriptions.length]);
 
   // ─── Real-time Admin Data Listeners ─────────────────────────────────
   const setupAdminRealtimeListeners = useCallback(() => {
@@ -1797,21 +1813,120 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const triggerRenewalCronSimulation = () => {
-    let renewed = 0, notified = 0;
+    let renewed = 0, notified = 0, expired = 0;
     const now = Date.now();
-    for (const sub of allSubscriptions.length > 0 ? allSubscriptions : subscriptions) {
-      const diff = (new Date(sub.expiryDate).getTime() - now) / 86400000;
-      if (diff <= 0 && sub.autoRenew) {
-        renewed++;
-        const exp = new Date(now + 30 * 86400000).toISOString();
-        try { updateDoc(doc(db, 'subscriptions', sub.id), { expiryDate: exp, status: 'active' }); } catch { }
-      }
-      if (diff > 0 && diff <= 3) {
+    const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+    const targetSubs = allSubscriptions.length > 0 ? allSubscriptions : subscriptions;
+
+    for (const sub of targetSubs) {
+      const expiryMs = new Date(sub.expiryDate).getTime();
+      const diffDays = (expiryMs - now) / 86400000;
+
+      if (diffDays <= 0) {
+        if (sub.autoRenew) {
+          renewed++;
+          const durationDays = daysMap[sub.planDuration] || 30;
+          const baseMs = Math.max(expiryMs, now);
+          const newExp = new Date(baseMs + durationDays * 86400000).toISOString();
+
+          // 1. Update subscription in Firestore & local state
+          try {
+            updateDoc(doc(db, 'subscriptions', sub.id), {
+              expiryDate: newExp,
+              warrantyValidUntil: newExp,
+              status: 'active',
+            });
+          } catch { }
+
+          // 2. Auto-generate Renewal Order record in Firestore
+          const renewalOrderId = generateRandomId('ord_renew');
+          const renewalOrderNumber = `RNW-${Math.floor(100000 + Math.random() * 900000)}`;
+          const targetUserId = sub.userId || user.id || 'usr_auto';
+          const targetUserEmail = sub.userEmail || user.email || 'customer@subnexus.com';
+
+          const renewalOrder: Order = {
+            id: renewalOrderId,
+            orderNumber: renewalOrderNumber,
+            userId: targetUserId,
+            userEmail: targetUserEmail,
+            items: [
+              {
+                productId: sub.productId,
+                productName: sub.productName,
+                productLogo: sub.productLogo,
+                duration: sub.planDuration,
+                durationLabel: sub.durationLabel,
+                price: sub.pricePaid,
+                quantity: 1,
+              },
+            ],
+            subtotal: sub.pricePaid,
+            discount: 0,
+            total: sub.pricePaid,
+            totalBdt: Math.round(sub.pricePaid * 125),
+            paymentMethod: sub.paymentMethod || 'bKash',
+            paymentStatus: 'paid',
+            deliveryStatus: 'delivered',
+            createdAt: new Date().toISOString(),
+            generatedSubscriptionIds: [sub.id],
+            verifiedAt: new Date().toISOString(),
+            verifiedBy: 'Auto-Renewal Engine',
+          };
+
+          try {
+            setDoc(doc(db, 'orders', renewalOrderId), renewalOrder);
+          } catch { }
+
+          // 3. Dispatch automated ticket notification to user
+          try {
+            adminSendMessageToUser(
+              targetUserId,
+              targetUserEmail,
+              `Auto-Renewal Successful: ${sub.productName}`,
+              `🎉 Your ${sub.productName} plan (${sub.durationLabel}) has been automatically renewed until ${new Date(newExp).toLocaleDateString()}. Your vault credentials remain unchanged and active.`
+            );
+          } catch { }
+        } else {
+          expired++;
+          try {
+            updateDoc(doc(db, 'subscriptions', sub.id), { status: 'expired' });
+          } catch { }
+
+          const targetUserId = sub.userId || user.id || 'usr_auto';
+          const targetUserEmail = sub.userEmail || user.email || 'customer@subnexus.com';
+
+          try {
+            adminSendMessageToUser(
+              targetUserId,
+              targetUserEmail,
+              `Plan Expired: ${sub.productName}`,
+              `⚠️ Your ${sub.productName} plan has expired. Enable Auto-Renew or add a new plan to keep your vault access active.`
+            );
+          } catch { }
+        }
+      } else if (diffDays > 0 && diffDays <= 3) {
         notified++;
-        try { updateDoc(doc(db, 'subscriptions', sub.id), { status: 'expiring_soon' }); } catch { }
+        if (sub.status !== 'expiring_soon') {
+          try {
+            updateDoc(doc(db, 'subscriptions', sub.id), { status: 'expiring_soon' });
+          } catch { }
+
+          const targetUserId = sub.userId || user.id || 'usr_auto';
+          const targetUserEmail = sub.userEmail || user.email || 'customer@subnexus.com';
+
+          try {
+            adminSendMessageToUser(
+              targetUserId,
+              targetUserEmail,
+              `Auto-Renewal Notice: ${sub.productName}`,
+              `⏰ Your ${sub.productName} plan will expire in ${Math.ceil(diffDays)} days. Auto-Renew is currently ${sub.autoRenew ? 'ENABLED' : 'DISABLED'}.`
+            );
+          } catch { }
+        }
       }
     }
-    return { renewedCount: renewed, notifiedCount: notified };
+
+    return { renewedCount: renewed, notifiedCount: notified, expiredCount: expired };
   };
 
   const fastForwardSimulationDays = (days: number) => {
