@@ -20,5 +20,5 @@ Disallow: /
 User-agent: Google-Extended
 Disallow: /
 
-Sitemap: https://subnexus.io/sitemap.xml
-Host: https://subnexus.io
+Sitemap: https://keyoon.com/sitemap.xml
+Host: https://keyoon.com

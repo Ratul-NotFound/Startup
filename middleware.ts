@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
 
   // Remove server fingerprinting headers
   response.headers.delete('X-Powered-By');
-  response.headers.set('Server', 'SubNexus');
+  response.headers.set('Server', 'Keyoon');
 
   // ─── 2. Block direct access to /_next/image with no referer ───
   // (prevents hotlinking your images)

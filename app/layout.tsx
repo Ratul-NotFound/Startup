@@ -15,9 +15,11 @@ import { InteractiveCursorGlow } from '@/components/ui/InteractiveCursorGlow';
 import { HydrationGuard } from '@/components/ui/HydrationGuard';
 
 export const metadata: Metadata = {
-  title: 'SubNexus — World-Class Retail Subscription Platform | ChatGPT, Netflix, Gemini, Claude',
-  description: 'Buy verified premium subscriptions including ChatGPT Plus, Google Gemini Advanced 2.0, Claude 3.5 Pro, Netflix 4K UHD, YouTube Premium, Adobe CC, and Spotify with instant automated bot delivery.',
+  title: 'Keyoon — World-Class Retail Subscription Platform | ChatGPT, Netflix, Gemini, Claude',
+  description: 'Buy verified premium subscriptions including ChatGPT Plus, Google Gemini Advanced 2.0, Claude 3.5 Pro, Netflix 4K UHD, YouTube Premium, Adobe CC, and Spotify with instant automated bot delivery on Keyoon.',
   keywords: [
+    'keyoon',
+    'keyoon subscriptions',
     'retail subscription marketplace',
     'buy chatgpt plus cheap',
     'claude pro subscription',
@@ -26,16 +28,16 @@ export const metadata: Metadata = {
     'youtube premium slot',
   ],
   openGraph: {
-    title: 'SubNexus — Elite Retail Subscription Marketplace',
+    title: 'Keyoon — Elite Retail Subscription Marketplace',
     description: 'Instant automated delivery for ChatGPT Plus, Claude Pro, Netflix 4K, Gemini Advanced, and 20+ top subscriptions at wholesale rates.',
-    url: 'https://subnexus.io',
-    siteName: 'SubNexus',
+    url: 'https://keyoon.com',
+    siteName: 'Keyoon',
     images: [
       {
         url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80',
         width: 1200,
         height: 630,
-        alt: 'SubNexus Subscription Vault',
+        alt: 'Keyoon Subscription Vault',
       },
     ],
     locale: 'en_US',

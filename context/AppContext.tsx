@@ -853,12 +853,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ─── Cart persistence ──────────────────────────────────────────────
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('subnexus_cart');
+      const saved = localStorage.getItem('keyoon_cart') || localStorage.getItem('subnexus_cart');
       if (saved) setCart(JSON.parse(saved));
     } catch { }
   }, []);
   useEffect(() => {
-    try { localStorage.setItem('subnexus_cart', JSON.stringify(cart)); } catch { }
+    try { localStorage.setItem('keyoon_cart', JSON.stringify(cart)); } catch { }
   }, [cart]);
 
   // ─── Computed cart values ──────────────────────────────────────────
@@ -1418,7 +1418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const msg = {
       id: generateRandomId('msg'),
       sender: 'agent' as const,
-      senderName: user.name || 'SubNexus Support Ops',
+      senderName: user.name || 'Keyoon Support Ops',
       content: message,
       ...(imageUrl ? { imageUrl } : {}),
       timestamp: new Date().toISOString(),
@@ -1471,7 +1471,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         {
           id: generateRandomId('msg'),
           sender: 'agent',
-          senderName: user.name || 'SubNexus Support Ops',
+          senderName: user.name || 'Keyoon Support Ops',
           content,
           ...(imageUrl ? { imageUrl } : {}),
           timestamp: new Date().toISOString(),

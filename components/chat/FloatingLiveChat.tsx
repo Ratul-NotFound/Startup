@@ -212,8 +212,8 @@ export const FloatingLiveChat: React.FC = () => {
     {
       id: 'welcome_1',
       sender: 'agent',
-      senderName: 'SubNexus Support Bot',
-      content: '👋 Hey there! Welcome to SubNexus. How can we help you today with subscriptions, credentials, or payments?',
+      senderName: 'Keyoon Support Bot',
+      content: '👋 Hey there! Welcome to Keyoon. How can we help you today with subscriptions, credentials, or payments?',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -268,7 +268,7 @@ export const FloatingLiveChat: React.FC = () => {
       return '💳 For bKash / Nagad / Rocket: Choose your wallet during checkout, send the BDT amount to the provided personal number, and submit your Transaction ID (TrxID). Our admin team verifies and delivers credentials in under 2 minutes!';
     }
     if (q.includes('credential') || q.includes('password') || q.includes('vault') || q.includes('login') || q.includes('account')) {
-      return '🔑 Credentials are automatically unlocked in your personal SubNexus Vault! Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.';
+      return '🔑 Credentials are automatically unlocked in your personal Keyoon Vault! Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.';
     }
     if (q.includes('order') || q.includes('track') || q.includes('status') || q.includes('delivery')) {
       if (orders && orders.length > 0) {
@@ -280,7 +280,7 @@ export const FloatingLiveChat: React.FC = () => {
     if (q.includes('warranty') || q.includes('replacement') || q.includes('renew') || q.includes('not working')) {
       return '🛡️ All subscriptions include a 100% Full-Term Replacement Warranty. If any login ever experiences an interruption, our automated monitoring engine resolves or replaces your slot immediately.';
     }
-    return `Got your message! A live SubNexus Support Specialist has been notified and will assist you right here shortly. You can also view your tickets in the Dashboard.`;
+    return `Got your message! A live Keyoon Support Specialist has been notified and will assist you right here shortly. You can also view your tickets in the Dashboard.`;
   }, [orders]);
 
   const handleSendMessage = useCallback(async (text: string, imageUrl?: string) => {
@@ -313,7 +313,7 @@ export const FloatingLiveChat: React.FC = () => {
       const replyMsg: LiveMessage = {
         id: `bot_${Date.now()}`,
         sender: 'agent',
-        senderName: 'SubNexus Support Ops',
+        senderName: 'Keyoon Support Ops',
         content: botReply,
         timestamp: new Date().toISOString(),
       };
@@ -378,7 +378,7 @@ export const FloatingLiveChat: React.FC = () => {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-black text-white tracking-tight">SubNexus Support</h3>
+                    <h3 className="text-sm font-black text-white tracking-tight">Keyoon Support</h3>
                     <span className="text-[9px] uppercase font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
                       Online
                     </span>
@@ -420,7 +420,7 @@ export const FloatingLiveChat: React.FC = () => {
               {/* Typing Indicator */}
               {isTyping && (
                 <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-zinc-900 border border-white/10 w-fit">
-                  <span className="text-[11px] text-zinc-400 font-medium">SubNexus is typing</span>
+                  <span className="text-[11px] text-zinc-400 font-medium">Keyoon is typing</span>
                   <span className="flex items-center gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                     <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-bounce" style={{ animationDelay: '150ms' }} />

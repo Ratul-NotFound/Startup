@@ -123,7 +123,7 @@ export const WriteReviewModal: React.FC = () => {
           {/* Header */}
           <div className="space-y-1">
             <h2 className="text-lg font-bold text-white">Write a Review</h2>
-            <p className="text-xs text-zinc-400">Share your experience with the SubNexus community.</p>
+            <p className="text-xs text-zinc-400">Share your experience with the Keyoon community.</p>
           </div>
 
           {isSubmitted ? (

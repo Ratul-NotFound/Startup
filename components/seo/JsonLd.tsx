@@ -6,24 +6,24 @@ export const JsonLd: React.FC = () => {
     '@graph': [
       {
         '@type': 'Organization',
-        '@id': 'https://subnexus.io/#organization',
-        'name': 'SubNexus Premium Retail Subscriptions',
-        'url': 'https://subnexus.io',
-        'logo': 'https://subnexus.io/logo.png',
+        '@id': 'https://keyoon.com/#organization',
+        'name': 'Keyoon Premium Retail Subscriptions',
+        'url': 'https://keyoon.com',
+        'logo': 'https://keyoon.com/logo.png',
         'description': 'Premier retail subscription marketplace for ChatGPT Plus, Claude 3.5 Pro, Gemini Advanced, Netflix 4K, YouTube Premium, and Adobe Creative Cloud with automated bot delivery.',
       },
       {
         '@type': 'WebSite',
-        '@id': 'https://subnexus.io/#website',
-        'url': 'https://subnexus.io',
-        'name': 'SubNexus',
+        '@id': 'https://keyoon.com/#website',
+        'url': 'https://keyoon.com',
+        'name': 'Keyoon',
         'publisher': {
-          '@id': 'https://subnexus.io/#organization',
+          '@id': 'https://keyoon.com/#organization',
         },
       },
       {
         '@type': 'SoftwareApplication',
-        'name': 'SubNexus Subscription Vault',
+        'name': 'Keyoon Subscription Vault',
         'operatingSystem': 'All',
         'applicationCategory': 'BusinessApplication',
         'aggregateRating': {

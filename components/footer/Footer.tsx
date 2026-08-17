@@ -20,10 +20,10 @@ export const Footer: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-base font-bold tracking-tight text-white uppercase font-sans leading-none">
-                  Sub<span className="text-cyan-400">Nexus</span>
+                  Key<span className="text-cyan-400">oon</span>
                 </span>
                 <span className="text-[10px] text-zinc-500 uppercase leading-tight mt-0.5 font-medium">
-                  Premium Subscriptions at Wholesale Rates
+                  Premium Digital Subscriptions · keyoon.com
                 </span>
               </div>
             </Link>
@@ -139,7 +139,7 @@ export const Footer: React.FC = () => {
 
         {/* Bottom Payment & Copyright Bar */}
         <div className="pt-8 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-4 text-zinc-500 text-[11px]">
-          <p>© {new Date().getFullYear()} SubNexus Platform Inc. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Keyoon Inc. (keyoon.com). All rights reserved.</p>
 
           <div className="flex items-center gap-4 text-zinc-400 font-medium">
             <span>Visa</span>

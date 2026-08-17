@@ -11,7 +11,7 @@ interface CalculatorItem {
   id: string;
   name: string;
   officialMonthly: number;
-  subnexusMonthly: number;
+  keyoonMonthly: number;
   selected: boolean;
   category: string;
 }
@@ -20,14 +20,14 @@ export const SavingsCalculator: React.FC = () => {
   const { products, addToCart } = useApp();
 
   const [items, setItems] = useState<CalculatorItem[]>([
-    { id: 'chatgpt-plus', name: 'ChatGPT Plus', officialMonthly: 20.00, subnexusMonthly: 5.83, selected: true, category: 'AI Tools' },
-    { id: 'netflix-4k-uhd', name: 'Netflix 4K UHD', officialMonthly: 22.99, subnexusMonthly: 3.91, selected: true, category: 'Streaming' },
-    { id: 'claude-pro', name: 'Claude 3.5 Pro', officialMonthly: 20.00, subnexusMonthly: 6.66, selected: true, category: 'AI Tools' },
-    { id: 'youtube-premium', name: 'YouTube Premium', officialMonthly: 13.99, subnexusMonthly: 2.49, selected: true, category: 'Streaming' },
-    { id: 'cursor-pro', name: 'Cursor Pro', officialMonthly: 20.00, subnexusMonthly: 6.25, selected: false, category: 'Developer' },
-    { id: 'gemini-advanced', name: 'Gemini Advanced 2.0', officialMonthly: 19.99, subnexusMonthly: 4.99, selected: false, category: 'AI Tools' },
-    { id: 'spotify-premium', name: 'Spotify Premium', officialMonthly: 11.99, subnexusMonthly: 2.29, selected: false, category: 'Music' },
-    { id: 'nordvpn-ultimate', name: 'NordVPN Ultimate', officialMonthly: 14.99, subnexusMonthly: 2.99, selected: false, category: 'Security' },
+    { id: 'chatgpt-plus', name: 'ChatGPT Plus', officialMonthly: 20.00, keyoonMonthly: 5.83, selected: true, category: 'AI Tools' },
+    { id: 'netflix-4k-uhd', name: 'Netflix 4K UHD', officialMonthly: 22.99, keyoonMonthly: 3.91, selected: true, category: 'Streaming' },
+    { id: 'claude-pro', name: 'Claude 3.5 Pro', officialMonthly: 20.00, keyoonMonthly: 6.66, selected: true, category: 'AI Tools' },
+    { id: 'youtube-premium', name: 'YouTube Premium', officialMonthly: 13.99, keyoonMonthly: 2.49, selected: true, category: 'Streaming' },
+    { id: 'cursor-pro', name: 'Cursor Pro', officialMonthly: 20.00, keyoonMonthly: 6.25, selected: false, category: 'Developer' },
+    { id: 'gemini-advanced', name: 'Gemini Advanced 2.0', officialMonthly: 19.99, keyoonMonthly: 4.99, selected: false, category: 'AI Tools' },
+    { id: 'spotify-premium', name: 'Spotify Premium', officialMonthly: 11.99, keyoonMonthly: 2.29, selected: false, category: 'Music' },
+    { id: 'nordvpn-ultimate', name: 'NordVPN Ultimate', officialMonthly: 14.99, keyoonMonthly: 2.99, selected: false, category: 'Security' },
   ]);
 
   const toggleItem = (id: string) => {
@@ -38,8 +38,8 @@ export const SavingsCalculator: React.FC = () => {
 
   const selectedItems = items.filter((i) => i.selected);
   const officialAnnual = selectedItems.reduce((acc, i) => acc + i.officialMonthly, 0) * 12;
-  const subnexusAnnual = selectedItems.reduce((acc, i) => acc + i.subnexusMonthly, 0) * 12;
-  const annualSavings = Math.max(0, officialAnnual - subnexusAnnual);
+  const keyoonAnnual = selectedItems.reduce((acc, i) => acc + i.keyoonMonthly, 0) * 12;
+  const annualSavings = Math.max(0, officialAnnual - keyoonAnnual);
   const savingsPercent = officialAnnual > 0 ? Math.round((annualSavings / officialAnnual) * 100) : 0;
 
   const handleBundleCheckout = () => {
@@ -129,8 +129,8 @@ export const SavingsCalculator: React.FC = () => {
                   <span className="line-through">${item.officialMonthly.toFixed(2)}/mo</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-zinc-400 font-medium">SubNexus:</span>
-                  <span className="text-cyan-400 font-bold font-mono">${item.subnexusMonthly.toFixed(2)}/mo</span>
+                  <span className="text-zinc-400 font-medium">Keyoon:</span>
+                  <span className="text-cyan-400 font-bold font-mono">${item.keyoonMonthly.toFixed(2)}/mo</span>
                 </div>
               </div>
             </div>
