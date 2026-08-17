@@ -17,7 +17,7 @@ import {
   Sparkles,
   Calendar,
 } from 'lucide-react';
-import { calculateDaysRemaining } from '@/lib/utils';
+import { calculateDaysRemaining, calculateExpiryProgress } from '@/lib/utils';
 
 export const CredentialVaultModal: React.FC = () => {
   const { activeVaultSub, setActiveVaultSub, toggleAutoRenew, extendSubscription, createSupportTicket } = useApp();
@@ -29,6 +29,9 @@ export const CredentialVaultModal: React.FC = () => {
   if (!activeVaultSub) return null;
 
   const daysLeft = calculateDaysRemaining(activeVaultSub.expiryDate);
+  const percentRemaining = calculateExpiryProgress(activeVaultSub.startDate, activeVaultSub.expiryDate, activeVaultSub.planDuration);
+  const isUrgent = daysLeft <= 3 && daysLeft > 0;
+  const isExpired = activeVaultSub.status === 'expired' || daysLeft <= 0;
 
   const copyToClipboard = (text: string, fieldName: string) => {
     navigator.clipboard.writeText(text);
@@ -62,8 +65,8 @@ export const CredentialVaultModal: React.FC = () => {
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-500/20 text-brand-300 border border-brand-500/30">
                   AES-256 Encrypted
                 </span>
-                <span className={`text-xs font-semibold ${daysLeft <= 3 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                  {daysLeft} Days Remaining
+                <span className={`text-xs font-semibold ${isExpired ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-emerald-400'}`}>
+                  {isExpired ? 'Expired' : `${daysLeft} Days Remaining`}
                 </span>
               </div>
               <h3 className="text-lg font-black text-white mt-0.5">{activeVaultSub.productName}</h3>
@@ -76,6 +79,43 @@ export const CredentialVaultModal: React.FC = () => {
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        {/* Synced Expiry Countdown Bar */}
+        <div className="p-3.5 rounded-2xl bg-obsidian-950 border border-white/[0.06] space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-400 flex items-center gap-1.5 font-medium">
+              <Clock className="h-3.5 w-3.5 text-cyan-400" /> Plan Expiry Status
+            </span>
+            <div className="flex items-center gap-1.5 font-mono">
+              <span className={`font-bold ${isExpired ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-white'}`}>
+                {isExpired ? 'Expired' : `${daysLeft} days remaining`}
+              </span>
+              {!isExpired && (
+                <span className="text-[10px] text-cyan-400 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
+                  {percentRemaining}%
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="w-full h-2 rounded-full bg-zinc-800/80 p-0.5 border border-white/5 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                isExpired
+                  ? 'bg-red-500 shadow-red-500/50'
+                  : isUrgent
+                  ? 'bg-gradient-to-r from-amber-500 to-rose-500 shadow-amber-500/50'
+                  : percentRemaining > 50
+                  ? 'bg-gradient-to-r from-cyan-500 to-emerald-400 shadow-cyan-500/30'
+                  : 'bg-gradient-to-r from-indigo-500 to-cyan-400 shadow-cyan-500/30'
+              }`}
+              style={{ width: `${isExpired ? 100 : Math.max(3, percentRemaining)}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 font-mono">
+            <span>Started: {new Date(activeVaultSub.startDate || Date.now()).toLocaleDateString()}</span>
+            <span>Expires on {new Date(activeVaultSub.expiryDate).toLocaleDateString()}</span>
+          </div>
         </div>
 
         {/* Credentials Box */}

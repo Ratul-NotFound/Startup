@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
 import { compressImageToDataUrl } from '@/lib/image-compression';
 import { printCleanInvoice } from '@/lib/invoice-printer';
+import { calculateDaysRemaining } from '@/lib/utils';
 import {
   Shield, TrendingUp, DollarSign, Users, Package, Tag,
   Headphones, ShoppingBag, Plus, Edit2, Trash2, Save, X,
@@ -43,7 +44,7 @@ export default function AdminPortalPage() {
     products, adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
     allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
     allUsers, adminUpdateUserRole,
-    allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
+    allSubscriptions, adminCreateSubscription, adminUpdateSubscription, adminDeleteSubscription, adminPurgeMockSubscriptions, adminPurgeAllSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     allTickets, adminReplyToTicket, adminCloseTicket, adminSendMessageToUser,
@@ -56,6 +57,11 @@ export default function AdminPortalPage() {
   } = useApp();
 
   const [tab, setTab] = useState<'overview' | 'orders' | 'payments' | 'products' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets' | 'reviews' | 'hero' | 'bot'>('overview');
+  const [editingFullSubscription, setEditingFullSubscription] = useState<(Partial<UserSubscription> & { isNew?: boolean }) | null>(null);
+  const [subDeleteConfirmId, setSubDeleteConfirmId] = useState<string | null>(null);
+  const [subStatusFilter, setSubStatusFilter] = useState<'all' | 'active' | 'expiring_soon' | 'expired' | 'paused'>('all');
+  const [showAdminVaultPassword, setShowAdminVaultPassword] = useState<Record<string, boolean>>({});
+  const [selectedSubIds, setSelectedSubIds] = useState<string[]>([]);
   const [editingQuickMessage, setEditingQuickMessage] = useState<(QuickMessage & { isNew?: boolean }) | null>(null);
   const [quickMessageDeleteConfirm, setQuickMessageDeleteConfirm] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -2552,102 +2558,373 @@ export default function AdminPortalPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════ */}
-      {/* SUBSCRIPTIONS TAB */}
+      {/* 7. SUBSCRIPTIONS & VAULT CREDENTIALS STUDIO TAB             */}
       {/* ═══════════════════════════════════════════════════════════ */}
-      {tab === 'subscriptions' && (
-        <div className="space-y-5">
-          <div className="relative max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-            <input value={subSearch} onChange={e => setSubSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-zinc-500"
-              placeholder="Search subscriptions…" />
-          </div>
-          <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06]">
-                  <tr>
-                    <th className="p-4">Product</th>
-                    <th className="p-4">Plan Duration</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Expires On</th>
-                    <th className="p-4">Assigned Credential</th>
-                    <th className="p-4 text-right">Edit Credentials</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.04]">
-                  {filteredSubs.map(s => (
-                    <React.Fragment key={s.id}>
-                      <tr className="hover:bg-white/[0.02]">
-                        <td className="p-4">
-                          <div className="flex items-center gap-2.5">
-                            <img src={s.productLogo} className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/10" alt={s.productName} />
-                            <span className="font-bold text-white">{s.productName}</span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-slate-300">{s.durationLabel}</td>
-                        <td className="p-4">
-                          <select value={s.status}
-                            onChange={e => adminUpdateSubscriptionStatus(s.id, e.target.value as any).then(() => showFeedback('success', 'Status updated.'))}
-                            className={`px-2 py-1 rounded-lg border text-[10px] font-bold focus:outline-none bg-zinc-900 ${
-                              s.status === 'active' ? 'text-emerald-400 border-emerald-500/30' :
-                              s.status === 'expired' ? 'text-red-400 border-red-500/30' :
-                              'text-amber-400 border-amber-500/30'
-                            }`}>
-                            {['active', 'expiring_soon', 'expired', 'paused'].map(st => <option key={st} value={st}>{st}</option>)}
-                          </select>
-                        </td>
-                        <td className="p-4 text-slate-400">{new Date(s.expiryDate).toLocaleDateString()}</td>
-                        <td className="p-4 font-mono text-xs text-slate-300 max-w-[180px] truncate">{s.credentials?.email || 'N/A'}</td>
-                        <td className="p-4 text-right">
-                          <button onClick={() => {
-                            setEditingSubId(editingSubId === s.id ? null : s.id);
-                            setSubCredEdit({
-                              email: s.credentials?.email || '',
-                              password: s.credentials?.password || '',
-                              notes: s.credentials?.notes || '',
-                            });
-                          }} className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-blue-400">
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                      {editingSubId === s.id && (
-                        <tr>
-                          <td colSpan={6} className="px-4 pb-4 bg-zinc-950/80">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
-                              {[
-                                { k: 'email', label: 'Account Login Email' },
-                                { k: 'password', label: 'Account Password' },
-                                { k: 'notes', label: 'Vault Note / PIN / Instructions' },
-                              ].map(f => (
-                                <div key={f.k}>
-                                  <label className="text-[11px] text-slate-400 font-bold block mb-1">{f.label}</label>
-                                  <input value={subCredEdit[f.k] || ''}
-                                    onChange={e => setSubCredEdit(prev => ({ ...prev, [f.k]: e.target.value }))}
-                                    className="w-full px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-blue-500"
-                                  />
-                                </div>
-                              ))}
+      {tab === 'subscriptions' && (() => {
+        const filteredSubsList = allSubscriptions.filter(s => {
+          const matchQuery =
+            s.productName.toLowerCase().includes(subSearch.toLowerCase()) ||
+            (s.userEmail && s.userEmail.toLowerCase().includes(subSearch.toLowerCase())) ||
+            (s.credentials?.email && s.credentials.email.toLowerCase().includes(subSearch.toLowerCase())) ||
+            (s.orderId && s.orderId.toLowerCase().includes(subSearch.toLowerCase()));
+          if (!matchQuery) return false;
+
+          if (subStatusFilter === 'all') return true;
+          if (subStatusFilter === 'expiring_soon') {
+            const days = calculateDaysRemaining(s.expiryDate);
+            return s.status === 'expiring_soon' || (days <= 3 && days >= 0);
+          }
+          return s.status === subStatusFilter;
+        });
+
+        const activeSubsCount = allSubscriptions.filter(s => s.status === 'active').length;
+        const expiringCount = allSubscriptions.filter(s => calculateDaysRemaining(s.expiryDate) <= 3 && calculateDaysRemaining(s.expiryDate) >= 0).length;
+
+        return (
+          <div className="space-y-6">
+            {/* Header with Search, Filter Chips & Add Action */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-base font-black text-white flex items-center gap-2">
+                  <Lock className="h-5 w-5 text-cyan-400" />
+                  <span>Customer Subscriptions & Vault Credentials</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Full dynamic CRUD control over customer logins, decrypted passwords, profile PINs, warranty, and expiry dates.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const firstProd = products[0];
+                    setEditingFullSubscription({
+                      isNew: true,
+                      productId: firstProd?.id || 'prod_1',
+                      productName: firstProd?.name || 'ChatGPT Plus',
+                      productLogo: firstProd?.logo || '',
+                      planDuration: '1_month',
+                      durationLabel: '1 Month',
+                      pricePaid: firstProd?.pricingTiers?.[0]?.price || 19.99,
+                      status: 'active',
+                      startDate: new Date().toISOString(),
+                      expiryDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+                      warrantyValidUntil: new Date(Date.now() + 30 * 86400000).toISOString(),
+                      autoRenew: true,
+                      autoRenewReminderDays: 3,
+                      accountType: 'private_account',
+                      userEmail: allUsers[0]?.email || '',
+                      userId: allUsers[0]?.id || '',
+                      credentials: {
+                        email: allUsers[0]?.email || 'customer@service.io',
+                        password: `Keyoon#${Math.floor(100000 + Math.random() * 900000)}`,
+                        pinCode: `${Math.floor(1000 + Math.random() * 9000)}`,
+                        profileName: 'VIP Profile 1',
+                        notes: '100% Full replacement warranty verified.',
+                      },
+                    });
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Provision New Subscription</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm('Purge all unlinked demo mock subscriptions from database? Only real customer subscriptions will remain.')) {
+                      await adminPurgeMockSubscriptions();
+                      setSelectedSubIds([]);
+                      showFeedback('success', 'All demo subscriptions purged from database.');
+                    }
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-zinc-800 hover:bg-amber-950/60 text-slate-300 hover:text-amber-300 font-bold text-xs flex items-center gap-1.5 transition-all border border-white/10 cursor-pointer"
+                  title="Purge mock demo subscriptions from Firestore"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Purge Demo Subscriptions</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (window.confirm('⚠️ Are you sure you want to delete ALL subscriptions in the database for a fresh clean start?')) {
+                      await adminPurgeAllSubscriptions();
+                      setSelectedSubIds([]);
+                      showFeedback('success', 'All subscriptions purged. Database is now clean.');
+                    }
+                  }}
+                  className="px-3.5 py-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 font-bold text-xs flex items-center gap-1.5 transition-all border border-red-500/30 cursor-pointer"
+                  title="Wipe entire subscriptions collection"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Purge All (Reset)</span>
+                </button>
+
+                {selectedSubIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (window.confirm(`Delete ${selectedSubIds.length} selected subscription(s)?`)) {
+                        for (const id of selectedSubIds) {
+                          await adminDeleteSubscription(id);
+                        }
+                        setSelectedSubIds([]);
+                        showFeedback('success', `Deleted ${selectedSubIds.length} subscriptions.`);
+                      }
+                    }}
+                    className="px-3.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer animate-pulse"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Delete Selected ({selectedSubIds.length})</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Filter Tabs & Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                {[
+                  { id: 'all', label: `All (${allSubscriptions.length})` },
+                  { id: 'active', label: `Active (${activeSubsCount})` },
+                  { id: 'expiring_soon', label: `Expiring Soon (${expiringCount})` },
+                  { id: 'expired', label: `Expired (${allSubscriptions.filter(s => s.status === 'expired').length})` },
+                  { id: 'paused', label: `Paused (${allSubscriptions.filter(s => s.status === 'paused').length})` },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setSubStatusFilter(f.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      subStatusFilter === f.id
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'bg-zinc-900 text-slate-400 hover:text-white border border-white/10'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                <input
+                  value={subSearch}
+                  onChange={e => setSubSearch(e.target.value)}
+                  placeholder="Search user, product, email..."
+                  className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 placeholder-zinc-500"
+                />
+              </div>
+            </div>
+
+            {/* Subscriptions Table */}
+            <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06] text-[10px] font-bold tracking-wider">
+                    <tr>
+                      <th className="p-4 w-10">
+                        <input
+                          type="checkbox"
+                          checked={filteredSubsList.length > 0 && selectedSubIds.length === filteredSubsList.length}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setSelectedSubIds(filteredSubsList.map(s => s.id));
+                            } else {
+                              setSelectedSubIds([]);
+                            }
+                          }}
+                          className="h-3.5 w-3.5 rounded accent-cyan-500 cursor-pointer"
+                        />
+                      </th>
+                      <th className="p-4">Product / Plan</th>
+                      <th className="p-4">Customer</th>
+                      <th className="p-4">Vault Credentials</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Expires On</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {filteredSubsList.map(s => {
+                      const daysLeft = calculateDaysRemaining(s.expiryDate);
+                      const isExpired = s.status === 'expired' || daysLeft < 0;
+                      const isExpiring = daysLeft <= 3 && !isExpired;
+                      const isPwdVisible = showAdminVaultPassword[s.id];
+                      const isSelected = selectedSubIds.includes(s.id);
+
+                      return (
+                        <tr key={s.id} className={`hover:bg-white/[0.02] transition-colors ${isSelected ? 'bg-cyan-950/20' : ''}`}>
+                          <td className="p-4">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={e => {
+                                if (e.target.checked) {
+                                  setSelectedSubIds(prev => [...prev, s.id]);
+                                } else {
+                                  setSelectedSubIds(prev => prev.filter(id => id !== s.id));
+                                }
+                              }}
+                              className="h-3.5 w-3.5 rounded accent-cyan-500 cursor-pointer"
+                            />
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={s.productLogo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100'}
+                                className="h-9 w-9 rounded-xl object-cover ring-1 ring-white/10 shrink-0"
+                                alt={s.productName}
+                              />
+                              <div>
+                                <span className="font-bold text-white block">{s.productName}</span>
+                                <span className="text-[11px] text-cyan-400 font-mono font-semibold">{s.durationLabel}</span>
+                              </div>
                             </div>
-                            <button onClick={() => handleSaveSubCreds(s.id)}
-                              className="mt-3 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5">
-                              <Save className="h-3.5 w-3.5" /> Save Credentials
-                            </button>
+                          </td>
+
+                          <td className="p-4">
+                            <div className="space-y-0.5">
+                              <span className="font-mono text-white text-xs block font-bold truncate max-w-[180px]">
+                                {s.userEmail || 'Guest Customer'}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                Ref: #{s.orderId ? s.orderId.replace('ord_', '') : s.id.slice(0, 8)}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            <div className="p-2.5 rounded-xl bg-zinc-950/80 border border-white/[0.06] space-y-1.5 max-w-[260px]">
+                              <div className="flex items-center justify-between text-[11px] font-mono">
+                                <span className="text-slate-400">User:</span>
+                                <span className="text-white font-bold truncate select-all">{s.credentials?.email || 'N/A'}</span>
+                              </div>
+                              {s.credentials?.password && (
+                                <div className="flex items-center justify-between text-[11px] font-mono">
+                                  <span className="text-slate-400">Pass:</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-cyan-300 font-bold select-all">
+                                      {isPwdVisible ? s.credentials.password : '••••••••'}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowAdminVaultPassword(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                      className="text-slate-500 hover:text-white p-0.5 cursor-pointer"
+                                    >
+                                      {isPwdVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                              {(s.credentials?.pinCode || s.credentials?.profileName) && (
+                                <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-white/[0.04]">
+                                  <span>{s.credentials.profileName || 'Slot'}</span>
+                                  <span className="text-amber-400 font-mono font-bold">PIN: {s.credentials.pinCode || 'None'}</span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            <select
+                              value={s.status}
+                              onChange={e => adminUpdateSubscriptionStatus(s.id, e.target.value as any).then(() => showFeedback('success', 'Status updated.'))}
+                              className={`px-2.5 py-1 rounded-xl border text-[11px] font-bold focus:outline-none bg-zinc-900 cursor-pointer ${
+                                s.status === 'active' ? 'text-emerald-400 border-emerald-500/30' :
+                                s.status === 'expired' ? 'text-red-400 border-red-500/30' :
+                                'text-amber-400 border-amber-500/30'
+                              }`}
+                            >
+                              <option value="active">Active</option>
+                              <option value="expiring_soon">Expiring Soon</option>
+                              <option value="expired">Expired</option>
+                              <option value="paused">Paused</option>
+                            </select>
+                          </td>
+
+                          <td className="p-4">
+                            <div className="space-y-0.5">
+                              <span className={`text-xs font-bold block ${isExpired ? 'text-red-400' : isExpiring ? 'text-amber-400' : 'text-slate-200'}`}>
+                                {new Date(s.expiryDate).toLocaleDateString()}
+                              </span>
+                              <span className={`text-[10px] font-semibold ${isExpired ? 'text-red-400' : isExpiring ? 'text-amber-400' : 'text-slate-500'}`}>
+                                {isExpired ? 'Expired' : `${daysLeft} days left`}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setEditingFullSubscription({ ...s, isNew: false })}
+                                className="p-1.5 rounded-xl bg-zinc-800 hover:bg-cyan-950/60 text-slate-300 hover:text-cyan-400 transition-colors cursor-pointer border border-white/10"
+                                title="Edit full credentials & subscription"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const newPwd = `Keyoon#${Math.floor(100000 + Math.random() * 900000)}`;
+                                  await adminUpdateSubscriptionCredentials(s.id, { password: newPwd });
+                                  showFeedback('success', `New password generated: ${newPwd}`);
+                                }}
+                                className="p-1.5 rounded-xl bg-zinc-800 hover:bg-amber-950/60 text-slate-300 hover:text-amber-400 transition-colors cursor-pointer border border-white/10"
+                                title="Regenerate & rotate password"
+                              >
+                                <Sparkles className="h-3.5 w-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const base = Math.max(new Date(s.expiryDate).getTime(), Date.now());
+                                  const newExp = new Date(base + 30 * 86400000).toISOString();
+                                  await adminUpdateSubscription(s.id, { expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' });
+                                  showFeedback('success', `Subscription extended by +30 days (New expiry: ${new Date(newExp).toLocaleDateString()})`);
+                                }}
+                                className="p-1.5 rounded-xl bg-zinc-800 hover:bg-emerald-950/60 text-slate-300 hover:text-emerald-400 transition-colors cursor-pointer border border-white/10"
+                                title="Extend by +30 Days"
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setSubDeleteConfirmId(s.id)}
+                                className="p-1.5 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 transition-colors cursor-pointer border border-white/10"
+                                title="Delete / Revoke Subscription"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {filteredSubs.length === 0 && (
-                    <tr><td colSpan={6} className="p-8 text-center text-slate-500">No subscriptions created yet.</td></tr>
-                  )}
-                </tbody>
-              </table>
+                      );
+                    })}
+
+                    {filteredSubsList.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="p-12 text-center text-slate-500 space-y-2">
+                          <Lock className="h-8 w-8 mx-auto text-slate-600 mb-2" />
+                          <p className="font-bold text-slate-300">No subscriptions matching query</p>
+                          <p className="text-xs">Click "+ Provision New Subscription" above to allocate credentials to any customer.</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* COUPONS TAB */}
@@ -4189,6 +4466,432 @@ export default function AdminPortalPage() {
               <button
                 type="button"
                 onClick={() => handleDeleteQuickMessage(quickMessageDeleteConfirm)}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* FULL SUBSCRIPTION & VAULT CREDENTIALS MODAL EDITOR         */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {editingFullSubscription && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto"
+          onClick={() => setEditingFullSubscription(null)}
+        >
+          <div
+            className="relative w-full max-w-xl rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl space-y-5 my-6 max-h-[90vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">
+                    {editingFullSubscription.isNew ? 'Provision New Subscription & Credentials' : `Edit Credentials for ${editingFullSubscription.productName}`}
+                  </h3>
+                  <p className="text-[11px] text-slate-400">Directly syncs to customer dashboard vault in real-time</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingFullSubscription(null)}
+                className="p-1.5 rounded-xl bg-zinc-900 text-slate-400 hover:text-white border border-white/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!editingFullSubscription.userEmail || !editingFullSubscription.productName) {
+                  showFeedback('error', 'Please specify a customer email and product.');
+                  return;
+                }
+
+                try {
+                  if (editingFullSubscription.isNew) {
+                    const { isNew, id, ...newSubData } = editingFullSubscription as UserSubscription & { isNew: boolean };
+                    await adminCreateSubscription(newSubData);
+                    showFeedback('success', `Subscription & Credentials provisioned to ${editingFullSubscription.userEmail}'s Vault!`);
+                  } else {
+                    await adminUpdateSubscription(editingFullSubscription.id!, editingFullSubscription);
+                    showFeedback('success', 'Subscription & Vault credentials updated in database.');
+                  }
+                  setEditingFullSubscription(null);
+                } catch {
+                  showFeedback('error', 'Failed to save subscription.');
+                }
+              }}
+              className="space-y-4 text-xs"
+            >
+              {/* Recipient User Email */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300 block">Customer Email / Account</label>
+                <div className="flex gap-2">
+                  <select
+                    value={editingFullSubscription.userEmail || ''}
+                    onChange={e => {
+                      const sel = allUsers.find(u => u.email.toLowerCase() === e.target.value.toLowerCase());
+                      setEditingFullSubscription(prev => prev ? ({
+                        ...prev,
+                        userEmail: e.target.value,
+                        userId: sel?.id || prev.userId || 'usr_guest',
+                      }) : null);
+                    }}
+                    className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="" disabled>Select registered customer…</option>
+                    {allUsers.map(u => (
+                      <option key={u.id} value={u.email}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="email"
+                    placeholder="Or enter custom email"
+                    value={editingFullSubscription.userEmail || ''}
+                    onChange={e => setEditingFullSubscription(prev => prev ? ({ ...prev, userEmail: e.target.value }) : null)}
+                    className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Product Selection & Duration */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-300 block">Product</label>
+                  <select
+                    value={editingFullSubscription.productId || ''}
+                    onChange={e => {
+                      const prod = products.find(p => p.id === e.target.value);
+                      if (prod) {
+                        setEditingFullSubscription(prev => prev ? ({
+                          ...prev,
+                          productId: prod.id,
+                          productName: prod.name,
+                          productLogo: prod.logo,
+                          pricePaid: prod.pricingTiers?.[0]?.price || prev.pricePaid || 19.99,
+                        }) : null);
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.category})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-300 block">Plan Duration</label>
+                  <select
+                    value={editingFullSubscription.planDuration || '1_month'}
+                    onChange={e => {
+                      const dur = e.target.value;
+                      const labels: Record<string, string> = {
+                        '1_month': '1 Month',
+                        '3_months': '3 Months',
+                        '6_months': '6 Months',
+                        '12_months': '12 Months',
+                        'lifetime': 'Lifetime Access',
+                      };
+                      const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+                      const dCount = daysMap[dur] || 30;
+                      const newExp = new Date(Date.now() + dCount * 86400000).toISOString();
+
+                      setEditingFullSubscription(prev => prev ? ({
+                        ...prev,
+                        planDuration: dur as any,
+                        durationLabel: labels[dur] || dur,
+                        expiryDate: newExp,
+                        warrantyValidUntil: newExp,
+                      }) : null);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="1_month">1 Month</option>
+                    <option value="3_months">3 Months</option>
+                    <option value="6_months">6 Months</option>
+                    <option value="12_months">12 Months (1 Year)</option>
+                    <option value="lifetime">Lifetime Access</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Account Login Credentials */}
+              <div className="p-4 rounded-2xl bg-zinc-900/80 border border-cyan-500/20 space-y-3">
+                <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">
+                  Vault Account Login Credentials
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">Account Login Email / ID</label>
+                    <input
+                      type="text"
+                      value={editingFullSubscription.credentials?.email || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingFullSubscription(prev => prev ? ({
+                          ...prev,
+                          credentials: { ...(prev.credentials || {}), email: val } as any,
+                        }) : null);
+                      }}
+                      placeholder="e.g. premium.user@service.com"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-slate-300">Account Password</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const autoPwd = `Keyoon#${Math.floor(100000 + Math.random() * 900000)}`;
+                          setEditingFullSubscription(prev => prev ? ({
+                            ...prev,
+                            credentials: { ...(prev.credentials || {}), password: autoPwd } as any,
+                          }) : null);
+                        }}
+                        className="text-[10px] text-cyan-400 hover:text-cyan-300 font-bold cursor-pointer"
+                      >
+                        ⚡ Generate
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={editingFullSubscription.credentials?.password || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingFullSubscription(prev => prev ? ({
+                          ...prev,
+                          credentials: { ...(prev.credentials || {}), password: val } as any,
+                        }) : null);
+                      }}
+                      placeholder="Password"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono font-bold"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">Profile Name (Optional)</label>
+                    <input
+                      type="text"
+                      value={editingFullSubscription.credentials?.profileName || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingFullSubscription(prev => prev ? ({
+                          ...prev,
+                          credentials: { ...(prev.credentials || {}), profileName: val } as any,
+                        }) : null);
+                      }}
+                      placeholder="e.g. VIP Profile 1"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-300 block mb-1">Profile Lock PIN (Optional)</label>
+                    <input
+                      type="text"
+                      value={editingFullSubscription.credentials?.pinCode || ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingFullSubscription(prev => prev ? ({
+                          ...prev,
+                          credentials: { ...(prev.credentials || {}), pinCode: val } as any,
+                        }) : null);
+                      }}
+                      placeholder="e.g. 1234"
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">VIP Invite Link / Direct URL (Optional)</label>
+                  <input
+                    type="url"
+                    value={editingFullSubscription.credentials?.inviteLink || ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditingFullSubscription(prev => prev ? ({
+                        ...prev,
+                        credentials: { ...(prev.credentials || {}), inviteLink: val } as any,
+                      }) : null);
+                    }}
+                    placeholder="https://..."
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-300 block mb-1">Setup Instructions / Vault Notes</label>
+                  <textarea
+                    rows={2}
+                    value={editingFullSubscription.credentials?.notes || ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setEditingFullSubscription(prev => prev ? ({
+                        ...prev,
+                        credentials: { ...(prev.credentials || {}), notes: val } as any,
+                      }) : null);
+                    }}
+                    placeholder="e.g. 100% replacement warranty active. Do not change profile name."
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white focus:outline-none resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Expiry Date, Status & Quick Extension Buttons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-300">Plan Expiry Date</label>
+                    <span className="text-[10px] text-cyan-400 font-bold">
+                      {calculateDaysRemaining(editingFullSubscription.expiryDate || new Date().toISOString())}d left
+                    </span>
+                  </div>
+                  <input
+                    type="date"
+                    value={editingFullSubscription.expiryDate ? editingFullSubscription.expiryDate.split('T')[0] : ''}
+                    onChange={e => {
+                      const d = e.target.value ? new Date(e.target.value).toISOString() : new Date().toISOString();
+                      setEditingFullSubscription(prev => prev ? ({
+                        ...prev,
+                        expiryDate: d,
+                        warrantyValidUntil: d,
+                      }) : null);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none font-mono"
+                    required
+                  />
+                  <div className="flex items-center gap-1 pt-1">
+                    {[
+                      { label: '+30d', days: 30 },
+                      { label: '+90d', days: 90 },
+                      { label: '+1y', days: 365 },
+                      { label: 'Lifetime', days: 3650 },
+                    ].map(btn => (
+                      <button
+                        key={btn.label}
+                        type="button"
+                        onClick={() => {
+                          const base = Math.max(new Date(editingFullSubscription.expiryDate || Date.now()).getTime(), Date.now());
+                          const newExp = new Date(base + btn.days * 86400000).toISOString();
+                          setEditingFullSubscription(prev => prev ? ({
+                            ...prev,
+                            expiryDate: newExp,
+                            warrantyValidUntil: newExp,
+                          }) : null);
+                        }}
+                        className="px-2 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-[10px] font-bold text-slate-300 border border-white/5 cursor-pointer"
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-300 block">Subscription Status</label>
+                  <select
+                    value={editingFullSubscription.status || 'active'}
+                    onChange={e => setEditingFullSubscription(prev => prev ? ({
+                      ...prev,
+                      status: e.target.value as any,
+                    }) : null)}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none"
+                  >
+                    <option value="active">Active (Full Access)</option>
+                    <option value="expiring_soon">Expiring Soon</option>
+                    <option value="expired">Expired</option>
+                    <option value="paused">Paused / Under Maintenance</option>
+                  </select>
+
+                  <div className="flex items-center gap-2 pt-3">
+                    <input
+                      type="checkbox"
+                      id="subAutoRenewToggle"
+                      checked={editingFullSubscription.autoRenew ?? true}
+                      onChange={e => setEditingFullSubscription(prev => prev ? ({
+                        ...prev,
+                        autoRenew: e.target.checked,
+                      }) : null)}
+                      className="h-4 w-4 rounded accent-cyan-500 cursor-pointer"
+                    />
+                    <label htmlFor="subAutoRenewToggle" className="text-xs font-bold text-slate-300 cursor-pointer">
+                      Auto-Renewal Engine Enabled
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setEditingFullSubscription(null)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
+                >
+                  <Save className="h-3.5 w-3.5" />
+                  <span>Save & Sync to Customer Vault</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription Delete Confirmation Modal */}
+      {subDeleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-sm rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl text-center space-y-4">
+            <div className="h-12 w-12 rounded-2xl bg-red-950/60 border border-red-500/30 text-red-400 mx-auto flex items-center justify-center">
+              <Trash2 className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-black text-white text-sm">Revoke & Delete Subscription?</h3>
+              <p className="text-xs text-slate-400 mt-1">This will remove the credentials from the customer&apos;s vault.</p>
+            </div>
+            <div className="flex gap-2 justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => setSubDeleteConfirmId(null)}
+                className="px-4 py-2 rounded-xl bg-zinc-900 text-slate-300 text-xs font-bold hover:bg-zinc-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await adminDeleteSubscription(subDeleteConfirmId);
+                  setSubDeleteConfirmId(null);
+                  showFeedback('success', 'Subscription revoked and deleted.');
+                }}
                 className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-md cursor-pointer"
               >
                 Confirm Delete

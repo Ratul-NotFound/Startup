@@ -9,7 +9,7 @@ import {
   CreditCard, Sparkles, Image as ImageIcon, Loader2, ArrowUpRight,
   Bell, Globe, LogOut, Phone, Shield, Search, CheckCircle,
 } from 'lucide-react';
-import { calculateDaysRemaining } from '@/lib/utils';
+import { calculateDaysRemaining, calculateExpiryProgress } from '@/lib/utils';
 import { compressImageToDataUrl } from '@/lib/image-compression';
 import { printCleanInvoice } from '@/lib/invoice-printer';
 import Link from 'next/link';
@@ -103,18 +103,22 @@ export default function CustomerDashboardPage() {
     );
   }
 
-  const activeCount = subscriptions.filter(s => s.status === 'active' || s.status === 'expiring_soon').length;
-  const expiringSoon = subscriptions.filter(s => s.status === 'expiring_soon' || calculateDaysRemaining(s.expiryDate) <= 3).length;
+  const activeCount = subscriptions.filter(s => (s.status === 'active' || s.status === 'expiring_soon') && calculateDaysRemaining(s.expiryDate) > 0).length;
+  const expiringSoon = subscriptions.filter(s => s.status !== 'expired' && calculateDaysRemaining(s.expiryDate) > 0 && (s.status === 'expiring_soon' || calculateDaysRemaining(s.expiryDate) <= 3)).length;
   const totalSpentUsd = orders.reduce((acc, o) => acc + (o.total || 0), 0);
   const totalSpentBdt = orders.reduce((acc, o) => acc + (o.totalBdt || (o.total * 125)), 0);
 
   // Filtered subscriptions
   const filteredSubscriptions = subscriptions.filter(s => {
-    const matchesSearch = s.productName.toLowerCase().includes(subSearch.toLowerCase()) ||
-      (s.credentials?.email && s.credentials.email.toLowerCase().includes(subSearch.toLowerCase()));
+    const q = subSearch.toLowerCase().trim();
+    const matchesSearch = !q ||
+      s.productName.toLowerCase().includes(q) ||
+      (s.credentials?.email && s.credentials.email.toLowerCase().includes(q)) ||
+      (s.orderId && s.orderId.toLowerCase().includes(q));
     if (!matchesSearch) return false;
-    if (subFilter === 'active') return s.status === 'active' && calculateDaysRemaining(s.expiryDate) > 3;
-    if (subFilter === 'expiring') return calculateDaysRemaining(s.expiryDate) <= 3;
+    const daysLeft = calculateDaysRemaining(s.expiryDate);
+    if (subFilter === 'active') return (s.status === 'active' || s.status === 'expiring_soon') && daysLeft > 3;
+    if (subFilter === 'expiring') return s.status !== 'expired' && daysLeft <= 3 && daysLeft > 0;
     return true;
   });
 
@@ -337,8 +341,9 @@ export default function CustomerDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredSubscriptions.map(sub => {
                 const daysLeft = calculateDaysRemaining(sub.expiryDate);
-                const isUrgent = daysLeft <= 3;
-                const isExpired = sub.status === 'expired' || daysLeft < 0;
+                const percentRemaining = calculateExpiryProgress(sub.startDate, sub.expiryDate, sub.planDuration);
+                const isUrgent = daysLeft <= 3 && daysLeft > 0;
+                const isExpired = sub.status === 'expired' || daysLeft <= 0;
                 const showCreds = showCredentials[sub.id];
                 const serviceUrl = getServiceUrl(sub.productName);
 
@@ -346,7 +351,7 @@ export default function CustomerDashboardPage() {
                   <div
                     key={sub.id}
                     className={`p-5 rounded-3xl bg-zinc-900 border flex flex-col justify-between gap-4 shadow-lg transition-all ${
-                      isUrgent && !isExpired ? 'border-amber-500/40 shadow-amber-500/5' :
+                      isUrgent ? 'border-amber-500/40 shadow-amber-500/5' :
                       isExpired ? 'border-red-500/30 shadow-red-500/5' :
                       'border-white/[0.08]'
                     }`}
@@ -370,29 +375,48 @@ export default function CustomerDashboardPage() {
                           isUrgent ? 'bg-amber-950/60 text-amber-400 border-amber-500/30' :
                           'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
                         }`}>
-                          {isExpired ? 'Expired' : isUrgent ? 'Expiring' : 'Active'}
+                          {isExpired ? 'Expired' : isUrgent ? 'Expiring Soon' : 'Active'}
                         </span>
                       </div>
 
-                      {/* Expiry Countdown */}
-                      <div className="space-y-1.5 p-3 rounded-2xl bg-zinc-950 border border-white/[0.05]">
-                        <div className="flex justify-between text-xs">
-                          <span className="text-slate-400 flex items-center gap-1">
+                      {/* Expiry Countdown & Synced Progress Bar */}
+                      <div className="space-y-2 p-3.5 rounded-2xl bg-zinc-950 border border-white/[0.05]">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-slate-400 flex items-center gap-1.5 font-medium">
                             <Clock className="h-3.5 w-3.5 text-cyan-400" /> Plan Expiry
                           </span>
-                          <span className={`font-bold ${isExpired ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-white'}`}>
-                            {isExpired ? 'Expired' : `${daysLeft} days remaining`}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`font-bold ${isExpired ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-white'}`}>
+                              {isExpired ? 'Expired' : `${daysLeft} days remaining`}
+                            </span>
+                            {!isExpired && (
+                              <span className="text-[10px] font-mono text-cyan-400 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
+                                {percentRemaining}%
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="w-full h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+
+                        {/* Accurate Dynamic Sync Bar */}
+                        <div className="w-full h-2 rounded-full bg-zinc-800/80 p-0.5 border border-white/5 overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all ${
-                              isExpired ? 'bg-red-500' : isUrgent ? 'bg-amber-400' : 'bg-gradient-to-r from-indigo-500 to-cyan-400'
+                            className={`h-full rounded-full transition-all duration-500 shadow-sm ${
+                              isExpired
+                                ? 'bg-red-500 shadow-red-500/50'
+                                : isUrgent
+                                ? 'bg-gradient-to-r from-amber-500 to-rose-500 shadow-amber-500/50'
+                                : percentRemaining > 50
+                                ? 'bg-gradient-to-r from-cyan-500 to-emerald-400 shadow-cyan-500/30'
+                                : 'bg-gradient-to-r from-indigo-500 to-cyan-400 shadow-cyan-500/30'
                             }`}
-                            style={{ width: `${Math.max(0, Math.min(100, (daysLeft / 90) * 100))}%` }}
+                            style={{ width: `${isExpired ? 100 : Math.max(3, percentRemaining)}%` }}
                           />
                         </div>
-                        <p className="text-[10px] text-slate-500">Expires on {new Date(sub.expiryDate).toLocaleDateString()}</p>
+
+                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 font-mono">
+                          <span>Expires: {new Date(sub.expiryDate).toLocaleDateString()}</span>
+                          <span className="text-slate-400">{sub.planDuration?.replace('_', ' ').toUpperCase() || 'PLAN'}</span>
+                        </div>
                       </div>
 
                       {/* Credential Reveal Section */}

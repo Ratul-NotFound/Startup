@@ -22,78 +22,53 @@ service cloud.firestore {
     }
 
     // 1. Products Collection (Storefront items)
-    // Public read so all visitors can browse the catalog
-    // Admin only write/update/delete
     match /products/{productId} {
-      allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+      allow read, write: if true;
     }
 
     // 2. Coupons Collection (Promo codes)
-    // Public read for discount validation
-    // Admin only management
     match /coupons/{couponCode} {
-      allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+      allow read, write: if true;
     }
 
     // 3. Admin Team Collection
     match /admins/{adminId} {
-      allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+      allow read, write: if true;
     }
 
     // 4. Users Collection (Customer profiles)
-    // Authenticated users and admins can read/write
     match /users/{userId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read, write: if true;
     }
 
     // 5. Orders Collection
-    // Customers can submit orders with their TrxID; admins can approve and deliver
     match /orders/{orderId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read, write: if true;
     }
 
     // 6. Subscriptions Collection (Vault credentials & active plans)
-    // Synchronized credentials and active plans
     match /subscriptions/{subscriptionId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read, write: if true;
     }
 
     // 7. Support Tickets Collection
-    // Real-time live messaging and customer ticketing
     match /support_tickets/{ticketId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read, write: if true;
     }
 
     // 8. Reviews Collection (Customer Ratings & Reviews)
-    // Public read and verified customer submissions
     match /reviews/{reviewId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if isAdmin() || isSuperAdmin();
+      allow read, write: if true;
     }
 
     // 9. Payment Methods Collection (bKash, Nagad, Rocket numbers & QR codes)
-    // Public read for checkout payment display
     match /payment_methods/{methodId} {
-      allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+      allow read, write: if true;
     }
 
     // 10. Hero Slides Collection (Storefront Dynamic Banner Management)
     match /hero_slides/{slideId} {
-      allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+      allow read, write: if true;
     }
 
     // 11. Email Verifications & OTPs
@@ -103,8 +78,7 @@ service cloud.firestore {
 
     // 12. Quick Messages & Bot Auto-Replies
     match /quick_messages/{messageId} {
-      allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+      allow read, write: if true;
     }
   }
 }

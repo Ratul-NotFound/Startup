@@ -157,6 +157,11 @@ interface AppContextType {
 
   // Admin: Subscription management
   allSubscriptions: UserSubscription[];
+  adminCreateSubscription: (sub: Omit<UserSubscription, 'id'>) => Promise<string>;
+  adminUpdateSubscription: (id: string, updates: Partial<UserSubscription>) => Promise<void>;
+  adminDeleteSubscription: (id: string) => Promise<void>;
+  adminPurgeMockSubscriptions: () => Promise<void>;
+  adminPurgeAllSubscriptions: () => Promise<void>;
   adminUpdateSubscriptionCredentials: (subId: string, credentials: Partial<UserSubscription['credentials']>) => Promise<void>;
   adminUpdateSubscriptionStatus: (subId: string, status: UserSubscription['status']) => Promise<void>;
 
@@ -672,14 +677,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         // Live User Orders Listener (matches UID and Email)
+        let uidOrders: Order[] = [];
+        let emailOrders: Order[] = [];
+
+        const updateCombinedOrders = () => {
+          const map = new Map<string, Order>();
+          uidOrders.forEach(o => map.set(o.id, o));
+          emailOrders.forEach(o => map.set(o.id, o));
+          const list = Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setOrders(list);
+        };
+
         const unsubUserOrdersUid = onSnapshot(
           query(collection(db, 'orders'), where('userId', '==', fbUser.uid)),
           (snapshot) => {
-            const uOrders = snapshot.docs.map(d => d.data() as Order);
-            setOrders(prev => {
-              const combined = [...uOrders, ...prev.filter(p => !uOrders.some(u => u.id === p.id))];
-              return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            });
+            uidOrders = snapshot.docs.map(d => d.data() as Order);
+            updateCombinedOrders();
           }
         );
 
@@ -688,54 +701,62 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unsubUserOrdersEmail = onSnapshot(
             query(collection(db, 'orders'), where('userEmail', '==', fbUser.email)),
             (snapshot) => {
-              const uOrders = snapshot.docs.map(d => d.data() as Order);
-              setOrders(prev => {
-                const combined = [...uOrders, ...prev.filter(p => !uOrders.some(u => u.id === p.id))];
-                return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-              });
+              emailOrders = snapshot.docs.map(d => d.data() as Order);
+              updateCombinedOrders();
             }
           );
         }
 
         // Live User Subscriptions Listener (matches UID and Email)
+        let uidSubs: UserSubscription[] = [];
+        let emailSubs: UserSubscription[] = [];
+
+        const updateCombinedSubs = () => {
+          const map = new Map<string, UserSubscription>();
+          uidSubs.forEach(s => map.set(s.id, s));
+          emailSubs.forEach(s => map.set(s.id, s));
+          const list = Array.from(map.values());
+          setSubscriptions(list);
+        };
+
         const unsubUserSubsUid = onSnapshot(
           query(collection(db, 'subscriptions'), where('userId', '==', fbUser.uid)),
           (snapshot) => {
-            const uSubs = snapshot.docs.map(d => d.data() as UserSubscription);
-            setSubscriptions(prev => {
-              const map = new Map<string, UserSubscription>();
-              prev.forEach(s => map.set(s.id, s));
-              uSubs.forEach(s => map.set(s.id, s));
-              return Array.from(map.values());
-            });
+            uidSubs = snapshot.docs.map(d => d.data() as UserSubscription);
+            updateCombinedSubs();
           }
         );
 
         let unsubUserSubsEmail = () => {};
         if (fbUser.email) {
+          const cleanEmail = fbUser.email.toLowerCase().trim();
+          const emailVariants = Array.from(new Set([fbUser.email, cleanEmail])).filter(Boolean);
           unsubUserSubsEmail = onSnapshot(
-            query(collection(db, 'subscriptions'), where('userEmail', '==', fbUser.email)),
+            query(collection(db, 'subscriptions'), where('userEmail', 'in', emailVariants)),
             (snapshot) => {
-              const uSubs = snapshot.docs.map(d => d.data() as UserSubscription);
-              setSubscriptions(prev => {
-                const map = new Map<string, UserSubscription>();
-                prev.forEach(s => map.set(s.id, s));
-                uSubs.forEach(s => map.set(s.id, s));
-                return Array.from(map.values());
-              });
+              emailSubs = snapshot.docs.map(d => d.data() as UserSubscription);
+              updateCombinedSubs();
             }
           );
         }
 
         // Live User Tickets Listener (matches UID and Email)
+        let uidTickets: SupportTicket[] = [];
+        let emailTickets: SupportTicket[] = [];
+
+        const updateCombinedTickets = () => {
+          const map = new Map<string, SupportTicket>();
+          uidTickets.forEach(t => map.set(t.id, t));
+          emailTickets.forEach(t => map.set(t.id, t));
+          const list = Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setTickets(list);
+        };
+
         const unsubUserTicketsUid = onSnapshot(
           query(collection(db, 'support_tickets'), where('userId', '==', fbUser.uid)),
           (snapshot) => {
-            const uTkts = snapshot.docs.map(d => d.data() as SupportTicket);
-            setTickets(prev => {
-              const combined = [...uTkts, ...prev.filter(p => !uTkts.some(u => u.id === p.id))];
-              return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            });
+            uidTickets = snapshot.docs.map(d => d.data() as SupportTicket);
+            updateCombinedTickets();
           }
         );
 
@@ -744,11 +765,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unsubUserTicketsEmail = onSnapshot(
             query(collection(db, 'support_tickets'), where('userEmail', '==', fbUser.email)),
             (snapshot) => {
-              const uTkts = snapshot.docs.map(d => d.data() as SupportTicket);
-              setTickets(prev => {
-                const combined = [...uTkts, ...prev.filter(p => !uTkts.some(u => u.id === p.id))];
-                return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-              });
+              emailTickets = snapshot.docs.map(d => d.data() as SupportTicket);
+              updateCombinedTickets();
             }
           );
         }
@@ -813,8 +831,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (allSubscriptions.length > 0) {
       const mySubs = allSubscriptions.filter(s =>
         (s.userId && (s.userId === myUid || s.userId === user.id)) ||
-        (s.userEmail && s.userEmail.toLowerCase() === myEmail) ||
-        (s.credentials?.email && s.credentials.email.toLowerCase() === myEmail)
+        (s.userEmail && s.userEmail.toLowerCase() === myEmail)
       );
       if (mySubs.length > 0) {
         setSubscriptions(mySubs);
@@ -848,12 +865,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCoupons(cSnap.docs.map(d => d.data() as Coupon));
       }
 
-      // Refresh admins
-      const aSnap = await getDocs(collection(db, 'admins'));
-      if (!aSnap.empty) {
-        setAdminList(aSnap.docs.map(d => d.data() as AdminMember));
-      }
-
       // Refresh logged-in user specific data (Orders, Subscriptions Vault, Tickets)
       if (firebaseUser?.uid) {
         const myUid = firebaseUser.uid;
@@ -862,46 +873,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // 1. Fetch user orders
         const [ordUidSnap, ordEmailSnap] = await Promise.all([
           getDocs(query(collection(db, 'orders'), where('userId', '==', myUid))),
-          myEmail ? getDocs(query(collection(db, 'orders'), where('userEmail', '==', firebaseUser.email))) : Promise.resolve({ docs: [] }),
+          myEmail ? getDocs(query(collection(db, 'orders'), where('userEmail', '==', myEmail))) : Promise.resolve({ docs: [] }),
         ]);
 
         const ordsMap = new Map<string, Order>();
         ordUidSnap.docs.forEach(d => ordsMap.set(d.id, d.data() as Order));
         ordEmailSnap.docs.forEach(d => ordsMap.set(d.id, d.data() as Order));
         const userOrds = Array.from(ordsMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        if (userOrds.length > 0) {
-          setOrders(userOrds);
-        }
+        setOrders(userOrds);
 
-        // 2. Fetch user subscriptions & vault credentials
+        // 2. Fetch user subscriptions & vault credentials directly from actual Firestore
         const [subUidSnap, subEmailSnap] = await Promise.all([
           getDocs(query(collection(db, 'subscriptions'), where('userId', '==', myUid))),
-          myEmail ? getDocs(query(collection(db, 'subscriptions'), where('userEmail', '==', firebaseUser.email))) : Promise.resolve({ docs: [] }),
+          myEmail ? getDocs(query(collection(db, 'subscriptions'), where('userEmail', 'in', Array.from(new Set([firebaseUser.email, myEmail])).filter(Boolean)))) : Promise.resolve({ docs: [] }),
         ]);
 
         const subsMap = new Map<string, UserSubscription>();
         subUidSnap.docs.forEach(d => subsMap.set(d.id, d.data() as UserSubscription));
         subEmailSnap.docs.forEach(d => subsMap.set(d.id, d.data() as UserSubscription));
-
-        // Check if any order has subscription IDs not yet fetched
-        const missingSubIds: string[] = [];
-        userOrds.forEach(o => {
-          if (o.generatedSubscriptionIds && o.generatedSubscriptionIds.length > 0) {
-            o.generatedSubscriptionIds.forEach(sid => {
-              if (!subsMap.has(sid)) missingSubIds.push(sid);
-            });
-          }
-        });
-
-        if (missingSubIds.length > 0) {
-          const fetchedMissing = await Promise.all(missingSubIds.map(sid => getDoc(doc(db, 'subscriptions', sid))));
-          fetchedMissing.forEach(sDoc => {
-            if (sDoc.exists()) subsMap.set(sDoc.id, sDoc.data() as UserSubscription);
-          });
-        }
-
         const userSubs = Array.from(subsMap.values());
-        if (userSubs.length > 0) {
+        if (userSubs.length > 0 || !isAdmin) {
           setSubscriptions(userSubs);
         }
       }
@@ -920,7 +911,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         );
         setAllOrders(ords);
         setAllUsers(usrSnap.docs.map(d => d.data() as CustomerProfile));
-        setAllSubscriptions(subSnap.docs.map(d => d.data() as UserSubscription));
+        const allSubsList = subSnap.docs.map(d => d.data() as UserSubscription);
+        setAllSubscriptions(allSubsList);
+
+        if (firebaseUser?.email) {
+          const myEmail = (firebaseUser.email || '').toLowerCase().trim();
+          const myUid = firebaseUser.uid;
+          const myAdminSubs = allSubsList.filter(s =>
+            (s.userId && (s.userId === myUid || s.userId === user.id)) ||
+            (s.userEmail && s.userEmail.toLowerCase() === myEmail)
+          );
+          if (myAdminSubs.length > 0) {
+            setSubscriptions(myAdminSubs);
+          }
+        }
         setAllTickets(tktSnap.docs.map(d => d.data() as SupportTicket).sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         ));
@@ -1010,7 +1014,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isBangladesh = ['bkash', 'nagad', 'rocket', 'upay', 'custom'].includes(paymentMethod);
 
     const currentUid = firebaseUser ? firebaseUser.uid : user.id;
-    const currentEmail = customEmail || (firebaseUser ? firebaseUser.email : user.email) || user.email;
+    const currentEmail = (customEmail || (firebaseUser ? firebaseUser.email : user.email) || user.email || '').toLowerCase().trim();
 
     const newOrder: Order = {
       id: orderId,
@@ -1052,7 +1056,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const durationDays = daysMap[item.selectedPlan.duration] || 30;
           const startDate = new Date().toISOString();
           const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
-          const creds = generateMockCredentials(item.product.name, item.product.accountType, customEmail || user.email);
+          const creds = generateMockCredentials(item.product.name, item.product.accountType, currentEmail);
           const sub: UserSubscription = {
             id: subId, orderId,
             productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
@@ -1060,8 +1064,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             pricePaid: item.selectedPlan.price, status: 'active', startDate, expiryDate,
             autoRenew: true, autoRenewReminderDays: 3, accountType: item.product.accountType,
             warrantyValidUntil: expiryDate, paymentMethod, credentials: creds,
-            // @ts-ignore – store userId for Firestore queries
-            userId: user.id,
+            userId: currentUid,
+            userEmail: currentEmail,
           };
           try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
         }
@@ -1294,7 +1298,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             paymentMethod: ord.paymentMethod,
             credentials: finalCreds,
             userId: ord.userId,
-            userEmail: ord.userEmail,
+            userEmail: (ord.userEmail || '').toLowerCase().trim(),
           };
 
           generatedSubs.push(sub);
@@ -1459,7 +1463,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: Subscription management ───────────────────────────────
+  const adminCreateSubscription = async (subData: Omit<UserSubscription, 'id'>): Promise<string> => {
+    const id = generateRandomId('sub');
+    const newSub: UserSubscription = {
+      ...subData,
+      id,
+      userEmail: (subData.userEmail || '').toLowerCase().trim(),
+    };
+    setAllSubscriptions(prev => [newSub, ...prev]);
+    setSubscriptions(prev => [newSub, ...prev]);
+    try {
+      await setDoc(doc(db, 'subscriptions', id), newSub);
+      if (newSub.userId) {
+        const uRef = doc(db, 'users', newSub.userId);
+        const uSnap = await getDoc(uRef);
+        if (uSnap.exists()) {
+          const count = (uSnap.data().activeSubscriptionsCount || 0) + 1;
+          await updateDoc(uRef, { activeSubscriptionsCount: count });
+        }
+      }
+    } catch (err) {
+      console.error('adminCreateSubscription error:', err);
+    }
+    return id;
+  };
+
+  const adminUpdateSubscription = async (id: string, updates: Partial<UserSubscription>) => {
+    const cleanUpdates = {
+      ...updates,
+      ...(updates.userEmail ? { userEmail: updates.userEmail.toLowerCase().trim() } : {}),
+    };
+    setAllSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...cleanUpdates } : s));
+    setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...cleanUpdates } : s));
+    try {
+      await updateDoc(doc(db, 'subscriptions', id), cleanUpdates as Record<string, unknown>);
+    } catch (err) {
+      console.error('adminUpdateSubscription error:', err);
+    }
+  };
+
+  const adminDeleteSubscription = async (id: string) => {
+    setAllSubscriptions(prev => prev.filter(s => s.id !== id));
+    setSubscriptions(prev => prev.filter(s => s.id !== id));
+    try {
+      await deleteDoc(doc(db, 'subscriptions', id));
+    } catch (err) {
+      console.error('adminDeleteSubscription error:', err);
+    }
+  };
+
   const adminUpdateSubscriptionCredentials = async (subId: string, credentials: Partial<UserSubscription['credentials']>) => {
     setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials } } : s));
     setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials } } : s));
@@ -1480,6 +1532,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await updateDoc(doc(db, 'subscriptions', subId), { status });
     } catch (err) {
       console.error('adminUpdateSubscriptionStatus error:', err);
+    }
+  };
+
+  const adminPurgeMockSubscriptions = async () => {
+    try {
+      const [subSnap, ordSnap] = await Promise.all([
+        getDocs(collection(db, 'subscriptions')),
+        getDocs(collection(db, 'orders')),
+      ]);
+      const validOrderSubIds = new Set<string>();
+      ordSnap.docs.forEach(d => {
+        const o = d.data() as Order;
+        if (o.generatedSubscriptionIds) {
+          o.generatedSubscriptionIds.forEach(id => validOrderSubIds.add(id));
+        }
+      });
+
+      const batch = writeBatch(db);
+      let count = 0;
+      for (const d of subSnap.docs) {
+        const data = d.data() as UserSubscription;
+        const isLinkedToOrder = validOrderSubIds.has(d.id) || (data.orderId && ordSnap.docs.some(od => od.id === data.orderId));
+        const isMockEmail = !data.userEmail ||
+                            data.credentials?.email?.includes('@keyoon-vault.com') ||
+                            data.credentials?.email?.includes('customer@service.io');
+
+        if (!isLinkedToOrder || isMockEmail) {
+          batch.delete(d.ref);
+          count++;
+        }
+      }
+      if (count > 0) {
+        await batch.commit();
+      }
+      const cleanSnap = await getDocs(collection(db, 'subscriptions'));
+      const cleanSubs = cleanSnap.docs.map(d => d.data() as UserSubscription);
+      setAllSubscriptions(cleanSubs);
+      if (firebaseUser?.email) {
+        const myEmail = (firebaseUser.email || '').toLowerCase().trim();
+        setSubscriptions(cleanSubs.filter(s => s.userEmail && s.userEmail.toLowerCase() === myEmail));
+      }
+    } catch (err) {
+      console.error('adminPurgeMockSubscriptions error:', err);
+    }
+  };
+
+  const adminPurgeAllSubscriptions = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'subscriptions'));
+      const batch = writeBatch(db);
+      for (const d of snap.docs) {
+        batch.delete(d.ref);
+      }
+      await batch.commit();
+      setAllSubscriptions([]);
+      setSubscriptions([]);
+    } catch (err) {
+      console.error('adminPurgeAllSubscriptions error:', err);
     }
   };
 
@@ -1902,7 +2012,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
     allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
     allUsers, adminUpdateUserRole,
-    allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
+    allSubscriptions, adminCreateSubscription, adminUpdateSubscription, adminDeleteSubscription, adminPurgeMockSubscriptions, adminPurgeAllSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
