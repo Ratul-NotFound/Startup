@@ -7,6 +7,7 @@ import { BrandTicker } from '@/components/hero/BrandTicker';
 import { ProductCatalog } from '@/components/store/ProductCatalog';
 import { CustomerReviewsSection } from '@/components/reviews/CustomerReviewsSection';
 import { TrustAndFaq } from '@/components/trust/TrustAndFaq';
+import { SpecialOffersSection } from '@/components/store/SpecialOffersSection';
 import { Scroll3DReveal } from '@/components/ui/Scroll3DReveal';
 
 export default function HomePage() {
@@ -30,7 +31,14 @@ export default function HomePage() {
         </Scroll3DReveal>
       </div>
 
-      {/* 3. Subscription Product Vault */}
+      {/* 3. Special Offers, Giveaways & Promo Codes Hub */}
+      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-2" suppressHydrationWarning>
+        <Scroll3DReveal direction="up" rotateXAmount={15} delay={0.1}>
+          <SpecialOffersSection />
+        </Scroll3DReveal>
+      </div>
+
+      {/* 4. Subscription Product Vault */}
       <div id="catalog" className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 scroll-mt-24" suppressHydrationWarning>
         <Scroll3DReveal direction="up" rotateXAmount={14} delay={0.1}>
           <ProductCatalog />

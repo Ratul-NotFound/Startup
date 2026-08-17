@@ -64,6 +64,11 @@ export interface Coupon {
   discountPercent: number;
   description: string;
   minOrderAmount?: number;
+  isSpecialOffer?: boolean;
+  offerTag?: string;
+  offerTitle?: string;
+  expiryDate?: string;
+  type?: 'discount' | 'giveaway' | 'special_deal' | 'bundle_offer';
 }
 
 export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'crypto_usdt' | 'card_stripe' | 'custom';
