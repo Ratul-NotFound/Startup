@@ -5,7 +5,7 @@ import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
 import {
   TrendingUp, DollarSign, Users, Package, Tag, Headphones, ShoppingBag,
   BarChart2, MessageSquare, Lock, Star, Sparkles, CreditCard, UserCheck,
-  CheckCircle2, AlertCircle, RefreshCw,
+  CheckCircle2, AlertCircle, RefreshCw, Gift,
 } from 'lucide-react';
 import { Product, Coupon, UserSubscription, Order, BangladeshPaymentMethod, SupportTicket, HeroSlide, QuickMessage } from '@/types';
 
@@ -389,7 +389,7 @@ export default function AdminPortalPage() {
       title: 'Storefront & Products',
       items: [
         { id: 'products', label: 'Product Catalog', icon: <Package className="h-4 w-4" />, count: products.length },
-        { id: 'coupons', label: 'Promo Coupons', icon: <Tag className="h-4 w-4" />, count: coupons.length },
+        { id: 'coupons', label: 'Special Offers, Giveaways & Coupons', icon: <Gift className="h-4 w-4 text-cyan-400" />, count: coupons.length },
         { id: 'reviews', label: 'Customer Reviews', icon: <Star className="h-4 w-4" />, count: reviews.length },
         { id: 'hero', label: 'Hero Carousel Slides', icon: <Sparkles className="h-4 w-4" />, count: heroSlides.length },
         { id: 'bot', label: 'Bot Answers & Chips', icon: <MessageSquare className="h-4 w-4" />, count: quickMessages.length },
