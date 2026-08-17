@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { calculateDaysRemaining } from '@/lib/utils';
 import { compressImageToDataUrl } from '@/lib/image-compression';
+import { printCleanInvoice } from '@/lib/invoice-printer';
 import Link from 'next/link';
 
 // Quick service portal resolver
@@ -1110,12 +1111,12 @@ export default function CustomerDashboardPage() {
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex justify-end gap-2">
               <button
-                onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-bold text-xs border border-white/10 flex items-center gap-1.5 transition-colors cursor-pointer"
+                onClick={() => printCleanInvoice(viewingInvoice)}
+                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-md flex items-center gap-1.5 transition-colors cursor-pointer"
               >
-                <Download className="h-3.5 w-3.5" /> Print / Save Invoice
+                <Download className="h-3.5 w-3.5" /> Download / Print Clean Invoice
               </button>
             </div>
           </div>

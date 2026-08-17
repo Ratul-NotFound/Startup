@@ -208,3 +208,16 @@ section,
     box-shadow: none !important;
   }
 }
+
+/* ─── Print Stylesheet ──────────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+}
+

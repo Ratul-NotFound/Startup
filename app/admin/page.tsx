@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
 import { compressImageToDataUrl } from '@/lib/image-compression';
+import { printCleanInvoice } from '@/lib/invoice-printer';
 import {
   Shield, TrendingUp, DollarSign, Users, Package, Tag,
   Headphones, ShoppingBag, Plus, Edit2, Trash2, Save, X,
@@ -11,7 +12,7 @@ import {
   BarChart2, MessageSquare, Lock, LogIn, UserPlus, UserCheck,
   UserX, Sparkles, AlertTriangle, ArrowUpRight, Star, ThumbsUp,
   CreditCard, QrCode, Image as ImageIcon, Check, Send, Loader2,
-  Menu, Home, LayoutDashboard, ChevronRight, Zap, BookOpen, Upload,
+  Menu, Home, LayoutDashboard, ChevronRight, Zap, BookOpen, Upload, FileText,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -2003,9 +2004,18 @@ export default function AdminPortalPage() {
                                 </button>
                               </div>
                             ) : (
-                              <div className="text-[11px] text-slate-500 font-semibold flex items-center justify-end gap-1">
+                              <div className="flex items-center justify-end gap-2 text-[11px] text-slate-500 font-semibold">
+                                <button
+                                  type="button"
+                                  onClick={() => printCleanInvoice(o)}
+                                  className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-cyan-400 hover:text-cyan-300 border border-white/10 flex items-center gap-1 font-bold text-[10px] cursor-pointer"
+                                  title="Print Clean Tax Invoice"
+                                >
+                                  <FileText className="h-3 w-3" />
+                                  <span>Invoice</span>
+                                </button>
                                 <span className="text-emerald-400">✓</span>
-                                <span>{o.deliveryStatus === 'delivered' ? 'Delivered to Vault' : o.deliveryStatus}</span>
+                                <span>{o.deliveryStatus === 'delivered' ? 'Delivered' : o.deliveryStatus}</span>
                               </div>
                             )}
                           </td>
