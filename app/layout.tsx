@@ -58,6 +58,10 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <JsonLd />
+        {/* Favicon links */}
+        <link rel="icon" type="image/png" href="/images/Fabicon.png" />
+        <link rel="shortcut icon" type="image/png" href="/images/Fabicon.png" />
+        <link rel="apple-touch-icon" href="/images/Fabicon.png" />
         {/* Security meta tags */}
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="referrer" content="strict-origin-when-cross-origin" />

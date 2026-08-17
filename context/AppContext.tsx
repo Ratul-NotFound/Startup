@@ -283,6 +283,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [brandSettings, setBrandSettings] = useState<BrandSettings>({
     brandName: 'Keyoon',
     brandTagline: 'Premium Digital Subscriptions',
+    faviconUrl: '/images/Fabicon.png',
+    navbarLogoUrl: '/images/One_Row_logo.png',
   });
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -302,14 +304,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    if (brandSettings?.faviconUrl) {
-      let link: HTMLLinkElement | null = document.querySelector("link[rel*='icon']");
-      if (!link) {
-        link = document.createElement('link');
-        link.rel = 'shortcut icon';
-        document.getElementsByTagName('head')[0].appendChild(link);
-      }
-      link.href = brandSettings.faviconUrl;
+    const faviconUrl = brandSettings?.faviconUrl || '/images/Fabicon.png';
+    const iconLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+
+    if (iconLinks.length > 0) {
+      iconLinks.forEach(link => {
+        link.href = faviconUrl;
+      });
+    } else {
+      const link = document.createElement('link');
+      link.rel = 'shortcut icon';
+      link.type = 'image/png';
+      link.href = faviconUrl;
+      document.getElementsByTagName('head')[0].appendChild(link);
     }
   }, [brandSettings?.faviconUrl]);
 
@@ -627,7 +634,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // 8. Real-time Brand Settings & Favicon listener
     const unsubBrandSettings = onSnapshot(doc(db, 'settings', 'brand'), (snap) => {
       if (snap.exists()) {
-        setBrandSettings(snap.data() as BrandSettings);
+        const data = snap.data() as BrandSettings;
+        setBrandSettings(prev => ({
+          ...prev,
+          ...data,
+          faviconUrl: data.faviconUrl || '/images/Fabicon.png',
+          navbarLogoUrl: data.navbarLogoUrl || '/images/One_Row_logo.png',
+        }));
       }
     });
 

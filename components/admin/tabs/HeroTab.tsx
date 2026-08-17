@@ -29,8 +29,8 @@ export function HeroTab({
   updateBrandSettings,
 }: HeroTabProps) {
   // Brand form state
-  const [formFavicon, setFormFavicon] = useState(brandSettings?.faviconUrl || '');
-  const [formNavbarLogo, setFormNavbarLogo] = useState(brandSettings?.navbarLogoUrl || '');
+  const [formFavicon, setFormFavicon] = useState(brandSettings?.faviconUrl || '/images/Fabicon.png');
+  const [formNavbarLogo, setFormNavbarLogo] = useState(brandSettings?.navbarLogoUrl || '/images/One_Row_logo.png');
   const [formBrandName, setFormBrandName] = useState(brandSettings?.brandName || 'Keyoon');
   const [formTagline, setFormTagline] = useState(brandSettings?.brandTagline || 'Premium Digital Subscriptions');
 
@@ -43,8 +43,8 @@ export function HeroTab({
 
   useEffect(() => {
     if (brandSettings) {
-      if (brandSettings.faviconUrl !== undefined) setFormFavicon(brandSettings.faviconUrl);
-      if (brandSettings.navbarLogoUrl !== undefined) setFormNavbarLogo(brandSettings.navbarLogoUrl);
+      setFormFavicon(brandSettings.faviconUrl || '/images/Fabicon.png');
+      setFormNavbarLogo(brandSettings.navbarLogoUrl || '/images/One_Row_logo.png');
       if (brandSettings.brandName) setFormBrandName(brandSettings.brandName);
       if (brandSettings.brandTagline) setFormTagline(brandSettings.brandTagline);
     }
