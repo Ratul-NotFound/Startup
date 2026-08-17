@@ -160,7 +160,7 @@ export interface CustomerProfile {
   joinedDate: string;
   lifetimeSpend: number;
   activeSubscriptionsCount: number;
-  preferredCurrency: 'USD' | 'EUR' | 'GBP' | 'CAD';
+  preferredCurrency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'BDT';
   emailAlertsEnabled: boolean;
   autoRenewEnabled: boolean;
 }
@@ -233,4 +233,15 @@ export interface Review {
   likes: number;
   likedBy?: string[];
   planDuration?: string;
+}
+
+export interface HeroSlide {
+  id: string;
+  tag: string;
+  title: string;
+  sub: string;
+  bgImage: string;
+  ctaText?: string;
+  ctaLink?: string;
+  order?: number;
 }

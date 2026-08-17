@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import Link from 'next/link';
 import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
 import { compressImageToDataUrl } from '@/lib/image-compression';
 import {
@@ -10,12 +11,13 @@ import {
   BarChart2, MessageSquare, Lock, LogIn, UserPlus, UserCheck,
   UserX, Sparkles, AlertTriangle, ArrowUpRight, Star, ThumbsUp,
   CreditCard, QrCode, Image as ImageIcon, Check, Send, Loader2,
+  Menu, Home, LayoutDashboard, ChevronRight,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { Product, Coupon, UserSubscription, Order, AdminMember, Review, BangladeshPaymentMethod, SupportTicket } from '@/types';
+import { Product, Coupon, UserSubscription, Order, AdminMember, Review, BangladeshPaymentMethod, SupportTicket, HeroSlide } from '@/types';
 
 // ─── Blank product template ─────────────────────────────────────────
 const blankProduct = (): Omit<Product, 'id'> => ({
@@ -48,12 +50,23 @@ export default function AdminPortalPage() {
     financialMetrics, triggerRenewalCronSimulation, fastForwardSimulationDays,
     refreshAllData, isSyncing,
     reviews, deleteReview, adminCreateReview, adminResetReviews,
+    heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
   } = useApp();
 
-  const [tab, setTab] = useState<'overview' | 'orders' | 'payments' | 'products' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets' | 'reviews'>('overview');
+  const [tab, setTab] = useState<'overview' | 'orders' | 'payments' | 'products' | 'users' | 'admins' | 'subscriptions' | 'coupons' | 'tickets' | 'reviews' | 'hero'>('overview');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'paid' | 'failed'>('all');
   const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
+  const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
+  const [customProvisionOrder, setCustomProvisionOrder] = useState<Order | null>(null);
+  const [provisionCreds, setProvisionCreds] = useState({ email: '', password: '', pinCode: '', notes: '' });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Hero Slides state
+  const [editingHeroSlide, setEditingHeroSlide] = useState<(HeroSlide & { isNew?: boolean }) | null>(null);
+  const [heroDeleteConfirm, setHeroDeleteConfirm] = useState<string | null>(null);
+  const [isCompressingHeroImg, setIsCompressingHeroImg] = useState(false);
+  const heroFileInputRef = useRef<HTMLInputElement>(null);
 
   // Direct Message Modal state
   const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
@@ -196,23 +209,41 @@ export default function AdminPortalPage() {
 
   const pendingOrdersCount = allOrders.filter(o => o.paymentStatus === 'pending').length;
 
-  // ─── ADMIN TAB NAVIGATION ─────────────────────────────────────────
-  const navTabs = [
-    { id: 'overview', label: 'Overview', icon: <BarChart2 className="h-4 w-4" /> },
+  // ─── ADMIN SIDEBAR SECTIONS NAVIGATION ─────────────────────────────
+  const navSections = [
     {
-      id: 'orders',
-      label: pendingOrdersCount > 0 ? `Orders (${pendingOrdersCount} Pending)` : `Orders (${allOrders.length})`,
-      icon: <ShoppingBag className={`h-4 w-4 ${pendingOrdersCount > 0 ? 'text-amber-400 animate-pulse' : ''}`} />,
+      title: 'Core Operations',
+      items: [
+        { id: 'overview', label: 'Command Overview', icon: <BarChart2 className="h-4 w-4 text-cyan-400" />, count: null },
+        {
+          id: 'orders',
+          label: 'Orders & Verification',
+          icon: <ShoppingBag className={`h-4 w-4 ${pendingOrdersCount > 0 ? 'text-amber-400' : 'text-emerald-400'}`} />,
+          count: pendingOrdersCount > 0 ? `${pendingOrdersCount} Pending` : `${allOrders.length}`,
+          isUrgent: pendingOrdersCount > 0,
+        },
+        { id: 'payments', label: 'Payment Gateways', icon: <CreditCard className="h-4 w-4 text-emerald-400" />, count: paymentMethods.length },
+        { id: 'products', label: 'Products & Pricing', icon: <Package className="h-4 w-4 text-indigo-400" />, count: products.length },
+        { id: 'subscriptions', label: 'Subscriptions Vault', icon: <Shield className="h-4 w-4 text-cyan-400" />, count: allSubscriptions.length },
+      ],
     },
-    { id: 'payments', label: `Payment Gateways (${paymentMethods.length})`, icon: <CreditCard className="h-4 w-4 text-emerald-400" /> },
-    { id: 'products', label: `Products (${products.length})`, icon: <Package className="h-4 w-4" /> },
-    { id: 'users', label: `Users (${allUsers.length})`, icon: <Users className="h-4 w-4" /> },
-    { id: 'admins', label: `Admin Team (${adminList.length})`, icon: <Shield className="h-4 w-4 text-red-400" /> },
-    { id: 'subscriptions', label: `Subscriptions (${allSubscriptions.length})`, icon: <Shield className="h-4 w-4" /> },
-    { id: 'coupons', label: `Coupons (${coupons.length})`, icon: <Tag className="h-4 w-4" /> },
-    { id: 'tickets', label: `Tickets (${allTickets.length})`, icon: <Headphones className="h-4 w-4" /> },
-    { id: 'reviews', label: `Reviews (${reviews.length})`, icon: <Star className="h-4 w-4 text-amber-400" /> },
-  ] as const;
+    {
+      title: 'Storefront & Growth',
+      items: [
+        { id: 'hero', label: 'Hero & Banners', icon: <Sparkles className="h-4 w-4 text-amber-300" />, count: heroSlides.length },
+        { id: 'reviews', label: 'Customer Reviews', icon: <Star className="h-4 w-4 text-amber-400" />, count: reviews.length },
+        { id: 'coupons', label: 'Promo Coupons', icon: <Tag className="h-4 w-4 text-rose-400" />, count: coupons.length },
+      ],
+    },
+    {
+      title: 'Customers & Team',
+      items: [
+        { id: 'users', label: 'Registered Customers', icon: <Users className="h-4 w-4 text-blue-400" />, count: allUsers.length },
+        { id: 'tickets', label: 'Live Support Tickets', icon: <Headphones className="h-4 w-4 text-purple-400" />, count: allTickets.length },
+        { id: 'admins', label: 'Admin Privileges', icon: <Shield className="h-4 w-4 text-red-400" />, count: adminList.length },
+      ],
+    },
+  ];
 
   // ─── PRODUCT HANDLERS ─────────────────────────────────────────────
   const handleSaveProduct = async () => {
@@ -242,6 +273,34 @@ export default function AdminPortalPage() {
     p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
     p.category.toLowerCase().includes(productSearch.toLowerCase())
   );
+
+  // ─── HERO SLIDE HANDLERS ──────────────────────────────────────────
+  const handleSaveHeroSlide = async () => {
+    if (!editingHeroSlide) return;
+    try {
+      if (editingHeroSlide.isNew) {
+        const { isNew, id, ...rest } = editingHeroSlide;
+        await adminCreateHeroSlide(rest);
+        showFeedback('success', 'Hero slide created and published live on storefront.');
+      } else {
+        await adminUpdateHeroSlide(editingHeroSlide.id, editingHeroSlide);
+        showFeedback('success', 'Hero slide updated and published live.');
+      }
+      setEditingHeroSlide(null);
+    } catch {
+      showFeedback('error', 'Failed to save hero slide.');
+    }
+  };
+
+  const handleDeleteHeroSlide = async (id: string) => {
+    try {
+      await adminDeleteHeroSlide(id);
+      setHeroDeleteConfirm(null);
+      showFeedback('success', 'Hero slide removed from storefront.');
+    } catch {
+      showFeedback('error', 'Failed to delete hero slide.');
+    }
+  };
 
   // ─── CUSTOMER LOOKUP HELPER ──────────────────────────────────────
   const getCustomerInfo = (userId?: string, userEmail?: string, fallbackName?: string) => {
@@ -355,39 +414,58 @@ export default function AdminPortalPage() {
   const activeTicket = allTickets.find(t => t.id === selectedTicketId) || allTickets[0] || null;
 
   return (
-    <div className="min-h-screen py-8 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="min-h-screen py-6 max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 space-y-6">
 
-      {/* Admin Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-zinc-900 border border-white/[0.08]">
-        <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-950/50">
-            <Shield className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-white">Admin Management Hub</h1>
-              {isSuperAdmin ? (
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-950 border border-red-500/40 text-red-300">
-                  Superadmin
-                </span>
-              ) : (
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-950 border border-blue-500/40 text-blue-300">
-                  Administrator
-                </span>
-              )}
+      {/* Admin Top Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-zinc-900/90 border border-white/[0.08] backdrop-blur-xl shadow-2xl">
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-950/50">
+              <Shield className="h-5 w-5 text-white" />
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">Logged in as {firebaseUser.email} · Real-time Firestore Sync Active</p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-black text-white">SubNexus Command Hub</h1>
+                {isSuperAdmin ? (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-950/80 border border-red-500/40 text-red-300">
+                    Superadmin
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-950/80 border border-blue-500/40 text-blue-300">
+                    Administrator
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 font-mono">{firebaseUser.email}</p>
+            </div>
           </div>
+
+          {/* Mobile Menu Button (< lg) */}
+          <button
+            onClick={() => setMobileMenuOpen(prev => !prev)}
+            className="lg:hidden p-2.5 rounded-2xl bg-zinc-800 border border-white/10 text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5 text-red-400" /> : <Menu className="h-5 w-5 text-cyan-400" />}
+            <span className="text-xs font-bold">{mobileMenuOpen ? 'Close' : 'Menu'}</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2.5">
+          <Link
+            href="/"
+            className="px-3.5 py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-750 border border-white/10 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
+          >
+            <Home className="h-3.5 w-3.5 text-cyan-400" />
+            <span>Storefront</span>
+          </Link>
+
           <button
             onClick={async () => {
               await refreshAllData();
               showFeedback('success', 'Database re-synced successfully.');
             }}
             disabled={isSyncing}
-            className="px-3.5 py-2 rounded-xl bg-zinc-800 border border-white/10 text-xs text-slate-200 hover:text-white font-bold flex items-center gap-2 hover:bg-zinc-750 transition-all disabled:opacity-50"
+            className="px-3.5 py-2 rounded-xl bg-zinc-800 border border-white/10 text-xs text-slate-200 hover:text-white font-bold flex items-center gap-2 hover:bg-zinc-750 transition-all disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`h-3.5 w-3.5 text-cyan-400 ${isSyncing ? 'animate-spin' : ''}`} />
             <span>{isSyncing ? 'Syncing...' : 'Sync Live Data'}</span>
@@ -405,20 +483,58 @@ export default function AdminPortalPage() {
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-1 border-b border-white/[0.08] overflow-x-auto scrollbar-none pb-0">
-        {navTabs.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-3 text-xs font-bold whitespace-nowrap border-b-2 -mb-px transition-all ${
-              tab === t.id ? 'border-white text-white bg-white/[0.03]' : 'border-transparent text-slate-400 hover:text-white'
-            }`}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Main Responsive Grid Layout (Sidebar + Content) */}
+      <div className="flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* Responsive Sidebar Navigation */}
+        <aside className={`w-full lg:w-72 shrink-0 space-y-5 bg-zinc-900/90 border border-white/[0.08] p-4 rounded-3xl backdrop-blur-xl shadow-2xl lg:sticky lg:top-6 ${
+          mobileMenuOpen ? 'block' : 'hidden lg:block'
+        }`}>
+          {navSections.map(section => (
+            <div key={section.title} className="space-y-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 block mb-1">
+                {section.title}
+              </span>
+              {section.items.map(item => {
+                const isActive = tab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setTab(item.id as any);
+                      setMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
+                      isActive
+                        ? 'bg-gradient-to-r from-indigo-600/30 via-indigo-500/20 to-transparent text-white border border-indigo-500/40 shadow-md'
+                        : 'text-slate-400 hover:text-white hover:bg-zinc-800/60 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {item.icon}
+                      <span className="truncate">{item.label}</span>
+                    </div>
+
+                    {item.count !== null && (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold shrink-0 ${
+                        (item as any).isUrgent
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse'
+                          : isActive
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-zinc-800 text-slate-400'
+                      }`}>
+                        {item.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </aside>
+
+        {/* Main Content Area */}
+        <main className="flex-1 min-w-0 w-full space-y-6">
 
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* OVERVIEW TAB */}
@@ -1198,15 +1314,37 @@ export default function AdminPortalPage() {
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
                                   onClick={async () => {
-                                    await adminApproveAndDeliverOrder(o.id);
-                                    showFeedback('success', `Order #${o.orderNumber} approved and credentials delivered to Vault!`);
+                                    setApprovingOrderId(o.id);
+                                    try {
+                                      await adminApproveAndDeliverOrder(o.id);
+                                      showFeedback('success', `Order #${o.orderNumber} approved and credentials delivered to Vault!`);
+                                    } finally {
+                                      setApprovingOrderId(null);
+                                    }
                                   }}
-                                  className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 transition-all shadow-md"
-                                  title="Approve payment and automatically provision subscriptions"
+                                  disabled={approvingOrderId === o.id}
+                                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+                                  title="1-Click Instant Auto-Provision & Deliver"
                                 >
-                                  <Check className="h-3.5 w-3.5" />
+                                  {approvingOrderId === o.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                                  ) : (
+                                    <Check className="h-3.5 w-3.5" />
+                                  )}
                                   <span>Approve & Deliver</span>
                                 </button>
+
+                                <button
+                                  onClick={() => {
+                                    setProvisionCreds({ email: o.userEmail || '', password: '', pinCode: '', notes: '' });
+                                    setCustomProvisionOrder(o);
+                                  }}
+                                  className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white font-bold text-xs transition-colors"
+                                  title="Enter specific custom account credentials"
+                                >
+                                  <Lock className="h-3.5 w-3.5 text-cyan-400" />
+                                </button>
+
                                 <button
                                   onClick={async () => {
                                     const reason = prompt('Reason for rejection (e.g. Invalid TrxID or amount mismatch):');
@@ -1222,8 +1360,9 @@ export default function AdminPortalPage() {
                                 </button>
                               </div>
                             ) : (
-                              <div className="text-[11px] text-slate-500 font-semibold">
-                                {o.deliveryStatus === 'delivered' ? '✓ Delivered' : o.deliveryStatus}
+                              <div className="text-[11px] text-slate-500 font-semibold flex items-center justify-end gap-1">
+                                <span className="text-emerald-400">✓</span>
+                                <span>{o.deliveryStatus === 'delivered' ? 'Delivered to Vault' : o.deliveryStatus}</span>
                               </div>
                             )}
                           </td>
@@ -2304,6 +2443,330 @@ export default function AdminPortalPage() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════ */}
+      {/* HERO & CINEMATIC BANNERS TAB                                */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {tab === 'hero' && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-cyan-400" />
+                <span>Storefront Hero & Cinematic Banners</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                Customize the rotating hero slides, live status tags, cursive slogans, and background imagery on the homepage in real-time.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  if (confirm('Reset all hero slides to the default cinematic presets?')) {
+                    await adminResetHeroSlides();
+                    showFeedback('success', 'Hero slides reset to default presets.');
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                Reset to Defaults
+              </button>
+
+              <button
+                onClick={() => {
+                  setEditingHeroSlide({
+                    id: '',
+                    isNew: true,
+                    tag: 'NEW EXCLUSIVE DEAL',
+                    title: 'Ultimate Premium Suite at 80% Off',
+                    sub: 'Instant 30-Second Vault Delivery',
+                    bgImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80',
+                    ctaText: 'Explore Subscriptions',
+                    ctaLink: '#catalog',
+                    order: heroSlides.length + 1,
+                  });
+                }}
+                className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Hero Slide</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Slides Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {heroSlides.map((slide, idx) => (
+              <div
+                key={slide.id || idx}
+                className="relative rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden shadow-xl flex flex-col justify-between group hover:border-cyan-500/40 transition-all"
+              >
+                {/* Background Image Preview */}
+                <div className="relative h-44 w-full overflow-hidden bg-black">
+                  <img
+                    src={slide.bgImage}
+                    alt={slide.title}
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-70"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+
+                  {/* Order & Tag Badges */}
+                  <div className="absolute top-3 left-3 flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full bg-black/70 backdrop-blur-md border border-white/15 text-[10px] font-mono font-bold text-cyan-300">
+                      Slide #{idx + 1}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-[10px] font-bold text-cyan-300">
+                      {slide.tag}
+                    </span>
+                  </div>
+
+                  {/* Actions overlay */}
+                  <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                    <button
+                      onClick={() => setEditingHeroSlide({ ...slide, isNew: false })}
+                      className="p-2 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 text-slate-300 hover:text-white border border-white/10 transition-colors shadow-sm"
+                      title="Edit slide"
+                    >
+                      <Edit2 className="h-3.5 w-3.5 text-cyan-400" />
+                    </button>
+
+                    {heroDeleteConfirm === slide.id ? (
+                      <button
+                        onClick={() => handleDeleteHeroSlide(slide.id)}
+                        className="px-2.5 py-1 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all shadow-md"
+                      >
+                        Confirm Delete
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setHeroDeleteConfirm(slide.id)}
+                        className="p-2 rounded-xl bg-zinc-900/90 hover:bg-red-950/60 text-slate-400 hover:text-red-400 border border-white/10 transition-colors shadow-sm"
+                        title="Delete slide"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Content Details */}
+                <div className="p-5 space-y-3">
+                  <div>
+                    <p className="text-base text-cyan-400 font-bold" style={{ fontFamily: "'Caveat', cursive" }}>
+                      {slide.sub}
+                    </p>
+                    <h3 className="text-base font-black text-white leading-snug mt-0.5">
+                      {slide.title}
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/[0.06]">
+                    <span className="font-mono">CTA: {slide.ctaText || 'Explore Subscriptions'} ({slide.ctaLink || '#catalog'})</span>
+                    <button
+                      onClick={() => setEditingHeroSlide({ ...slide, isNew: false })}
+                      className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Edit Content</span>
+                      <ArrowUpRight className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* EDIT / CREATE HERO SLIDE MODAL */}
+          {editingHeroSlide && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+              onClick={() => setEditingHeroSlide(null)}
+            >
+              <div
+                className="relative w-full max-w-xl rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-2xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm text-white">
+                        {editingHeroSlide.isNew ? 'Create New Hero Slide' : `Edit Hero Slide #${editingHeroSlide.order || 1}`}
+                      </h3>
+                      <p className="text-[11px] text-slate-400">Updates the storefront live carousel immediately</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setEditingHeroSlide(null)}
+                    className="p-1.5 rounded-xl bg-zinc-900 text-slate-400 hover:text-white border border-white/10"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSaveHeroSlide();
+                  }}
+                  className="space-y-4 text-xs"
+                >
+                  {/* Status Pill Tag */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300 block">Top Status Tag</label>
+                    <input
+                      type="text"
+                      value={editingHeroSlide.tag}
+                      onChange={e => setEditingHeroSlide(prev => prev ? ({ ...prev, tag: e.target.value }) : null)}
+                      placeholder="e.g. INSTANT 30S DELIVERY"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono uppercase tracking-wider"
+                      required
+                    />
+                  </div>
+
+                  {/* Cursive Subtitle */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300 block">Cursive Animated Subtitle</label>
+                    <input
+                      type="text"
+                      value={editingHeroSlide.sub}
+                      onChange={e => setEditingHeroSlide(prev => prev ? ({ ...prev, sub: e.target.value }) : null)}
+                      placeholder="e.g. Save Up to 80% on Official Digital Plans"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-cyan-400 font-bold"
+                      required
+                    />
+                  </div>
+
+                  {/* Main Headline Title */}
+                  <div className="space-y-1">
+                    <label className="font-bold text-slate-300 block">Main Headline Title</label>
+                    <input
+                      type="text"
+                      value={editingHeroSlide.title}
+                      onChange={e => setEditingHeroSlide(prev => prev ? ({ ...prev, title: e.target.value }) : null)}
+                      placeholder="e.g. Premium Subscriptions at Wholesale Rates"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-sm"
+                      required
+                    />
+                  </div>
+
+                  {/* Background Image URL & Uploader */}
+                  <div className="space-y-2">
+                    <label className="font-bold text-slate-300 block">Cinematic Background Image</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={editingHeroSlide.bgImage}
+                        onChange={e => setEditingHeroSlide(prev => prev ? ({ ...prev, bgImage: e.target.value }) : null)}
+                        placeholder="Image URL (e.g. /images/hero-vault.jpg or https://...)"
+                        className="flex-1 px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono text-[11px]"
+                        required
+                      />
+
+                      <input
+                        ref={heroFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          setIsCompressingHeroImg(true);
+                          try {
+                            const dataUrl = await compressImageToDataUrl(f, 1600, 900, 0.75);
+                            setEditingHeroSlide(prev => prev ? ({ ...prev, bgImage: dataUrl }) : null);
+                          } finally {
+                            setIsCompressingHeroImg(false);
+                            if (heroFileInputRef.current) heroFileInputRef.current.value = '';
+                          }
+                        }}
+                        className="hidden"
+                      />
+
+                      <button
+                        type="button"
+                        disabled={isCompressingHeroImg}
+                        onClick={() => heroFileInputRef.current?.click()}
+                        className="px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-cyan-400 font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                      >
+                        {isCompressingHeroImg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                        <span>Upload</span>
+                      </button>
+                    </div>
+
+                    {/* Preview Thumbnail */}
+                    {editingHeroSlide.bgImage && (
+                      <div className="relative h-28 w-full rounded-2xl overflow-hidden border border-white/10 bg-black">
+                        <img
+                          src={editingHeroSlide.bgImage}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center p-3 text-center">
+                          <p className="text-white font-bold text-xs drop-shadow">{editingHeroSlide.title}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CTA Text & Link */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300 block">Button CTA Text</label>
+                      <input
+                        type="text"
+                        value={editingHeroSlide.ctaText || ''}
+                        onChange={e => setEditingHeroSlide(prev => prev ? ({ ...prev, ctaText: e.target.value }) : null)}
+                        placeholder="e.g. Explore Subscriptions"
+                        className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-slate-300 block">Button CTA Link / Anchor</label>
+                      <input
+                        type="text"
+                        value={editingHeroSlide.ctaLink || ''}
+                        onChange={e => setEditingHeroSlide(prev => prev ? ({ ...prev, ctaLink: e.target.value }) : null)}
+                        placeholder="e.g. #catalog"
+                        className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.08]">
+                    <button
+                      type="button"
+                      onClick={() => setEditingHeroSlide(null)}
+                      className="px-4 py-2 rounded-xl text-slate-400 hover:text-white font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold flex items-center gap-1.5 shadow-md cursor-pointer"
+                    >
+                      <Save className="h-3.5 w-3.5" />
+                      <span>{editingHeroSlide.isNew ? 'Create Slide' : 'Save & Publish Live'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+        </main>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
       {/* DIRECT MESSAGE MODAL (Admin to any User)                    */}
       {/* ═══════════════════════════════════════════════════════════ */}
       {showDirectMessageModal && (
@@ -2480,6 +2943,151 @@ export default function AdminPortalPage() {
                 >
                   <Send className="h-3.5 w-3.5" />
                   {isSendingDirectMessage ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* CUSTOM CREDENTIAL PROVISIONING MODAL                       */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {customProvisionOrder && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          onClick={() => setCustomProvisionOrder(null)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl space-y-5"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <Lock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Provision Credentials for #{customProvisionOrder.orderNumber}</h3>
+                  <p className="text-[11px] text-slate-400">Customer: {customProvisionOrder.userEmail}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCustomProvisionOrder(null)}
+                className="p-1.5 rounded-xl bg-zinc-900 text-slate-400 hover:text-white border border-white/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-zinc-900/80 border border-white/[0.06] text-xs text-slate-300 space-y-1">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Ordered Items</span>
+              {customProvisionOrder.items.map((it, idx) => (
+                <div key={idx} className="font-bold text-white">
+                  {it.quantity}x {it.productName} ({it.durationLabel})
+                </div>
+              ))}
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setApprovingOrderId(customProvisionOrder.id);
+                try {
+                  await adminApproveAndDeliverOrder(customProvisionOrder.id, {
+                    email: provisionCreds.email.trim(),
+                    password: provisionCreds.password.trim(),
+                    pinCode: provisionCreds.pinCode.trim(),
+                    notes: provisionCreds.notes.trim(),
+                  });
+                  showFeedback('success', `Order #${customProvisionOrder.orderNumber} custom credentials provisioned and delivered!`);
+                  setCustomProvisionOrder(null);
+                } finally {
+                  setApprovingOrderId(null);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Account Login Email</label>
+                <input
+                  type="email"
+                  value={provisionCreds.email}
+                  onChange={e => setProvisionCreds(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="e.g. premium.user@service.com"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Account Password</label>
+                <input
+                  type="text"
+                  value={provisionCreds.password}
+                  onChange={e => setProvisionCreds(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Enter decrypted password or auto-generate"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono font-bold"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Profile PIN (Optional)</label>
+                  <input
+                    type="text"
+                    value={provisionCreds.pinCode}
+                    onChange={e => setProvisionCreds(prev => ({ ...prev, pinCode: e.target.value }))}
+                    placeholder="e.g. 1234"
+                    className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Quick Auto-Fill</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProvisionCreds({
+                        email: customProvisionOrder.userEmail || 'customer@service.io',
+                        password: `Nexus#${Math.floor(100000 + Math.random() * 900000)}`,
+                        pinCode: `${Math.floor(1000 + Math.random() * 9000)}`,
+                        notes: 'Official verified subscription provided with 100% warranty.',
+                      });
+                    }}
+                    className="w-full py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-cyan-400 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    ⚡ Auto-Generate
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Notes / Instructions for Customer</label>
+                <textarea
+                  rows={2}
+                  value={provisionCreds.notes}
+                  onChange={e => setProvisionCreds(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="e.g. Please do not change profile name. Use Profile 1."
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 resize-none"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setCustomProvisionOrder(null)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={approvingOrderId === customProvisionOrder.id || !provisionCreds.email || !provisionCreds.password}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
+                >
+                  {approvingOrderId === customProvisionOrder.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                  <span>Save & Deliver to Customer Vault</span>
                 </button>
               </div>
             </form>

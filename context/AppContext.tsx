@@ -4,11 +4,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
-  AdminMember, Review, BangladeshPaymentMethod,
+  AdminMember, Review, BangladeshPaymentMethod, HeroSlide,
 } from '@/types';
 import {
   MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
-  INITIAL_FINANCIAL_METRICS, MOCK_REVIEWS, MOCK_PAYMENT_METHODS,
+  INITIAL_FINANCIAL_METRICS, MOCK_REVIEWS, MOCK_PAYMENT_METHODS, MOCK_HERO_SLIDES,
 } from '@/lib/mock-data';
 import { generateOrderNumber, generateRandomId, generateMockCredentials } from '@/lib/utils';
 import { auth, db, initAnalytics } from '@/lib/firebase';
@@ -78,6 +78,7 @@ interface AppContextType {
   // Auth & User
   user: CustomerProfile;
   setUser: React.Dispatch<React.SetStateAction<CustomerProfile>>;
+  updateUserProfile: (updates: Partial<CustomerProfile>) => Promise<void>;
   toggleUserRole: () => void;
   firebaseUser: FirebaseUser | null;
   isAuthModalOpen: boolean;
@@ -99,7 +100,7 @@ interface AppContextType {
   // Admin: Order management & Approval
   allOrders: Order[];
   adminUpdateOrderStatus: (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => Promise<void>;
-  adminApproveAndDeliverOrder: (orderId: string) => Promise<void>;
+  adminApproveAndDeliverOrder: (orderId: string, customCreds?: { email?: string; password?: string; pinCode?: string; notes?: string }) => Promise<void>;
   adminRejectOrder: (orderId: string, reason?: string) => Promise<void>;
 
   // Admin: User management
@@ -149,6 +150,13 @@ interface AppContextType {
   targetReviewProduct: Product | null;
   setTargetReviewProduct: (p: Product | null) => void;
 
+  // Hero Banner Dynamic Customization
+  heroSlides: HeroSlide[];
+  adminCreateHeroSlide: (slide: Omit<HeroSlide, 'id'>) => Promise<string>;
+  adminUpdateHeroSlide: (id: string, updates: Partial<HeroSlide>) => Promise<void>;
+  adminDeleteHeroSlide: (id: string) => Promise<void>;
+  adminResetHeroSlides: () => Promise<void>;
+
   // Global UI
   activeSearchQuery: string;
   setActiveSearchQuery: (query: string) => void;
@@ -175,6 +183,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Bangladesh Payment Methods State
   const [paymentMethods, setPaymentMethods] = useState<BangladeshPaymentMethod[]>(MOCK_PAYMENT_METHODS);
+
+  // Hero Slides State
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(MOCK_HERO_SLIDES);
 
   // Auth & Roles
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -289,7 +300,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await batch.commit();
       }
 
-      // 5. Ensure superadmin doc exists in admins collection
+      // 5. Seed Hero Slides if empty
+      const heroSnap = await getDocs(collection(db, 'hero_slides'));
+      if (heroSnap.empty) {
+        console.log('[Firestore] Seeding initial hero slides...');
+        const batch = writeBatch(db);
+        for (const s of MOCK_HERO_SLIDES) {
+          const docRef = doc(db, 'hero_slides', s.id);
+          batch.set(docRef, s);
+        }
+        await batch.commit();
+      }
+
+      // 6. Ensure superadmin doc exists in admins collection
       const superAdminRef = doc(db, 'admins', SUPERADMIN_EMAIL.toLowerCase().replace(/[^a-z0-9]/g, '_'));
       const superAdminSnap = await getDoc(superAdminRef);
       if (!superAdminSnap.exists()) {
@@ -418,12 +441,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }]);
     });
 
+    // 6. Real-time Hero Slides listener (available to all users)
+    const unsubHeroSlides = onSnapshot(collection(db, 'hero_slides'), (snapshot) => {
+      if (!snapshot.empty) {
+        const slides = snapshot.docs.map(d => ({
+          ...d.data(),
+          id: d.id,
+        } as HeroSlide));
+        slides.sort((a, b) => (a.order || 0) - (b.order || 0));
+        setHeroSlides(slides);
+      } else {
+        setHeroSlides(MOCK_HERO_SLIDES);
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[Firestore] Hero slides listener error:', err);
+      }
+      setHeroSlides(MOCK_HERO_SLIDES);
+    });
+
     return () => {
       unsubProducts();
       unsubCoupons();
       unsubReviews();
       unsubPaymentMethods();
       unsubAdmins();
+      unsubHeroSlides();
     };
   }, [seedFirestoreIfEmpty]);
 
@@ -570,8 +613,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           (snapshot) => {
             const uSubs = snapshot.docs.map(d => d.data() as UserSubscription);
             setSubscriptions(prev => {
-              const combined = [...uSubs, ...prev.filter(p => !uSubs.some(u => u.id === p.id))];
-              return combined;
+              const map = new Map<string, UserSubscription>();
+              prev.forEach(s => map.set(s.id, s));
+              uSubs.forEach(s => map.set(s.id, s));
+              return Array.from(map.values());
             });
           }
         );
@@ -579,32 +624,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         let unsubUserSubsEmail = () => {};
         if (fbUser.email) {
           unsubUserSubsEmail = onSnapshot(
-            query(collection(db, 'subscriptions'), where('credentials.email', '==', fbUser.email)),
+            query(collection(db, 'subscriptions'), where('userEmail', '==', fbUser.email)),
             (snapshot) => {
               const uSubs = snapshot.docs.map(d => d.data() as UserSubscription);
               setSubscriptions(prev => {
-                const combined = [...uSubs, ...prev.filter(p => !uSubs.some(u => u.id === p.id))];
-                return combined;
+                const map = new Map<string, UserSubscription>();
+                prev.forEach(s => map.set(s.id, s));
+                uSubs.forEach(s => map.set(s.id, s));
+                return Array.from(map.values());
               });
             }
           );
         }
 
-        // Live User Tickets Listener
-        const unsubUserTickets = onSnapshot(
+        // Live User Tickets Listener (matches UID and Email)
+        const unsubUserTicketsUid = onSnapshot(
           query(collection(db, 'support_tickets'), where('userId', '==', fbUser.uid)),
           (snapshot) => {
             const uTkts = snapshot.docs.map(d => d.data() as SupportTicket);
-            setTickets(uTkts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+            setTickets(prev => {
+              const combined = [...uTkts, ...prev.filter(p => !uTkts.some(u => u.id === p.id))];
+              return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            });
           }
         );
+
+        let unsubUserTicketsEmail = () => {};
+        if (fbUser.email) {
+          unsubUserTicketsEmail = onSnapshot(
+            query(collection(db, 'support_tickets'), where('userEmail', '==', fbUser.email)),
+            (snapshot) => {
+              const uTkts = snapshot.docs.map(d => d.data() as SupportTicket);
+              setTickets(prev => {
+                const combined = [...uTkts, ...prev.filter(p => !uTkts.some(u => u.id === p.id))];
+                return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+              });
+            }
+          );
+        }
 
         unsubscribersRef.current.push(
           unsubUserOrdersUid,
           unsubUserOrdersEmail,
           unsubUserSubsUid,
           unsubUserSubsEmail,
-          unsubUserTickets
+          unsubUserTicketsUid,
+          unsubUserTicketsEmail
         );
 
         // If admin or superadmin, activate full real-time database listeners
@@ -639,6 +704,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [setupAdminRealtimeListeners]);
 
+  // ─── Reactive Sync for Logged-In User Data ────────────────────────
+  useEffect(() => {
+    if (!firebaseUser?.email) return;
+    const myEmail = (firebaseUser.email || '').toLowerCase().trim();
+    const myUid = firebaseUser.uid;
+
+    if (allOrders.length > 0) {
+      const myOrders = allOrders.filter(o =>
+        (o.userId && (o.userId === myUid || o.userId === user.id)) ||
+        (o.userEmail && o.userEmail.toLowerCase() === myEmail)
+      );
+      if (myOrders.length > 0) {
+        setOrders(myOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      }
+    }
+
+    if (allSubscriptions.length > 0) {
+      const mySubs = allSubscriptions.filter(s =>
+        (s.userId && (s.userId === myUid || s.userId === user.id)) ||
+        (s.userEmail && s.userEmail.toLowerCase() === myEmail) ||
+        (s.credentials?.email && s.credentials.email.toLowerCase() === myEmail)
+      );
+      if (mySubs.length > 0) {
+        setSubscriptions(mySubs);
+      }
+    }
+
+    if (allTickets.length > 0) {
+      const myTkts = allTickets.filter(t =>
+        (t.userId && (t.userId === myUid || t.userId === user.id)) ||
+        (t.userEmail && t.userEmail.toLowerCase() === myEmail)
+      );
+      if (myTkts.length > 0) {
+        setTickets(myTkts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      }
+    }
+  }, [allOrders, allSubscriptions, allTickets, firebaseUser?.email, firebaseUser?.uid, user.id]);
+
   // ─── Manual Refresh All Data ──────────────────────────────────────
   const refreshAllData = useCallback(async () => {
     setIsSyncing(true);
@@ -659,6 +762,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const aSnap = await getDocs(collection(db, 'admins'));
       if (!aSnap.empty) {
         setAdminList(aSnap.docs.map(d => d.data() as AdminMember));
+      }
+
+      // Refresh logged-in user specific data (Orders, Subscriptions Vault, Tickets)
+      if (firebaseUser?.uid) {
+        const myUid = firebaseUser.uid;
+        const myEmail = (firebaseUser.email || '').toLowerCase().trim();
+
+        // 1. Fetch user orders
+        const [ordUidSnap, ordEmailSnap] = await Promise.all([
+          getDocs(query(collection(db, 'orders'), where('userId', '==', myUid))),
+          myEmail ? getDocs(query(collection(db, 'orders'), where('userEmail', '==', firebaseUser.email))) : Promise.resolve({ docs: [] }),
+        ]);
+
+        const ordsMap = new Map<string, Order>();
+        ordUidSnap.docs.forEach(d => ordsMap.set(d.id, d.data() as Order));
+        ordEmailSnap.docs.forEach(d => ordsMap.set(d.id, d.data() as Order));
+        const userOrds = Array.from(ordsMap.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        if (userOrds.length > 0) {
+          setOrders(userOrds);
+        }
+
+        // 2. Fetch user subscriptions & vault credentials
+        const [subUidSnap, subEmailSnap] = await Promise.all([
+          getDocs(query(collection(db, 'subscriptions'), where('userId', '==', myUid))),
+          myEmail ? getDocs(query(collection(db, 'subscriptions'), where('userEmail', '==', firebaseUser.email))) : Promise.resolve({ docs: [] }),
+        ]);
+
+        const subsMap = new Map<string, UserSubscription>();
+        subUidSnap.docs.forEach(d => subsMap.set(d.id, d.data() as UserSubscription));
+        subEmailSnap.docs.forEach(d => subsMap.set(d.id, d.data() as UserSubscription));
+
+        // Check if any order has subscription IDs not yet fetched
+        const missingSubIds: string[] = [];
+        userOrds.forEach(o => {
+          if (o.generatedSubscriptionIds && o.generatedSubscriptionIds.length > 0) {
+            o.generatedSubscriptionIds.forEach(sid => {
+              if (!subsMap.has(sid)) missingSubIds.push(sid);
+            });
+          }
+        });
+
+        if (missingSubIds.length > 0) {
+          const fetchedMissing = await Promise.all(missingSubIds.map(sid => getDoc(doc(db, 'subscriptions', sid))));
+          fetchedMissing.forEach(sDoc => {
+            if (sDoc.exists()) subsMap.set(sDoc.id, sDoc.data() as UserSubscription);
+          });
+        }
+
+        const userSubs = Array.from(subsMap.values());
+        if (userSubs.length > 0) {
+          setSubscriptions(userSubs);
+        }
       }
 
       // If admin, refresh all collections
@@ -693,7 +848,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setIsSyncing(false);
     }
-  }, [isAdmin, isSuperAdmin]);
+  }, [isAdmin, isSuperAdmin, firebaseUser?.email, firebaseUser?.uid]);
 
   // ─── Cart persistence ──────────────────────────────────────────────
   useEffect(() => {
@@ -847,11 +1002,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newOrder;
   };
 
+  // ─── User Profile management ───────────────────────────────────────
+  const updateUserProfile = async (updates: Partial<CustomerProfile>) => {
+    const updated = { ...user, ...updates };
+    setUser(updated);
+    if (firebaseUser?.uid) {
+      try {
+        const userRef = doc(db, 'users', firebaseUser.uid);
+        await updateDoc(userRef, updates as Record<string, unknown>);
+      } catch {
+        try {
+          const userRef = doc(db, 'users', firebaseUser.uid);
+          await setDoc(userRef, updated, { merge: true });
+        } catch (err) {
+          console.error('Error updating user profile in Firestore:', err);
+        }
+      }
+    }
+  };
+
   // ─── Subscription management ───────────────────────────────────────
   const toggleAutoRenew = async (subId: string) => {
-    const sub = subscriptions.find(s => s.id === subId);
+    const sub = subscriptions.find(s => s.id === subId) || allSubscriptions.find(s => s.id === subId);
     if (!sub) return;
     const newAutoRenew = !sub.autoRenew;
+    setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, autoRenew: newAutoRenew } : s));
+    setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, autoRenew: newAutoRenew } : s));
     try {
       await updateDoc(doc(db, 'subscriptions', subId), { autoRenew: newAutoRenew });
     } catch { }
@@ -862,6 +1038,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!sub) return;
     const base = Math.max(new Date(sub.expiryDate).getTime(), Date.now());
     const newExp = new Date(base + additionalDays * 86400000).toISOString();
+    setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' } : s));
+    setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' } : s));
     try {
       await updateDoc(doc(db, 'subscriptions', subId), { expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' });
     } catch { }
@@ -969,14 +1147,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const adminApproveAndDeliverOrder = async (orderId: string) => {
+  const adminApproveAndDeliverOrder = async (
+    orderId: string,
+    customCreds?: { email?: string; password?: string; pinCode?: string; notes?: string }
+  ) => {
     try {
       const orderRef = doc(db, 'orders', orderId);
-      const snap = await getDoc(orderRef);
-      if (!snap.exists()) return;
-      const ord = snap.data() as Order;
+      let ord: Order | undefined;
+      try {
+        const snap = await getDoc(orderRef);
+        if (snap.exists()) {
+          ord = snap.data() as Order;
+        }
+      } catch { }
+
+      if (!ord) {
+        ord = allOrders.find(o => o.id === orderId);
+      }
+      if (!ord) return;
 
       const generatedSubIds: string[] = [];
+      const generatedSubs: UserSubscription[] = [];
       const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
 
       for (const item of ord.items) {
@@ -986,7 +1177,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const durationDays = daysMap[item.duration] || 30;
           const startDate = new Date().toISOString();
           const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
-          const creds = generateMockCredentials(item.productName, 'private_account', ord.userEmail);
+          const autoCreds = generateMockCredentials(item.productName, 'private_account', ord.userEmail);
+          const finalCreds = {
+            email: customCreds?.email || autoCreds.email,
+            password: customCreds?.password || autoCreds.password,
+            pinCode: customCreds?.pinCode || autoCreds.pinCode,
+            notes: customCreds?.notes || autoCreds.notes,
+          };
 
           const sub: UserSubscription = {
             id: subId,
@@ -1005,22 +1202,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             accountType: 'private_account',
             warrantyValidUntil: expiryDate,
             paymentMethod: ord.paymentMethod,
-            credentials: creds,
+            credentials: finalCreds,
             userId: ord.userId,
             userEmail: ord.userEmail,
           };
 
-          await setDoc(doc(db, 'subscriptions', subId), sub);
+          generatedSubs.push(sub);
+          try {
+            await setDoc(doc(db, 'subscriptions', subId), sub);
+          } catch (err) {
+            console.error('Error writing subscription:', err);
+          }
         }
       }
 
-      await updateDoc(orderRef, {
-        paymentStatus: 'paid',
-        deliveryStatus: 'delivered',
-        generatedSubscriptionIds: generatedSubIds,
-        verifiedAt: new Date().toISOString(),
-        verifiedBy: user.email || 'Admin',
-      });
+      try {
+        await updateDoc(orderRef, {
+          paymentStatus: 'paid',
+          deliveryStatus: 'delivered',
+          generatedSubscriptionIds: generatedSubIds,
+          verifiedAt: new Date().toISOString(),
+          verifiedBy: user.email || 'Admin',
+        });
+      } catch (err) {
+        console.error('Error updating order doc:', err);
+      }
 
       // Update user lifetime spend and subscription count
       try {
@@ -1035,13 +1241,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch {}
 
-      // Update local state
+      // Update local state for orders and subscriptions
+      setAllSubscriptions(prev => [...generatedSubs, ...prev.filter(s => !generatedSubs.some(g => g.id === s.id))]);
+      setSubscriptions(prev => [...generatedSubs, ...prev.filter(s => !generatedSubs.some(g => g.id === s.id))]);
+
       setAllOrders(prev => prev.map(o => o.id === orderId ? {
         ...o,
         paymentStatus: 'paid',
         deliveryStatus: 'delivered',
         generatedSubscriptionIds: generatedSubIds,
       } : o));
+
+      setOrders(prev => prev.map(o => o.id === orderId ? {
+        ...o,
+        paymentStatus: 'paid',
+        deliveryStatus: 'delivered',
+        generatedSubscriptionIds: generatedSubIds,
+      } : o));
+
+      // Automated ticket / notification dispatch to customer
+      try {
+        await adminSendMessageToUser(
+          ord.userId,
+          ord.userEmail,
+          `Order #${ord.orderNumber} Approved & Delivered`,
+          `🎉 Your payment for Order #${ord.orderNumber} (${ord.items.map(i => i.productName).join(', ')}) has been verified and approved! Your credentials have been provisioned to your Customer Dashboard Vault.`
+        );
+      } catch {}
     } catch (err) {
       console.error('adminApproveAndDeliverOrder error:', err);
     }
@@ -1055,6 +1281,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         adminNotes: reason || 'Payment not received or invalid TrxID.',
       });
       setAllOrders(prev => prev.map(o => o.id === orderId ? {
+        ...o,
+        paymentStatus: 'failed',
+        deliveryStatus: 'failed',
+        adminNotes: reason || 'Payment not received or invalid TrxID.',
+      } : o));
+      setOrders(prev => prev.map(o => o.id === orderId ? {
         ...o,
         paymentStatus: 'failed',
         deliveryStatus: 'failed',
@@ -1139,6 +1371,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Admin: Subscription management ───────────────────────────────
   const adminUpdateSubscriptionCredentials = async (subId: string, credentials: Partial<UserSubscription['credentials']>) => {
+    setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials } } : s));
+    setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials } } : s));
     try {
       const subRef = doc(db, 'subscriptions', subId);
       const subSnap = await getDoc(subRef);
@@ -1150,6 +1384,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminUpdateSubscriptionStatus = async (subId: string, status: UserSubscription['status']) => {
+    setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, status } : s));
+    setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, status } : s));
     try {
       await updateDoc(doc(db, 'subscriptions', subId), { status });
     } catch (err) {
@@ -1451,6 +1687,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ─── Admin Hero Slides Dynamic Customization ────────────────────────
+  const adminCreateHeroSlide = async (slideData: Omit<HeroSlide, 'id'>): Promise<string> => {
+    const slideId = generateRandomId('hero');
+    const newSlide: HeroSlide = {
+      ...slideData,
+      id: slideId,
+      order: slideData.order ?? (heroSlides.length + 1),
+    };
+    setHeroSlides(prev => [...prev, newSlide]);
+    try {
+      await setDoc(doc(db, 'hero_slides', slideId), newSlide);
+    } catch (err) {
+      console.warn('[Firestore] Admin hero slide create error:', err);
+    }
+    return slideId;
+  };
+
+  const adminUpdateHeroSlide = async (id: string, updates: Partial<HeroSlide>) => {
+    setHeroSlides(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    try {
+      await updateDoc(doc(db, 'hero_slides', id), updates);
+    } catch (err) {
+      console.warn('[Firestore] Admin hero slide update error:', err);
+    }
+  };
+
+  const adminDeleteHeroSlide = async (id: string) => {
+    setHeroSlides(prev => prev.filter(s => s.id !== id));
+    try {
+      await deleteDoc(doc(db, 'hero_slides', id));
+    } catch (err) {
+      console.warn('[Firestore] Admin hero slide delete error:', err);
+    }
+  };
+
+  const adminResetHeroSlides = async () => {
+    setHeroSlides(MOCK_HERO_SLIDES);
+    try {
+      const snap = await getDocs(collection(db, 'hero_slides'));
+      const batch = writeBatch(db);
+      for (const d of snap.docs) {
+        batch.delete(d.ref);
+      }
+      for (const s of MOCK_HERO_SLIDES) {
+        batch.set(doc(db, 'hero_slides', s.id), s);
+      }
+      await batch.commit();
+    } catch (err) {
+      console.warn('[Firestore] Admin reset hero slides error:', err);
+    }
+  };
+
   // ─── Memoize context value to prevent all-consumer re-renders ────────
   // Without this, every setState call in AppProvider re-creates the value
   // object and forces ALL useApp() consumers to re-render simultaneously.
@@ -1461,7 +1749,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isCartOpen, setIsCartOpen, isCheckoutOpen, setIsCheckoutOpen,
     processCheckout, orders, latestOrder, setLatestOrder,
     subscriptions, toggleAutoRenew, extendSubscription, activeVaultSub, setActiveVaultSub,
-    user, setUser, toggleUserRole, firebaseUser, isAuthModalOpen, setIsAuthModalOpen,
+    user, setUser, updateUserProfile, toggleUserRole, firebaseUser, isAuthModalOpen, setIsAuthModalOpen,
     logout: async () => { try { await signOut(auth); } catch { } },
     isAdmin,
     isSuperAdmin,
@@ -1474,6 +1762,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
+    heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
     allTickets, adminReplyToTicket, adminCloseTicket, adminSendMessageToUser,
     financialMetrics, emailNotifications, sendTestEmail,
     triggerRenewalCronSimulation, fastForwardSimulationDays,
@@ -1488,7 +1777,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
-    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods,
+    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides,
     financialMetrics, emailNotifications, isSyncing,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
     activeSearchQuery, activeCategoryFilter,

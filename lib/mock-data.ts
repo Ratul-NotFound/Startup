@@ -1,4 +1,4 @@
-import { Product, Coupon, CustomerProfile, UserSubscription, Order, SupportTicket, FinancialMetric, Review, BangladeshPaymentMethod } from '@/types';
+import { Product, Coupon, CustomerProfile, UserSubscription, Order, SupportTicket, FinancialMetric, Review, BangladeshPaymentMethod, HeroSlide } from '@/types';
 
 export const MOCK_PAYMENT_METHODS: BangladeshPaymentMethod[] = [
   {
@@ -751,6 +751,49 @@ export const MOCK_REVIEWS: Review[] = [
     likes: 17,
     likedBy: [],
     planDuration: '12 Months',
+  },
+];
+
+export const MOCK_HERO_SLIDES: HeroSlide[] = [
+  {
+    id: 'hero_1',
+    sub: 'Save Up to 80% on Official Digital Plans',
+    title: 'Premium Subscriptions at Wholesale Rates',
+    tag: 'INSTANT 30S DELIVERY',
+    bgImage: '/images/hero-vault.jpg',
+    ctaText: 'Explore Catalog',
+    ctaLink: '#catalog',
+    order: 1,
+  },
+  {
+    id: 'hero_2',
+    sub: 'ChatGPT Plus, Gemini Advanced & 4K Cinema',
+    title: 'AI Models & 4K Streaming Hub',
+    tag: 'VERIFIED OFFICIAL ACCOUNTS',
+    bgImage: '/images/hero-ai-cinema.jpg',
+    ctaText: 'View AI Tools',
+    ctaLink: '#catalog',
+    order: 2,
+  },
+  {
+    id: 'hero_3',
+    sub: 'Cursor Pro, Claude 3.5 & Developer Workspaces',
+    title: 'Pro Developer & Cloud Suites',
+    tag: 'FAST CLOUD SERVERS',
+    bgImage: '/images/hero-dev-code.jpg',
+    ctaText: 'Browse Dev Tools',
+    ctaLink: '#catalog',
+    order: 3,
+  },
+  {
+    id: 'hero_4',
+    sub: 'Adobe Creative Cloud & NordVPN Complete',
+    title: 'Creative Design & Security Suites',
+    tag: '100% REPLACEMENT WARRANTY',
+    bgImage: '/images/hero-creative-vpn.jpg',
+    ctaText: 'Discover Creative Apps',
+    ctaLink: '#catalog',
+    order: 4,
   },
 ];
 

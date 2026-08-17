@@ -4,60 +4,38 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { ArrowRight, Zap } from 'lucide-react';
 import { MagneticButton } from '@/components/ui/MagneticButton';
+import { useApp } from '@/context/AppContext';
+import { MOCK_HERO_SLIDES } from '@/lib/mock-data';
 
 export const HeroBanner: React.FC = () => {
+  const { heroSlides } = useApp();
   const containerRef = useRef<HTMLElement>(null);
   const isInView = useInView(containerRef, { margin: '200px 0px 200px 0px', once: false });
   const [activeSlide, setActiveSlide] = useState(0);
 
-  const backgroundSlides = [
-    {
-      sub: 'Save Up to 80% on Official Digital Plans',
-      title: 'Premium Subscriptions at Wholesale Rates',
-      tag: 'INSTANT 30S DELIVERY',
-      bgImage: '/images/hero-vault.jpg',
-    },
-    {
-      sub: 'ChatGPT Plus, Gemini Advanced & 4K Cinema',
-      title: 'AI Models & 4K Streaming Hub',
-      tag: 'VERIFIED OFFICIAL ACCOUNTS',
-      bgImage: '/images/hero-ai-cinema.jpg',
-    },
-    {
-      sub: 'Cursor Pro, Claude 3.5 & Developer Workspaces',
-      title: 'Pro Developer & Cloud Suites',
-      tag: 'FAST CLOUD SERVERS',
-      bgImage: '/images/hero-dev-code.jpg',
-    },
-    {
-      sub: 'Adobe Creative Cloud & NordVPN Complete',
-      title: 'Creative Design & Security Suites',
-      tag: '100% REPLACEMENT WARRANTY',
-      bgImage: '/images/hero-creative-vpn.jpg',
-    },
-  ];
+  const slides = (heroSlides && heroSlides.length > 0) ? heroSlides : MOCK_HERO_SLIDES;
 
   useEffect(() => {
     if (!isInView) return;
     const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % backgroundSlides.length);
+      setActiveSlide((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
-  }, [backgroundSlides.length, isInView]);
+  }, [slides.length, isInView]);
 
-  const current = backgroundSlides[activeSlide];
+  const current = slides[activeSlide % slides.length] || slides[0] || MOCK_HERO_SLIDES[0];
 
   return (
     <section ref={containerRef} className="relative min-h-[86vh] sm:min-h-[92vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12" suppressHydrationWarning>
       
-      {/* 100% Full-Viewport Responsive 4-Slide Background Carousel */}
+      {/* 100% Full-Viewport Responsive Dynamic Slides Background Carousel */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ transform: 'translateZ(0)' }} suppressHydrationWarning>
-        {backgroundSlides.map((slide, idx) => (
+        {slides.map((slide, idx) => (
           <div
-            key={idx}
+            key={slide.id || idx}
             suppressHydrationWarning
             className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out will-change-[opacity] ${
-              idx === activeSlide ? 'opacity-100' : 'opacity-0'
+              idx === (activeSlide % slides.length) ? 'opacity-100' : 'opacity-0'
             }`}
           >
             <img
@@ -66,7 +44,7 @@ export const HeroBanner: React.FC = () => {
               loading={idx === 0 ? 'eager' : 'lazy'}
               decoding="async"
               className={`w-full h-full object-cover object-center transition-transform duration-[8000ms] ease-out will-change-transform ${
-                idx === activeSlide ? 'scale-108' : 'scale-100'
+                idx === (activeSlide % slides.length) ? 'scale-108' : 'scale-100'
               }`}
             />
           </div>
@@ -177,12 +155,12 @@ export const HeroBanner: React.FC = () => {
       {/* Hero Carousel Indicators with Smooth Spring Bar Transition */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full flex justify-center">
         <div className="flex items-center justify-center gap-2">
-          {backgroundSlides.map((_, idx) => (
+          {slides.map((_, idx) => (
             <button
               key={idx}
               onClick={() => setActiveSlide(idx)}
               className={`relative h-1.5 rounded-full transition-all duration-300 ${
-                idx === activeSlide ? 'w-10 bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]' : 'w-2.5 bg-white/20 hover:bg-white/40'
+                idx === (activeSlide % slides.length) ? 'w-10 bg-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.8)]' : 'w-2.5 bg-white/20 hover:bg-white/40'
               }`}
               aria-label={`Go to slide ${idx + 1}`}
             />

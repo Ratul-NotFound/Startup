@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter, usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import {
   X,
@@ -17,6 +18,9 @@ import {
 import { formatCurrency } from '@/lib/utils';
 
 export const CartDrawer: React.FC = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const {
     cart,
     isCartOpen,
@@ -36,6 +40,20 @@ export const CartDrawer: React.FC = () => {
 
   const [couponInput, setCouponInput] = useState('');
   const [couponFeedback, setCouponFeedback] = useState<{ success?: boolean; message?: string } | null>(null);
+
+  const handleBrowseCatalog = () => {
+    setIsCartOpen(false);
+    if (pathname === '/') {
+      const el = document.getElementById('catalog');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 600, behavior: 'smooth' });
+      }
+    } else {
+      router.push('/#catalog');
+    }
+  };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,8 +132,8 @@ export const CartDrawer: React.FC = () => {
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setIsCartOpen(false)}
-                      className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)]"
+                      onClick={handleBrowseCatalog}
+                      className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] cursor-pointer"
                     >
                       Browse Catalog
                     </motion.button>

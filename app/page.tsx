@@ -31,7 +31,7 @@ export default function HomePage() {
       </div>
 
       {/* 3. Subscription Product Vault */}
-      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4" suppressHydrationWarning>
+      <div id="catalog" className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 scroll-mt-24" suppressHydrationWarning>
         <Scroll3DReveal direction="up" rotateXAmount={14} delay={0.1}>
           <ProductCatalog />
         </Scroll3DReveal>

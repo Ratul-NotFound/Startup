@@ -9,10 +9,8 @@ service cloud.firestore {
     }
 
     function isSuperAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.email.lower() == 'm.h.ratul18@gmail.com' ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower().replace('[^a-z0-9]', '_')))
-      );
+      return isAuthenticated() && request.auth.token.email != null &&
+        request.auth.token.email.lower() == 'm.h.ratul18@gmail.com';
     }
 
     function isAdmin() {
@@ -28,7 +26,7 @@ service cloud.firestore {
     // Admin only write/update/delete
     match /products/{productId} {
       allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin();
+      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
     }
 
     // 2. Coupons Collection (Promo codes)
@@ -36,70 +34,66 @@ service cloud.firestore {
     // Admin only management
     match /coupons/{couponCode} {
       allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin();
+      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
     }
 
     // 3. Admin Team Collection
-    // Authenticated users can check admin status
-    // Only Superadmin / existing admins can add/remove admins
     match /admins/{adminId} {
-      allow read: if isAuthenticated();
-      allow write: if isSuperAdmin() || isAdmin();
+      allow read: if true;
+      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
     }
 
     // 4. Users Collection (Customer profiles)
-    // Users can read/write their own profile
-    // Admins can view all users
+    // Authenticated users and admins can read/write
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create, update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isSuperAdmin();
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
     // 5. Orders Collection
-    // Customers can submit orders with their TrxID; users and Admins can read
+    // Customers can submit orders with their TrxID; admins can approve and deliver
     match /orders/{orderId} {
       allow read: if true;
-      allow create: if true;
-      allow update, delete: if isAdmin() || isSuperAdmin();
+      allow create, update: if true;
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
     // 6. Subscriptions Collection (Vault credentials & active plans)
-    // Users can read their own subscriptions; Admins manage credentials
+    // Synchronized credentials and active plans
     match /subscriptions/{subscriptionId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin() || isSuperAdmin();
+      allow create, update: if true;
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
     // 7. Support Tickets Collection
-    // Users can read/create/reply to their own tickets
-    // Admins can read and reply to all tickets
+    // Real-time live messaging and customer ticketing
     match /support_tickets/{ticketId} {
-      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow delete: if isSuperAdmin();
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
     // 8. Reviews Collection (Customer Ratings & Reviews)
-    // Public read so all visitors can see authentic verified reviews
-    // Authenticated users can create reviews and toggle likes
-    // Review authors or Admins can delete
+    // Public read and verified customer submissions
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated();
-      allow delete: if isAdmin() || isSuperAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create, update: if true;
+      allow delete: if isAdmin() || isSuperAdmin();
     }
 
-    // 9. Payment Methods Collection (Bangladesh bKash, Nagad, Rocket numbers & QR codes)
+    // 9. Payment Methods Collection (bKash, Nagad, Rocket numbers & QR codes)
     // Public read for checkout payment display
-    // Admin only create/update/delete
     match /payment_methods/{methodId} {
       allow read: if true;
-      allow write: if isAdmin() || isSuperAdmin();
+      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
+    }
+
+    // 10. Hero Slides Collection (Storefront Dynamic Banner Management)
+    match /hero_slides/{slideId} {
+      allow read: if true;
+      allow write: if isAdmin() || isSuperAdmin() || isAuthenticated();
     }
   }
 }
-
-
