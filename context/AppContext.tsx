@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
@@ -1367,38 +1367,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // ─── Memoize context value to prevent all-consumer re-renders ────────
+  // Without this, every setState call in AppProvider re-creates the value
+  // object and forces ALL useApp() consumers to re-render simultaneously.
+  const contextValue = useMemo(() => ({
+    products, selectedProduct, setSelectedProduct,
+    cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart,
+    appliedCoupon, applyCoupon, removeCoupon, cartSubtotal, cartDiscount, cartTotal,
+    isCartOpen, setIsCartOpen, isCheckoutOpen, setIsCheckoutOpen,
+    processCheckout, orders, latestOrder, setLatestOrder,
+    subscriptions, toggleAutoRenew, extendSubscription, activeVaultSub, setActiveVaultSub,
+    user, setUser, toggleUserRole, firebaseUser, isAuthModalOpen, setIsAuthModalOpen,
+    logout: async () => { try { await signOut(auth); } catch { } },
+    isAdmin,
+    isSuperAdmin,
+    adminList,
+    adminAddAdmin,
+    adminRemoveAdmin,
+    adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
+    allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
+    allUsers, adminUpdateUserRole,
+    allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
+    coupons, adminCreateCoupon, adminDeleteCoupon,
+    paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
+    allTickets, adminReplyToTicket, adminCloseTicket,
+    financialMetrics, emailNotifications, sendTestEmail,
+    triggerRenewalCronSimulation, fastForwardSimulationDays,
+    refreshAllData, isSyncing,
+    tickets, createSupportTicket, replyToTicket,
+    reviews, addReview, likeReview, deleteReview,
+    adminCreateReview, adminUpdateReview, adminResetReviews,
+    isWriteReviewOpen, setIsWriteReviewOpen,
+    targetReviewProduct, setTargetReviewProduct,
+    activeSearchQuery, setActiveSearchQuery, activeCategoryFilter, setActiveCategoryFilter,
+  }), [
+    products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
+    orders, latestOrder, subscriptions, activeVaultSub,
+    user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
+    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods,
+    financialMetrics, emailNotifications, isSyncing,
+    tickets, reviews, isWriteReviewOpen, targetReviewProduct,
+    activeSearchQuery, activeCategoryFilter,
+    cartSubtotal, cartDiscount, cartTotal,
+    // stable function refs (useCallback) don't need to be in deps
+    addToCart, removeFromCart, updateCartItemQuantity, clearCart,
+    applyCoupon, removeCoupon, setSelectedProduct, setIsCartOpen,
+    setIsCheckoutOpen, processCheckout, setLatestOrder,
+    toggleAutoRenew, extendSubscription, setActiveVaultSub,
+    setUser, toggleUserRole, setIsAuthModalOpen,
+    adminAddAdmin, adminRemoveAdmin,
+    adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
+    adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
+    adminUpdateUserRole, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
+    adminCreateCoupon, adminDeleteCoupon,
+    adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
+    adminReplyToTicket, adminCloseTicket,
+    sendTestEmail, triggerRenewalCronSimulation, fastForwardSimulationDays, refreshAllData,
+    createSupportTicket, replyToTicket,
+    addReview, likeReview, deleteReview,
+    adminCreateReview, adminUpdateReview, adminResetReviews,
+    setIsWriteReviewOpen, setTargetReviewProduct,
+    setActiveSearchQuery, setActiveCategoryFilter,
+  ]);
+
   return (
-    <AppContext.Provider value={{
-      products, selectedProduct, setSelectedProduct,
-      cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart,
-      appliedCoupon, applyCoupon, removeCoupon, cartSubtotal, cartDiscount, cartTotal,
-      isCartOpen, setIsCartOpen, isCheckoutOpen, setIsCheckoutOpen,
-      processCheckout, orders, latestOrder, setLatestOrder,
-      subscriptions, toggleAutoRenew, extendSubscription, activeVaultSub, setActiveVaultSub,
-      user, setUser, toggleUserRole, firebaseUser, isAuthModalOpen, setIsAuthModalOpen,
-      logout: async () => { try { await signOut(auth); } catch { } },
-      isAdmin,
-      isSuperAdmin,
-      adminList,
-      adminAddAdmin,
-      adminRemoveAdmin,
-      adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
-      allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
-      allUsers, adminUpdateUserRole,
-      allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
-      coupons, adminCreateCoupon, adminDeleteCoupon,
-      paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
-      allTickets, adminReplyToTicket, adminCloseTicket,
-      financialMetrics, emailNotifications, sendTestEmail,
-      triggerRenewalCronSimulation, fastForwardSimulationDays,
-      refreshAllData, isSyncing,
-      tickets, createSupportTicket, replyToTicket,
-      reviews, addReview, likeReview, deleteReview,
-      adminCreateReview, adminUpdateReview, adminResetReviews,
-      isWriteReviewOpen, setIsWriteReviewOpen,
-      targetReviewProduct, setTargetReviewProduct,
-      activeSearchQuery, setActiveSearchQuery, activeCategoryFilter, setActiveCategoryFilter,
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

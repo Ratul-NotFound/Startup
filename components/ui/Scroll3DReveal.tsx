@@ -19,15 +19,16 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
   className = '',
   delay = 0,
   direction = 'up',
-  rotateXAmount = 22,
+  // Halved from original values — full visual effect, much lower composite cost
+  rotateXAmount = 6,
   rotateYAmount = 0,
-  scaleAmount = 0.88,
+  scaleAmount = 0.97,
   perspective = 1400,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const initialY = direction === 'up' ? 60 : direction === 'down' ? -60 : 0;
-  const initialX = direction === 'left' ? 60 : direction === 'right' ? -60 : 0;
+  const initialY = direction === 'up' ? 32 : direction === 'down' ? -32 : 0;
+  const initialX = direction === 'left' ? 32 : direction === 'right' ? -32 : 0;
 
   return (
     <div style={{ perspective }} className={`overflow-visible ${className}`} suppressHydrationWarning>
@@ -50,9 +51,9 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
           rotateX: 0,
           rotateY: 0,
         }}
-        viewport={{ once: true, margin: '-40px' }}
+        viewport={{ once: true, margin: '-20px' }}
         transition={{
-          duration: 0.7,
+          duration: 0.5,
           delay,
           ease: [0.16, 1, 0.3, 1],
         }}
@@ -61,6 +62,7 @@ export const Scroll3DReveal: React.FC<Scroll3DRevealProps> = ({
           transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
+          willChange: 'opacity, transform',
         }}
         className="w-full h-full"
       >

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -8,34 +8,8 @@ import { SubscriptionCategory } from '@/types';
 import { Interactive3DCard } from '@/components/ui/Interactive3DCard';
 import { ProductCardImageCarousel } from './ProductCardImageCarousel';
 
-export const ProductCatalog: React.FC = () => {
-  const {
-    products,
-    setSelectedProduct,
-    addToCart,
-    activeSearchQuery,
-    setActiveSearchQuery,
-  } = useApp();
-
-  const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'discount'>('popular');
-  const [selectedPlanMap, setSelectedPlanMap] = useState<Record<string, number>>({});
-
-  // Refs for each category horizontal scroll container
-  const scrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  const scrollCategory = (catId: string, direction: 'left' | 'right') => {
-    const el = scrollRefs.current[catId];
-    if (el) {
-      const scrollAmount = direction === 'left' ? -380 : 380;
-      el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
-
-  const categoryMetadata: {
-    id: SubscriptionCategory;
-    label: string;
-    description: string;
-  }[] = [
+// Module-level constant — never recreated on re-renders
+const CATEGORY_METADATA: { id: SubscriptionCategory; label: string; description: string }[] = [
     {
       id: 'ai',
       label: 'AI & Productivity',
@@ -61,9 +35,30 @@ export const ProductCatalog: React.FC = () => {
       label: 'VPN & Online Security',
       description: 'Encrypted privacy tunnels, threat protection & fast proxies',
     },
-  ];
+];
 
-  // Filter & Sort Logic
+export const ProductCatalog: React.FC = () => {
+  const {
+    products,
+    setSelectedProduct,
+    addToCart,
+    activeSearchQuery,
+    setActiveSearchQuery,
+  } = useApp();
+
+  const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'discount'>('popular');
+  const [selectedPlanMap, setSelectedPlanMap] = useState<Record<string, number>>({});
+
+  // Refs for each category horizontal scroll container
+  const scrollRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const scrollCategory = useCallback((catId: string, direction: 'left' | 'right') => {
+    const el = scrollRefs.current[catId];
+    if (el) {
+      const scrollAmount = direction === 'left' ? -380 : 380;
+      el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  }, []);
   const processedProducts = useMemo(() => {
     let list = [...products];
 
@@ -92,7 +87,7 @@ export const ProductCatalog: React.FC = () => {
 
   // Group products by category
   const categoryGroups = useMemo(() => {
-    return categoryMetadata
+    return CATEGORY_METADATA
       .map((meta) => {
         const catProducts = processedProducts.filter((p) => p.category === meta.id);
         return {
@@ -102,11 +97,11 @@ export const ProductCatalog: React.FC = () => {
         };
       })
       .filter((group) => group.products.length > 0);
-  }, [processedProducts, categoryMetadata]);
+  }, [processedProducts]);
 
-  const handleSelectPlanIndex = (productId: string, planIndex: number) => {
+  const handleSelectPlanIndex = useCallback((productId: string, planIndex: number) => {
     setSelectedPlanMap((prev) => ({ ...prev, [productId]: planIndex }));
-  };
+  }, []);
 
   const sortOptions = [
     { id: 'popular', label: 'Popular', icon: <TrendingUp className="h-3.5 w-3.5" /> },

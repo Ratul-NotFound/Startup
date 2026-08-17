@@ -1,13 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false, // Disable double-render in dev for cleaner perf profiling
 
-  // ─── Images: explicit allowed hostnames instead of wildcard ────────
+  // ─── Compiler: strip console.log in production ────────────────────
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+  },
+
+  // ─── Experimental: optimize package imports ────────────────────────
+  experimental: {
+    optimizePackageImports: ['framer-motion', 'lucide-react', 'recharts'],
+  },
+
+  // ─── Images: serve WebP/AVIF + explicit allowed hostnames ──────────
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400, // cache 24h
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'ui-avatars.com' },
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // Google OAuth avatars
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
       { protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
       { protocol: 'https', hostname: 'i.giphy.com' },
       { protocol: 'https', hostname: 'media.giphy.com' },

@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useCallback } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { useIsLowEndDevice } from '@/hooks/useIsLowEndDevice';
 
 interface Interactive3DCardProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const isLowEnd = useIsLowEndDevice();
 
   // Mouse physics with smooth springs
   const x = useMotionValue(0.5);
@@ -68,6 +70,21 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
 
   const animationDelay = delay !== undefined ? delay : Math.min(index * 0.06, 0.35);
 
+  // On low-end devices skip 3D physics — just use a simple fade-in
+  if (isLowEnd) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.35, delay: animationDelay }}
+        className={`relative h-full ${className}`}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+
   return (
     <div style={{ perspective: 1200 }} className="h-full">
       <motion.div
@@ -77,10 +94,10 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
         onMouseLeave={handleMouseLeave}
         initial={{
           opacity: 0,
-          y: 50,
-          scale: 0.9,
-          rotateX: 20,
-          rotateY: index % 2 === 0 ? -8 : 8,
+          y: 30,
+          scale: 0.95,
+          rotateX: 10,
+          rotateY: index % 2 === 0 ? -4 : 4,
         }}
         whileInView={{
           opacity: 1,
@@ -91,7 +108,7 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
         }}
         viewport={{ once: true, margin: '-40px' }}
         transition={{
-          duration: 0.7,
+          duration: 0.5,
           delay: animationDelay,
           ease: [0.16, 1, 0.3, 1],
         }}
@@ -102,6 +119,7 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
           transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
+          willChange: isHovered ? 'transform' : 'auto',
         }}
         whileHover={{
           scale: 1.03,
