@@ -12,6 +12,7 @@ const nextConfig = {
     optimizePackageImports: ['framer-motion', 'lucide-react', 'recharts'],
   },
 
+
   // ─── Images: serve WebP/AVIF + explicit allowed hostnames ──────────
   images: {
     formats: ['image/avif', 'image/webp'],

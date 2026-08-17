@@ -2798,36 +2798,52 @@ export default function AdminPortalPage() {
                           </td>
 
                           <td className="p-4">
-                            <div className="p-2.5 rounded-xl bg-zinc-950/80 border border-white/[0.06] space-y-1.5 max-w-[260px]">
-                              <div className="flex items-center justify-between text-[11px] font-mono">
-                                <span className="text-slate-400">User:</span>
-                                <span className="text-white font-bold truncate select-all">{s.credentials?.email || 'N/A'}</span>
-                              </div>
-                              {s.credentials?.password && (
+                            {(!s.credentials?.email && !s.credentials?.password) || s.credentialsConfigured === false ? (
+                              <button
+                                type="button"
+                                onClick={() => setEditingFullSubscription({ ...s, isNew: false })}
+                                className="w-full flex items-center gap-2 p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/40 hover:border-amber-400/70 transition-all cursor-pointer group"
+                                title="Click to set real credentials for this customer"
+                              >
+                                <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                                <div className="text-left">
+                                  <div className="text-amber-400 font-bold text-[11px]">⚠️ Credentials Needed</div>
+                                  <div className="text-slate-500 text-[10px]">Click Edit to configure real login</div>
+                                </div>
+                              </button>
+                            ) : (
+                              <div className="p-2.5 rounded-xl bg-zinc-950/80 border border-white/[0.06] space-y-1.5 max-w-[260px]">
                                 <div className="flex items-center justify-between text-[11px] font-mono">
-                                  <span className="text-slate-400">Pass:</span>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-cyan-300 font-bold select-all">
-                                      {isPwdVisible ? s.credentials.password : '••••••••'}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setShowAdminVaultPassword(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
-                                      className="text-slate-500 hover:text-white p-0.5 cursor-pointer"
-                                    >
-                                      {isPwdVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                                    </button>
+                                  <span className="text-slate-400">User:</span>
+                                  <span className="text-white font-bold truncate max-w-[160px] select-all">{s.credentials?.email || '—'}</span>
+                                </div>
+                                {s.credentials?.password && (
+                                  <div className="flex items-center justify-between text-[11px] font-mono">
+                                    <span className="text-slate-400">Pass:</span>
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-cyan-300 font-bold select-all">
+                                        {isPwdVisible ? s.credentials.password : '••••••••'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowAdminVaultPassword(prev => ({ ...prev, [s.id]: !prev[s.id] }))}
+                                        className="text-slate-500 hover:text-white p-0.5 cursor-pointer"
+                                      >
+                                        {isPwdVisible ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                      </button>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                              {(s.credentials?.pinCode || s.credentials?.profileName) && (
-                                <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-white/[0.04]">
-                                  <span>{s.credentials.profileName || 'Slot'}</span>
-                                  <span className="text-amber-400 font-mono font-bold">PIN: {s.credentials.pinCode || 'None'}</span>
-                                </div>
-                              )}
-                            </div>
+                                )}
+                                {(s.credentials?.pinCode || s.credentials?.profileName) && (
+                                  <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-white/[0.04]">
+                                    <span>{s.credentials.profileName || 'Slot'}</span>
+                                    <span className="text-amber-400 font-mono font-bold">PIN: {s.credentials.pinCode || 'None'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </td>
+
 
                           <td className="p-4">
                             <select

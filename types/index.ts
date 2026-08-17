@@ -98,6 +98,7 @@ export interface AccountCredentials {
 export interface UserSubscription {
   id: string;
   orderId: string;
+  orderNumber?: string;
   productId: string;
   productName: string;
   productLogo: string;
@@ -116,7 +117,9 @@ export interface UserSubscription {
   paymentMethod: PaymentMethod;
   userId?: string;
   userEmail?: string;
+  credentialsConfigured?: boolean; // false = admin needs to set real credentials
 }
+
 
 export interface Order {
   id: string;

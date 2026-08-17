@@ -283,6 +283,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Active unsubs ref to clean up on unmount or user change
   const unsubscribersRef = useRef<(() => void)[]>([]);
+  // Separate ref for admin-wide global listeners (never cleared on user sub updates)
+  const adminUnsubscribersRef = useRef<(() => void)[]>([]);
 
   // ─── Analytics init ────────────────────────────────────────────────
   useEffect(() => { initAnalytics(); }, []);
@@ -567,9 +569,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Real-time Admin Data Listeners ─────────────────────────────────
   const setupAdminRealtimeListeners = useCallback(() => {
-    // Clear any previous listeners
-    unsubscribersRef.current.forEach(u => u());
-    unsubscribersRef.current = [];
+    // Clear ONLY previous admin-wide listeners (never touch user-specific ones)
+    adminUnsubscribersRef.current.forEach(u => u());
+    adminUnsubscribersRef.current = [];
 
     // All orders listener
     const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
@@ -594,21 +596,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         averageOrderValue: ords.length > 0 ? totalRev / ords.length : 0,
       }));
     });
-    unsubscribersRef.current.push(unsubOrders);
+    adminUnsubscribersRef.current.push(unsubOrders);
 
     // All users listener
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const usrs = snapshot.docs.map(d => d.data() as CustomerProfile);
       setAllUsers(usrs);
     });
-    unsubscribersRef.current.push(unsubUsers);
+    adminUnsubscribersRef.current.push(unsubUsers);
 
     // All subscriptions listener
     const unsubSubs = onSnapshot(collection(db, 'subscriptions'), (snapshot) => {
       const sbs = snapshot.docs.map(d => d.data() as UserSubscription);
       setAllSubscriptions(sbs);
     });
-    unsubscribersRef.current.push(unsubSubs);
+    adminUnsubscribersRef.current.push(unsubSubs);
 
     // All support tickets listener
     const unsubTickets = onSnapshot(collection(db, 'support_tickets'), (snapshot) => {
@@ -617,7 +619,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       setAllTickets(tkts);
     });
-    unsubscribersRef.current.push(unsubTickets);
+    adminUnsubscribersRef.current.push(unsubTickets);
   }, []);
 
   // ─── Auth state listener & User-specific live listeners ─────────────
@@ -787,7 +789,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setIsAuthModalOpen(false);
       } else {
-        // Signed out
+        // Signed out — clear everything
         setIsSuperAdmin(false);
         setIsAdmin(false);
         setUser(INITIAL_USER_PROFILE);
@@ -799,15 +801,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAllSubscriptions([]);
         setAllTickets([]);
 
-        // Clean up listeners
+        // Clean up user-specific listeners
         unsubscribersRef.current.forEach(u => u());
         unsubscribersRef.current = [];
+        // Clean up admin-wide listeners
+        adminUnsubscribersRef.current.forEach(u => u());
+        adminUnsubscribersRef.current = [];
       }
     });
 
     return () => {
       unsubscribeAuth();
       unsubscribersRef.current.forEach(u => u());
+      adminUnsubscribersRef.current.forEach(u => u());
       unsubscribersRef.current = [];
     };
   }, [setupAdminRealtimeListeners]);
@@ -892,9 +898,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         subUidSnap.docs.forEach(d => subsMap.set(d.id, d.data() as UserSubscription));
         subEmailSnap.docs.forEach(d => subsMap.set(d.id, d.data() as UserSubscription));
         const userSubs = Array.from(subsMap.values());
-        if (userSubs.length > 0 || !isAdmin) {
-          setSubscriptions(userSubs);
-        }
+        // Always set user subscriptions regardless of admin role
+        setSubscriptions(userSubs);
       }
 
       // If admin, refresh all collections
@@ -916,14 +921,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (firebaseUser?.email) {
           const myEmail = (firebaseUser.email || '').toLowerCase().trim();
-          const myUid = firebaseUser.uid;
+          const myUid = firebaseUser.uid || '';
           const myAdminSubs = allSubsList.filter(s =>
             (s.userId && (s.userId === myUid || s.userId === user.id)) ||
-            (s.userEmail && s.userEmail.toLowerCase() === myEmail)
+            (s.userEmail && s.userEmail.toLowerCase().trim() === myEmail)
           );
-          if (myAdminSubs.length > 0) {
-            setSubscriptions(myAdminSubs);
-          }
+          // Always update user-facing subscriptions for admin panel owner too
+          setSubscriptions(myAdminSubs);
         }
         setAllTickets(tktSnap.docs.map(d => d.data() as SupportTicket).sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -1048,29 +1052,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // If auto-verified / instant test card
     if (!isBangladesh) {
       const generatedSubIds: string[] = [];
+      // ONE subscription per cart LINE ITEM (not per unit quantity)
       for (const item of cart) {
-        for (let i = 0; i < item.quantity; i++) {
-          const subId = generateRandomId('sub');
-          generatedSubIds.push(subId);
-          const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
-          const durationDays = daysMap[item.selectedPlan.duration] || 30;
-          const startDate = new Date().toISOString();
-          const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
-          const creds = generateMockCredentials(item.product.name, item.product.accountType, currentEmail);
-          const sub: UserSubscription = {
-            id: subId, orderId,
-            productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
-            planDuration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
-            pricePaid: item.selectedPlan.price, status: 'active', startDate, expiryDate,
-            autoRenew: true, autoRenewReminderDays: 3, accountType: item.product.accountType,
-            warrantyValidUntil: expiryDate, paymentMethod, credentials: creds,
-            userId: currentUid,
-            userEmail: currentEmail,
-          };
-          try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
-        }
+        const subId = generateRandomId('sub');
+        generatedSubIds.push(subId);
+        const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+        const durationDays = daysMap[item.selectedPlan.duration] || 30;
+        const startDate = new Date().toISOString();
+        const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
+        const sub: UserSubscription = {
+          id: subId, orderId,
+          orderNumber: orderNum,
+          productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
+          planDuration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
+          pricePaid: item.selectedPlan.price * item.quantity, status: 'active', startDate, expiryDate,
+          autoRenew: true, autoRenewReminderDays: 3, accountType: item.product.accountType,
+          warrantyValidUntil: expiryDate, paymentMethod,
+          credentials: {
+            email: '',
+            password: '',
+            pinCode: '',
+            notes: 'Admin will provision credentials shortly.',
+          },
+          credentialsConfigured: false,
+          userId: currentUid,
+          userEmail: currentEmail,
+        };
+        try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
       }
       newOrder.generatedSubscriptionIds = generatedSubIds;
+
 
       // Update user stats in Firestore for instant payment
       try {
@@ -1264,51 +1275,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const generatedSubs: UserSubscription[] = [];
       const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
 
+      // Create ONE subscription per order LINE ITEM (not per unit quantity)
+      // quantity is stored on the subscription — keeps vault clean & logical
       for (const item of ord.items) {
-        for (let i = 0; i < (item.quantity || 1); i++) {
-          const subId = generateRandomId('sub');
-          generatedSubIds.push(subId);
-          const durationDays = daysMap[item.duration] || 30;
-          const startDate = new Date().toISOString();
-          const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
-          const autoCreds = generateMockCredentials(item.productName, 'private_account', ord.userEmail);
-          const finalCreds = {
-            email: customCreds?.email || autoCreds.email,
-            password: customCreds?.password || autoCreds.password,
-            pinCode: customCreds?.pinCode || autoCreds.pinCode,
-            notes: customCreds?.notes || autoCreds.notes,
-          };
+        const subId = generateRandomId('sub');
+        generatedSubIds.push(subId);
+        const durationDays = daysMap[item.duration] || 30;
+        const startDate = new Date().toISOString();
+        const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
 
-          const sub: UserSubscription = {
-            id: subId,
-            orderId,
-            productId: item.productId,
-            productName: item.productName,
-            productLogo: item.productLogo,
-            planDuration: item.duration,
-            durationLabel: item.durationLabel || '1 Month',
-            pricePaid: item.price,
-            status: 'active',
-            startDate,
-            expiryDate,
-            autoRenew: true,
-            autoRenewReminderDays: 3,
-            accountType: 'private_account',
-            warrantyValidUntil: expiryDate,
-            paymentMethod: ord.paymentMethod,
-            credentials: finalCreds,
-            userId: ord.userId,
-            userEmail: (ord.userEmail || '').toLowerCase().trim(),
-          };
+        const finalCreds = {
+          email: customCreds?.email || '',
+          password: customCreds?.password || '',
+          pinCode: customCreds?.pinCode || '',
+          notes: customCreds?.notes || 'Admin: Please configure real credentials for this customer.',
+        };
 
-          generatedSubs.push(sub);
-          try {
-            await setDoc(doc(db, 'subscriptions', subId), sub);
-          } catch (err) {
-            console.error('Error writing subscription:', err);
-          }
+        const sub: UserSubscription = {
+          id: subId,
+          orderId,
+          orderNumber: ord.orderNumber,
+          productId: item.productId,
+          productName: item.productName,
+          productLogo: item.productLogo,
+          planDuration: item.duration,
+          durationLabel: item.durationLabel || '1 Month',
+          pricePaid: item.price * (item.quantity || 1),
+          status: 'active',
+          startDate,
+          expiryDate,
+          autoRenew: true,
+          autoRenewReminderDays: 3,
+          accountType: 'private_account',
+          warrantyValidUntil: expiryDate,
+          paymentMethod: ord.paymentMethod,
+          credentials: finalCreds,
+          userId: ord.userId,
+          userEmail: (ord.userEmail || '').toLowerCase().trim(),
+          credentialsConfigured: !!(customCreds?.email && customCreds?.password),
+        };
+
+        generatedSubs.push(sub);
+        try {
+          await setDoc(doc(db, 'subscriptions', subId), sub);
+        } catch (err) {
+          console.error('Error writing subscription:', err);
         }
       }
+
 
       try {
         await updateDoc(orderRef, {
@@ -1489,9 +1503,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminUpdateSubscription = async (id: string, updates: Partial<UserSubscription>) => {
+    const hasRealCreds = updates.credentials &&
+      (updates.credentials.email || updates.credentials.password);
     const cleanUpdates = {
       ...updates,
       ...(updates.userEmail ? { userEmail: updates.userEmail.toLowerCase().trim() } : {}),
+      ...(hasRealCreds ? { credentialsConfigured: true } : {}),
     };
     setAllSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...cleanUpdates } : s));
     setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...cleanUpdates } : s));
@@ -1513,13 +1530,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminUpdateSubscriptionCredentials = async (subId: string, credentials: Partial<UserSubscription['credentials']>) => {
-    setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials } } : s));
-    setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials } } : s));
+    const hasRealCreds = !!(credentials?.email || credentials?.password);
+    setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials }, ...(hasRealCreds ? { credentialsConfigured: true } : {}) } : s));
+    setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, credentials: { ...s.credentials, ...credentials }, ...(hasRealCreds ? { credentialsConfigured: true } : {}) } : s));
     try {
       const subRef = doc(db, 'subscriptions', subId);
       const subSnap = await getDoc(subRef);
       const existing = subSnap.exists() ? (subSnap.data() as UserSubscription).credentials : {};
-      await updateDoc(subRef, { credentials: { ...existing, ...credentials } });
+      await updateDoc(subRef, {
+        credentials: { ...existing, ...credentials },
+        ...(hasRealCreds ? { credentialsConfigured: true } : {}),
+      });
     } catch (err) {
       console.error('adminUpdateSubscriptionCredentials error:', err);
     }
