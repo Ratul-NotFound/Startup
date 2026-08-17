@@ -135,9 +135,12 @@ export interface Order {
     durationLabel: string;
     price: number;
     quantity: number;
+    accountType?: AccountType;
   }[];
   subtotal: number;
   discount: number;
+  couponCode?: string;        // Coupon code used (if any)
+  couponDiscount?: number;    // Discount amount from coupon in BDT/USD
   total: number;
   totalBdt?: number;
   paymentMethod: PaymentMethod;
@@ -146,13 +149,17 @@ export interface Order {
   deliveryStatus: 'delivered' | 'processing' | 'failed';
   generatedSubscriptionIds: string[];
   // Bangladesh Payment Verification Fields
-  senderNumber?: string; // Phone number from which money was sent
-  transactionId?: string; // TrxID from bKash/Nagad/Rocket SMS
-  screenshotUrl?: string; // Compressed screenshot proof
+  senderNumber?: string;      // Phone number from which money was sent
+  transactionId?: string;     // TrxID from bKash/Nagad/Rocket SMS
+  screenshotUrl?: string;     // Compressed screenshot proof
   adminNotes?: string;
+  rejectionReason?: string;   // Reason if order was rejected
   verifiedAt?: string;
   verifiedBy?: string;
+  paymentVerifiedAt?: string; // When payment was marked verified (before delivery)
 }
+
+
 
 export interface CustomerProfile {
   id: string;

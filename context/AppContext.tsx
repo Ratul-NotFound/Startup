@@ -148,8 +148,12 @@ interface AppContextType {
   // Admin: Order management & Approval
   allOrders: Order[];
   adminUpdateOrderStatus: (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => Promise<void>;
-  adminApproveAndDeliverOrder: (orderId: string, customCreds?: { email?: string; password?: string; pinCode?: string; notes?: string }) => Promise<void>;
-  adminRejectOrder: (orderId: string, reason?: string) => Promise<void>;
+  adminApproveAndDeliverOrder: (
+    orderId: string,
+    perItemCreds: Array<{ email: string; password: string; pinCode?: string; profileName?: string; notes?: string }>
+  ) => Promise<void>;
+  adminVerifyPayment: (orderId: string) => Promise<void>;
+  adminRejectOrder: (orderId: string, reason: string) => Promise<void>;
 
   // Admin: User management
   allUsers: CustomerProfile[];
@@ -1252,9 +1256,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Mark payment verified without delivering (intermediate step)
+  const adminVerifyPayment = async (orderId: string) => {
+    try {
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, 'orders', orderId), { paymentVerifiedAt: now, verifiedBy: user.email || 'Admin' });
+      setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentVerifiedAt: now } : o));
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentVerifiedAt: now } : o));
+    } catch (err) {
+      console.error('adminVerifyPayment error:', err);
+    }
+  };
+
   const adminApproveAndDeliverOrder = async (
     orderId: string,
-    customCreds?: { email?: string; password?: string; pinCode?: string; notes?: string }
+    perItemCreds: Array<{ email: string; password: string; pinCode?: string; profileName?: string; notes?: string }>
   ) => {
     try {
       const orderRef = doc(db, 'orders', orderId);
@@ -1275,21 +1291,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const generatedSubs: UserSubscription[] = [];
       const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
 
-      // Create ONE subscription per order LINE ITEM (not per unit quantity)
-      // quantity is stored on the subscription — keeps vault clean & logical
-      for (const item of ord.items) {
+      // Create ONE subscription per order LINE ITEM with per-item credentials
+      for (let idx = 0; idx < ord.items.length; idx++) {
+        const item = ord.items[idx];
+        const creds = perItemCreds[idx] || perItemCreds[0] || { email: '', password: '' };
         const subId = generateRandomId('sub');
         generatedSubIds.push(subId);
         const durationDays = daysMap[item.duration] || 30;
         const startDate = new Date().toISOString();
         const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
-
-        const finalCreds = {
-          email: customCreds?.email || '',
-          password: customCreds?.password || '',
-          pinCode: customCreds?.pinCode || '',
-          notes: customCreds?.notes || 'Admin: Please configure real credentials for this customer.',
-        };
 
         const sub: UserSubscription = {
           id: subId,
@@ -1306,13 +1316,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           expiryDate,
           autoRenew: true,
           autoRenewReminderDays: 3,
-          accountType: 'private_account',
+          accountType: item.accountType || 'private_account',
           warrantyValidUntil: expiryDate,
           paymentMethod: ord.paymentMethod,
-          credentials: finalCreds,
+          credentials: {
+            email: creds.email || '',
+            password: creds.password || '',
+            pinCode: creds.pinCode || '',
+            profileName: creds.profileName || '',
+            notes: creds.notes || '',
+          },
           userId: ord.userId,
           userEmail: (ord.userEmail || '').toLowerCase().trim(),
-          credentialsConfigured: !!(customCreds?.email && customCreds?.password),
+          credentialsConfigured: !!(creds.email && creds.password),
         };
 
         generatedSubs.push(sub);
@@ -1381,25 +1397,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const adminRejectOrder = async (orderId: string, reason?: string) => {
+  const adminRejectOrder = async (orderId: string, reason: string) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), {
-        paymentStatus: 'failed',
-        deliveryStatus: 'failed',
-        adminNotes: reason || 'Payment not received or invalid TrxID.',
-      });
-      setAllOrders(prev => prev.map(o => o.id === orderId ? {
-        ...o,
-        paymentStatus: 'failed',
-        deliveryStatus: 'failed',
-        adminNotes: reason || 'Payment not received or invalid TrxID.',
-      } : o));
-      setOrders(prev => prev.map(o => o.id === orderId ? {
-        ...o,
-        paymentStatus: 'failed',
-        deliveryStatus: 'failed',
-        adminNotes: reason || 'Payment not received or invalid TrxID.',
-      } : o));
+      const updates = {
+        paymentStatus: 'failed' as const,
+        deliveryStatus: 'failed' as const,
+        rejectionReason: reason,
+        adminNotes: reason,
+        verifiedAt: new Date().toISOString(),
+        verifiedBy: user.email || 'Admin',
+      };
+      await updateDoc(doc(db, 'orders', orderId), updates);
+      setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
+      // Notify customer
+      const ord = allOrders.find(o => o.id === orderId);
+      if (ord) {
+        try {
+          await adminSendMessageToUser(
+            ord.userId, ord.userEmail,
+            `Order #${ord.orderNumber} — Payment Rejected`,
+            `❌ Your order #${ord.orderNumber} could not be verified. Reason: ${reason}. Please contact support or resubmit with correct payment details.`
+          );
+        } catch {}
+      }
     } catch (err) {
       console.error('adminRejectOrder error:', err);
     }
@@ -2031,7 +2052,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminAddAdmin,
     adminRemoveAdmin,
     adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
-    allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
+    allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     allUsers, adminUpdateUserRole,
     allSubscriptions, adminCreateSubscription, adminUpdateSubscription, adminDeleteSubscription, adminPurgeMockSubscriptions, adminPurgeAllSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
@@ -2065,7 +2086,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUser, toggleUserRole, setIsAuthModalOpen,
     adminAddAdmin, adminRemoveAdmin,
     adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
-    adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
+    adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     adminUpdateUserRole, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     adminCreateCoupon, adminDeleteCoupon,
     adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,

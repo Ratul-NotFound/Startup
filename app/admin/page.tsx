@@ -42,7 +42,7 @@ export default function AdminPortalPage() {
   const {
     firebaseUser, isAdmin, isSuperAdmin, setIsAuthModalOpen,
     products, adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
-    allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminRejectOrder,
+    allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     allUsers, adminUpdateUserRole,
     allSubscriptions, adminCreateSubscription, adminUpdateSubscription, adminDeleteSubscription, adminPurgeMockSubscriptions, adminPurgeAllSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
@@ -69,7 +69,12 @@ export default function AdminPortalPage() {
   const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
   const [approvingOrderId, setApprovingOrderId] = useState<string | null>(null);
   const [customProvisionOrder, setCustomProvisionOrder] = useState<Order | null>(null);
-  const [provisionCreds, setProvisionCreds] = useState({ email: '', password: '', pinCode: '', notes: '' });
+  // Per-item credentials (one entry per order line item)
+  const [perItemCreds, setPerItemCreds] = useState<Array<{ email: string; password: string; pinCode: string; profileName: string; notes: string }>>([]); 
+  const [approvalStep, setApprovalStep] = useState<'verify' | 'credentials' | 'confirm'>('verify');
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [showRejectionInput, setShowRejectionInput] = useState(false);
+  const [showItemPassword, setShowItemPassword] = useState<Record<number, boolean>>({});
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Hero Slides state
@@ -1947,6 +1952,18 @@ export default function AdminPortalPage() {
                             <div className="text-[10px] text-slate-400 font-medium capitalize">
                               {o.paymentMethodName || o.paymentMethod}
                             </div>
+                            {o.couponCode && (
+                              <div className="mt-1 flex items-center gap-1">
+                                <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/40 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                                  🏷️ {o.couponCode}
+                                </span>
+                                {o.couponDiscount != null && (
+                                  <span className="text-[10px] text-emerald-400 font-bold">
+                                    -{o.couponDiscount > 1 ? `৳${o.couponDiscount}` : `${(o.couponDiscount * 100).toFixed(0)}%`} off
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </td>
 
                           <td className="p-4">
@@ -1961,9 +1978,14 @@ export default function AdminPortalPage() {
 
                           <td className="p-4">
                             {o.transactionId ? (
-                              <span className="font-mono text-cyan-300 font-bold text-xs bg-cyan-950/40 px-2 py-0.5 rounded-lg border border-cyan-500/20 uppercase tracking-wider">
+                              <button
+                                type="button"
+                                onClick={() => { navigator.clipboard.writeText(o.transactionId!); showFeedback('success', 'TrxID copied!'); }}
+                                className="font-mono text-cyan-300 font-bold text-xs bg-cyan-950/40 px-2 py-0.5 rounded-lg border border-cyan-500/20 uppercase tracking-wider hover:bg-cyan-900/40 transition-colors cursor-pointer"
+                                title="Click to copy Transaction ID"
+                              >
                                 {o.transactionId}
-                              </span>
+                              </button>
                             ) : (
                               <span className="text-slate-600 italic text-[11px]">N/A</span>
                             )}
@@ -2000,51 +2022,42 @@ export default function AdminPortalPage() {
                             }`}>
                               {o.paymentStatus}
                             </span>
+                            {o.paymentVerifiedAt && o.paymentStatus === 'pending' && (
+                              <div className="text-[10px] text-emerald-400 font-bold mt-0.5">✓ Pmt verified</div>
+                            )}
+                            {o.rejectionReason && (
+                              <div className="text-[10px] text-red-400 mt-0.5 max-w-[120px] truncate" title={o.rejectionReason}>
+                                ✗ {o.rejectionReason}
+                              </div>
+                            )}
                           </td>
 
                           <td className="p-4 text-right">
                             {isPending ? (
                               <div className="flex items-center justify-end gap-1.5">
                                 <button
-                                  onClick={async () => {
-                                    setApprovingOrderId(o.id);
-                                    try {
-                                      await adminApproveAndDeliverOrder(o.id);
-                                      showFeedback('success', `Order #${o.orderNumber} approved and credentials delivered to Vault!`);
-                                    } finally {
-                                      setApprovingOrderId(null);
-                                    }
+                                  onClick={() => {
+                                    const initCreds = o.items.map(() => ({ email: o.userEmail || '', password: '', pinCode: '', profileName: '', notes: '' }));
+                                    setPerItemCreds(initCreds);
+                                    setApprovalStep('verify');
+                                    setRejectionReason('');
+                                    setShowRejectionInput(false);
+                                    setCustomProvisionOrder(o);
                                   }}
                                   disabled={approvingOrderId === o.id}
                                   className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
-                                  title="1-Click Instant Auto-Provision & Deliver"
                                 >
-                                  {approvingOrderId === o.id ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
-                                  ) : (
-                                    <Check className="h-3.5 w-3.5" />
-                                  )}
-                                  <span>Approve & Deliver</span>
+                                  {approvingOrderId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                                  <span>Approve &amp; Deliver</span>
                                 </button>
-
                                 <button
                                   onClick={() => {
-                                    setProvisionCreds({ email: o.userEmail || '', password: '', pinCode: '', notes: '' });
+                                    const initCreds = o.items.map(() => ({ email: '', password: '', pinCode: '', profileName: '', notes: '' }));
+                                    setPerItemCreds(initCreds);
+                                    setApprovalStep('verify');
+                                    setShowRejectionInput(true);
+                                    setRejectionReason('');
                                     setCustomProvisionOrder(o);
-                                  }}
-                                  className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white font-bold text-xs transition-colors"
-                                  title="Enter specific custom account credentials"
-                                >
-                                  <Lock className="h-3.5 w-3.5 text-cyan-400" />
-                                </button>
-
-                                <button
-                                  onClick={async () => {
-                                    const reason = prompt('Reason for rejection (e.g. Invalid TrxID or amount mismatch):');
-                                    if (reason !== null) {
-                                      await adminRejectOrder(o.id, reason);
-                                      showFeedback('error', `Order #${o.orderNumber} rejected.`);
-                                    }
                                   }}
                                   className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 font-bold text-xs transition-colors"
                                   title="Reject order"
@@ -2063,6 +2076,21 @@ export default function AdminPortalPage() {
                                   <FileText className="h-3 w-3" />
                                   <span>Invoice</span>
                                 </button>
+                                {o.paymentStatus === 'paid' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const initCreds = o.items.map(() => ({ email: o.userEmail || '', password: '', pinCode: '', profileName: '', notes: '' }));
+                                      setPerItemCreds(initCreds);
+                                      setApprovalStep('credentials');
+                                      setCustomProvisionOrder(o);
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-cyan-950/60 text-slate-400 hover:text-cyan-400 border border-white/10 flex items-center gap-1 font-bold text-[10px] cursor-pointer"
+                                    title="Re-provision credentials"
+                                  >
+                                    <Edit2 className="h-3 w-3" /><span>Re-provision</span>
+                                  </button>
+                                )}
                                 <span className="text-emerald-400">✓</span>
                                 <span>{o.deliveryStatus === 'delivered' ? 'Delivered' : o.deliveryStatus}</span>
                               </div>
@@ -4154,144 +4182,202 @@ export default function AdminPortalPage() {
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* CUSTOM CREDENTIAL PROVISIONING MODAL                       */}
       {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ══════ 3-STEP ORDER APPROVAL MODAL ══════ */}
       {customProvisionOrder && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
-          onClick={() => setCustomProvisionOrder(null)}
-        >
-          <div
-            className="relative w-full max-w-lg rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl space-y-5"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                  <Lock className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-white">Provision Credentials for #{customProvisionOrder.orderNumber}</h3>
-                  <p className="text-[11px] text-slate-400">Customer: {customProvisionOrder.userEmail}</p>
-                </div>
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setCustomProvisionOrder(null)}>
+          <div className="bg-zinc-900 border border-white/10 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-start justify-between px-6 py-5 border-b border-white/10">
+              <div>
+                <h2 className="text-xl font-black text-white">Order #{customProvisionOrder.orderNumber}</h2>
+                <p className="text-sm text-slate-400 mt-0.5">{customProvisionOrder.userEmail}</p>
               </div>
-              <button
-                onClick={() => setCustomProvisionOrder(null)}
-                className="p-1.5 rounded-xl bg-zinc-900 text-slate-400 hover:text-white border border-white/10"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              {/* Step indicator */}
+              <div className="flex items-center gap-2 text-xs font-bold">
+                {['verify','credentials','confirm'].map((s, si) => (
+                  <div key={s} className={`flex items-center gap-1 ${approvalStep === s ? 'text-cyan-400' : 'text-slate-600'}`}>
+                    <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] border ${approvalStep === s ? 'border-cyan-400 bg-cyan-950/40' : 'border-zinc-700 bg-zinc-800'}`}>{si+1}</span>
+                    <span className="hidden sm:inline capitalize">{s}</span>
+                    {si < 2 && <ChevronRight className="h-3 w-3 text-zinc-600" />}
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setCustomProvisionOrder(null)} className="text-slate-500 hover:text-white transition-colors"><X className="h-5 w-5" /></button>
             </div>
 
-            <div className="p-3 rounded-2xl bg-zinc-900/80 border border-white/[0.06] text-xs text-slate-300 space-y-1">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Ordered Items</span>
-              {customProvisionOrder.items.map((it, idx) => (
-                <div key={idx} className="font-bold text-white">
-                  {it.quantity}x {it.productName} ({it.durationLabel})
+            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+
+              {/* ── STEP 1: VERIFY PAYMENT ── */}
+              {approvalStep === 'verify' && (
+                <div className="space-y-4">
+                  <div className="bg-zinc-800/60 rounded-2xl p-4 space-y-3">
+                    <h3 className="text-sm font-black text-white">Step 1 — Payment Verification</h3>
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <div className="text-slate-500 mb-0.5">Sender Number</div>
+                        <div className="font-mono text-emerald-400 font-bold">{customProvisionOrder.senderNumber || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-500 mb-0.5">Transaction ID</div>
+                        <div className="font-mono text-cyan-300 font-bold">{customProvisionOrder.transactionId || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-500 mb-0.5">Amount</div>
+                        <div className="font-mono text-white font-black">{customProvisionOrder.totalBdt ? `৳${customProvisionOrder.totalBdt.toLocaleString()} BDT` : `$${customProvisionOrder.total.toFixed(2)}`}</div>
+                      </div>
+                      {customProvisionOrder.couponCode && (
+                        <div>
+                          <div className="text-slate-500 mb-0.5">Coupon Applied</div>
+                          <div className="font-mono text-emerald-400 font-bold">{customProvisionOrder.couponCode}</div>
+                        </div>
+                      )}
+                    </div>
+                    {customProvisionOrder.screenshotUrl && (
+                      <img src={customProvisionOrder.screenshotUrl} alt="Payment proof" className="w-full max-h-48 object-contain rounded-xl border border-white/10 bg-black" />
+                    )}
+                  </div>
+
+                  {/* Items ordered */}
+                  <div className="bg-zinc-800/40 rounded-2xl p-4">
+                    <h3 className="text-xs font-black text-white mb-2">{customProvisionOrder.items.length} Item(s) Ordered</h3>
+                    <div className="space-y-1.5">
+                      {customProvisionOrder.items.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-xs">
+                          <span className="text-slate-200">{item.quantity}x {item.productName} <span className="text-cyan-400">({item.durationLabel})</span></span>
+                          <span className="text-white font-bold">৳{(item.price * (item.quantity||1)).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Rejection input */}
+                  {showRejectionInput && (
+                    <div className="bg-red-950/30 rounded-2xl p-4 border border-red-500/20 space-y-2">
+                      <h3 className="text-xs font-black text-red-400">Rejection Reason</h3>
+                      <textarea
+                        value={rejectionReason}
+                        onChange={e => setRejectionReason(e.target.value)}
+                        rows={3}
+                        placeholder="e.g. Invalid TrxID, amount mismatch, unrecognized sender..."
+                        className="w-full bg-zinc-800 border border-red-500/30 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-red-400"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    {!showRejectionInput ? (
+                      <>
+                        <button onClick={() => setShowRejectionInput(true)} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 font-bold text-xs border border-white/10 transition-colors">Reject Payment</button>
+                        <button
+                          onClick={async () => {
+                            await adminVerifyPayment(customProvisionOrder.id);
+                            setApprovalStep('credentials');
+                          }}
+                          className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors"
+                        >Payment Verified → Next</button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => setShowRejectionInput(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors">Cancel</button>
+                        <button
+                          onClick={async () => {
+                            if (!rejectionReason.trim()) { showFeedback('error', 'Please enter a rejection reason.'); return; }
+                            await adminRejectOrder(customProvisionOrder.id, rejectionReason.trim());
+                            showFeedback('error', `Order #${customProvisionOrder.orderNumber} rejected.`);
+                            setCustomProvisionOrder(null);
+                          }}
+                          className="flex-1 px-4 py-2.5 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-xs transition-colors"
+                        >Confirm Rejection</button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {/* ── STEP 2: ENTER CREDENTIALS ── */}
+              {approvalStep === 'credentials' && (
+                <div className="space-y-4">
+                  <p className="text-xs text-slate-400">Enter credentials for each item. These will be delivered to the customer's vault.</p>
+                  {customProvisionOrder.items.map((item, idx) => (
+                    <div key={idx} className="bg-zinc-800/60 rounded-2xl p-4 space-y-3 border border-white/5">
+                      <div className="flex items-center gap-2">
+                        {item.productLogo && <img src={item.productLogo} alt={item.productName} className="h-7 w-7 rounded-lg object-cover" />}
+                        <div>
+                          <div className="font-bold text-white text-sm">{item.productName}</div>
+                          <div className="text-[11px] text-cyan-400">{item.durationLabel} · Qty {item.quantity}</div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-bold">Email / Username</label>
+                          <input type="text" value={perItemCreds[idx]?.email || ''} onChange={e => setPerItemCreds(prev => { const n=[...prev]; n[idx]={...n[idx], email: e.target.value}; return n; })} className="mt-0.5 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="email@provider.com" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-bold">Password</label>
+                          <div className="flex gap-1 mt-0.5">
+                            <input type={showItemPassword[idx] ? 'text' : 'password'} value={perItemCreds[idx]?.password || ''} onChange={e => setPerItemCreds(prev => { const n=[...prev]; n[idx]={...n[idx], password: e.target.value}; return n; })} className="flex-1 bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="••••••••" />
+                            <button type="button" onClick={() => setShowItemPassword(prev => ({...prev, [idx]: !prev[idx]}))} className="px-2 rounded-lg bg-zinc-800 border border-white/10 text-slate-400 hover:text-white transition-colors"><Eye className="h-3 w-3" /></button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-bold">Profile Name (optional)</label>
+                          <input type="text" value={perItemCreds[idx]?.profileName || ''} onChange={e => setPerItemCreds(prev => { const n=[...prev]; n[idx]={...n[idx], profileName: e.target.value}; return n; })} className="mt-0.5 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="Profile 1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-bold">PIN (optional)</label>
+                          <input type="text" value={perItemCreds[idx]?.pinCode || ''} onChange={e => setPerItemCreds(prev => { const n=[...prev]; n[idx]={...n[idx], pinCode: e.target.value}; return n; })} className="mt-0.5 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="1234" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 font-bold">Notes (optional)</label>
+                        <input type="text" value={perItemCreds[idx]?.notes || ''} onChange={e => setPerItemCreds(prev => { const n=[...prev]; n[idx]={...n[idx], notes: e.target.value}; return n; })} className="mt-0.5 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="Any extra instructions for customer..." />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="flex gap-2">
+                    <button onClick={() => setApprovalStep('verify')} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors">← Back</button>
+                    <button onClick={() => setApprovalStep('confirm')} className="flex-1 px-4 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-xs transition-colors">Review &amp; Confirm →</button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── STEP 3: CONFIRM & DELIVER ── */}
+              {approvalStep === 'confirm' && (
+                <div className="space-y-4">
+                  <div className="bg-emerald-950/30 rounded-2xl p-4 border border-emerald-500/20 space-y-3">
+                    <h3 className="text-sm font-black text-emerald-400">Confirm Delivery</h3>
+                    {customProvisionOrder.items.map((item, idx) => (
+                      <div key={idx} className="bg-zinc-900/60 rounded-xl p-3 text-xs space-y-1">
+                        <div className="font-bold text-white">{item.productName} <span className="text-cyan-400">({item.durationLabel})</span></div>
+                        <div className="text-slate-400">Email: <span className="text-white font-mono">{perItemCreds[idx]?.email || '—'}</span></div>
+                        <div className="text-slate-400">Pass: <span className="text-white font-mono">{perItemCreds[idx]?.password ? '••••••' : '—'}</span></div>
+                        {perItemCreds[idx]?.profileName && <div className="text-slate-400">Profile: <span className="text-white font-mono">{perItemCreds[idx].profileName}</span></div>}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => setApprovalStep('credentials')} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors">← Edit Creds</button>
+                    <button
+                      onClick={async () => {
+                        setApprovingOrderId(customProvisionOrder.id);
+                        try {
+                          await adminApproveAndDeliverOrder(customProvisionOrder.id, perItemCreds);
+                          showFeedback('success', `Order #${customProvisionOrder.orderNumber} approved & credentials delivered!`);
+                          setCustomProvisionOrder(null);
+                        } finally {
+                          setApprovingOrderId(null);
+                        }
+                      }}
+                      disabled={!!approvingOrderId}
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      {approvingOrderId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                      Approve &amp; Deliver
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setApprovingOrderId(customProvisionOrder.id);
-                try {
-                  await adminApproveAndDeliverOrder(customProvisionOrder.id, {
-                    email: provisionCreds.email.trim(),
-                    password: provisionCreds.password.trim(),
-                    pinCode: provisionCreds.pinCode.trim(),
-                    notes: provisionCreds.notes.trim(),
-                  });
-                  showFeedback('success', `Order #${customProvisionOrder.orderNumber} custom credentials provisioned and delivered!`);
-                  setCustomProvisionOrder(null);
-                } finally {
-                  setApprovingOrderId(null);
-                }
-              }}
-              className="space-y-3"
-            >
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Account Login Email</label>
-                <input
-                  type="email"
-                  value={provisionCreds.email}
-                  onChange={e => setProvisionCreds(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="e.g. premium.user@service.com"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Account Password</label>
-                <input
-                  type="text"
-                  value={provisionCreds.password}
-                  onChange={e => setProvisionCreds(prev => ({ ...prev, password: e.target.value }))}
-                  placeholder="Enter decrypted password or auto-generate"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono font-bold"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">Profile PIN (Optional)</label>
-                  <input
-                    type="text"
-                    value={provisionCreds.pinCode}
-                    onChange={e => setProvisionCreds(prev => ({ ...prev, pinCode: e.target.value }))}
-                    placeholder="e.g. 1234"
-                    className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">Quick Auto-Fill</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProvisionCreds({
-                        email: customProvisionOrder.userEmail || 'customer@service.io',
-                        password: `Nexus#${Math.floor(100000 + Math.random() * 900000)}`,
-                        pinCode: `${Math.floor(1000 + Math.random() * 9000)}`,
-                        notes: 'Official verified subscription provided with 100% warranty.',
-                      });
-                    }}
-                    className="w-full py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-cyan-400 text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    ⚡ Auto-Generate
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Notes / Instructions for Customer</label>
-                <textarea
-                  rows={2}
-                  value={provisionCreds.notes}
-                  onChange={e => setProvisionCreds(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="e.g. Please do not change profile name. Use Profile 1."
-                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-cyan-500 resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
-                <button
-                  type="button"
-                  onClick={() => setCustomProvisionOrder(null)}
-                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-bold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={approvingOrderId === customProvisionOrder.id || !provisionCreds.email || !provisionCreds.password}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
-                >
-                  {approvingOrderId === customProvisionOrder.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                  <span>Save & Deliver to Customer Vault</span>
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
