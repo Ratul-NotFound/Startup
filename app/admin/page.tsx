@@ -136,24 +136,56 @@ export default function AdminPortalPage() {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const revenueChartData = React.useMemo(() => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const now = new Date();
-    const result = [];
+  const [chartRange, setChartRange] = useState<'7d' | '30d' | '6m'>('6m');
 
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const mName = months[d.getMonth()];
-      const year = d.getFullYear();
-      const monthOrders = allOrders.filter(o => {
-        const od = new Date(o.createdAt);
-        return od.getMonth() === d.getMonth() && od.getFullYear() === year && o.paymentStatus === 'paid';
-      });
-      const rev = monthOrders.reduce((acc, o) => acc + (o.total || 0), 0);
-      result.push({ month: mName, revenue: rev, orders: monthOrders.length });
+  const revenueChartData = React.useMemo(() => {
+    const now = new Date();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const result: { label: string; revenue: number; orders: number }[] = [];
+
+    if (chartRange === '7d') {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dayStr = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        const dayEnd = dayStart + 86400000;
+        const dayOrders = allOrders.filter(o => {
+          const t = new Date(o.createdAt).getTime();
+          return t >= dayStart && t < dayEnd && (o.paymentStatus === 'paid' || o.paymentStatus === 'pending' || o.deliveryStatus === 'delivered');
+        });
+        const rev = dayOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+        result.push({ label: dayStr, revenue: parseFloat(rev.toFixed(2)), orders: dayOrders.length });
+      }
+    } else if (chartRange === '30d') {
+      for (let i = 28; i >= 0; i -= 4) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dayStr = `${d.getMonth() + 1}/${d.getDate()}`;
+        const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        const dayEnd = dayStart + 4 * 86400000;
+        const chunkOrders = allOrders.filter(o => {
+          const t = new Date(o.createdAt).getTime();
+          return t >= dayStart && t < dayEnd && (o.paymentStatus === 'paid' || o.paymentStatus === 'pending' || o.deliveryStatus === 'delivered');
+        });
+        const rev = chunkOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+        result.push({ label: dayStr, revenue: parseFloat(rev.toFixed(2)), orders: chunkOrders.length });
+      }
+    } else {
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mName = months[d.getMonth()];
+        const year = d.getFullYear();
+        const monthOrders = allOrders.filter(o => {
+          const od = new Date(o.createdAt);
+          return od.getMonth() === d.getMonth() && od.getFullYear() === year && (o.paymentStatus === 'paid' || o.paymentStatus === 'pending' || o.deliveryStatus === 'delivered');
+        });
+        const rev = monthOrders.reduce((acc, o) => acc + (o.total || 0), 0);
+        result.push({ label: mName, revenue: parseFloat(rev.toFixed(2)), orders: monthOrders.length });
+      }
     }
     return result;
-  }, [allOrders]);
+  }, [allOrders, chartRange]);
 
   // ─── AUTH GATES ─────────────────────────────────────────────────────
   if (!firebaseUser) {
@@ -565,25 +597,55 @@ export default function AdminPortalPage() {
           {/* Charts & Quick Feed */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-bold text-white">Revenue Performance</h3>
-                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                  Real-time Data
-                </span>
+              <div className="flex flex-wrap justify-between items-center gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Revenue Performance</h3>
+                  <p className="text-[11px] text-slate-400">Live gross volume from verified checkouts</p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-white/[0.08]">
+                  {(['7d', '30d', '6m'] as const).map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setChartRange(r)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                        chartRange === r
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {r === '7d' ? '7 Days' : r === '30d' ? '30 Days' : '6 Months'}
+                    </button>
+                  ))}
+                </div>
               </div>
               <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={revenueChartData}>
+                <AreaChart data={revenueChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                   <defs>
                     <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                  <XAxis dataKey="month" tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} />
-                  <YAxis tick={{ fill: '#71717a', fontSize: 11 }} axisLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 12 }} labelStyle={{ color: '#fff' }} itemStyle={{ color: '#a5b4fc' }} formatter={(v: number) => [`$${v.toLocaleString()}`, 'Revenue']} />
-                  <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} fill="url(#revGrad)" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: '#a1a1aa', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis
+                    tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={v => {
+                      if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`;
+                      return `$${v}`;
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }}
+                    labelStyle={{ color: '#fff', fontWeight: 'bold' }}
+                    formatter={(v: any) => [
+                      `$${Number(v).toFixed(2)} (৳${Math.round(Number(v) * 125).toLocaleString()})`,
+                      'Revenue Volume',
+                    ]}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2.5} fill="url(#revGrad)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
