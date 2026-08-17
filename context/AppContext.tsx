@@ -120,6 +120,7 @@ interface AppContextType {
   allTickets: SupportTicket[];
   adminReplyToTicket: (ticketId: string, message: string) => Promise<void>;
   adminCloseTicket: (ticketId: string) => Promise<void>;
+  adminSendMessageToUser: (targetUserId: string, targetUserEmail: string, subject: string, content: string, category?: SupportTicket['category']) => Promise<string>;
 
   // Analytics & Admin
   financialMetrics: FinancialMetric;
@@ -1206,6 +1207,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const adminSendMessageToUser = async (
+    targetUserId: string,
+    targetUserEmail: string,
+    subject: string,
+    content: string,
+    category: SupportTicket['category'] = 'general'
+  ): Promise<string> => {
+    const ticketId = generateRandomId('tkt');
+    const newTicket: SupportTicket = {
+      id: ticketId,
+      ticketNumber: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
+      userId: targetUserId || 'usr_direct',
+      userEmail: targetUserEmail,
+      subject: subject || 'Direct Admin Message',
+      category,
+      priority: 'high',
+      status: 'in_progress',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: [
+        {
+          id: generateRandomId('msg'),
+          sender: 'agent',
+          senderName: user.name || 'SubNexus Support Ops',
+          content,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+
+    try {
+      await setDoc(doc(db, 'support_tickets', ticketId), newTicket);
+      setAllTickets(prev => [newTicket, ...prev.filter(t => t.id !== ticketId)]);
+    } catch (err) {
+      console.error('adminSendMessageToUser error:', err);
+    }
+    return ticketId;
+  };
+
   // ─── User: Create ticket ───────────────────────────────────────────
   const createSupportTicket = (subject: string, category: SupportTicket['category'], initialMessage: string): SupportTicket => {
     const ticketId = generateRandomId('tkt');
@@ -1400,7 +1440,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
-    allTickets, adminReplyToTicket, adminCloseTicket,
+    allTickets, adminReplyToTicket, adminCloseTicket, adminSendMessageToUser,
     financialMetrics, emailNotifications, sendTestEmail,
     triggerRenewalCronSimulation, fastForwardSimulationDays,
     refreshAllData, isSyncing,

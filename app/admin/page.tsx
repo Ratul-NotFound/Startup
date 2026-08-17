@@ -8,13 +8,13 @@ import {
   CheckCircle2, AlertCircle, Clock, Search, RefreshCw, Eye, EyeOff,
   BarChart2, MessageSquare, Lock, LogIn, UserPlus, UserCheck,
   UserX, Sparkles, AlertTriangle, ArrowUpRight, Star, ThumbsUp,
-  CreditCard, QrCode, Image as ImageIcon, Check,
+  CreditCard, QrCode, Image as ImageIcon, Check, Send,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { Product, Coupon, UserSubscription, Order, AdminMember, Review, BangladeshPaymentMethod } from '@/types';
+import { Product, Coupon, UserSubscription, Order, AdminMember, Review, BangladeshPaymentMethod, SupportTicket } from '@/types';
 
 // ─── Blank product template ─────────────────────────────────────────
 const blankProduct = (): Omit<Product, 'id'> => ({
@@ -42,7 +42,7 @@ export default function AdminPortalPage() {
     allSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     coupons, adminCreateCoupon, adminDeleteCoupon,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
-    allTickets, adminReplyToTicket, adminCloseTicket,
+    allTickets, adminReplyToTicket, adminCloseTicket, adminSendMessageToUser,
     adminList, adminAddAdmin, adminRemoveAdmin,
     financialMetrics, triggerRenewalCronSimulation, fastForwardSimulationDays,
     refreshAllData, isSyncing,
@@ -53,6 +53,14 @@ export default function AdminPortalPage() {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [orderStatusFilter, setOrderStatusFilter] = useState<'all' | 'pending' | 'paid' | 'failed'>('all');
   const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
+
+  // Direct Message Modal state
+  const [showDirectMessageModal, setShowDirectMessageModal] = useState(false);
+  const [directMessageTarget, setDirectMessageTarget] = useState<{ id: string; name: string; email: string; avatar: string } | null>(null);
+  const [directMessageSubject, setDirectMessageSubject] = useState('');
+  const [directMessageCategory, setDirectMessageCategory] = useState<SupportTicket['category']>('general');
+  const [directMessageBody, setDirectMessageBody] = useState('');
+  const [isSendingDirectMessage, setIsSendingDirectMessage] = useState(false);
   const [editingPaymentMethod, setEditingPaymentMethod] = useState<(BangladeshPaymentMethod & { isNew?: boolean }) | null>(null);
   const [reviewSearch, setReviewSearch] = useState('');
   const [showAdminReviewForm, setShowAdminReviewForm] = useState(false);
@@ -240,6 +248,33 @@ export default function AdminPortalPage() {
       email: userEmail || '',
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`,
     };
+  };
+
+  // ─── DIRECT MESSAGE HANDLER ──────────────────────────────────────
+  const handleSendDirectMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!directMessageTarget || !directMessageBody.trim()) return;
+
+    setIsSendingDirectMessage(true);
+    try {
+      const tktId = await adminSendMessageToUser(
+        directMessageTarget.id,
+        directMessageTarget.email,
+        directMessageSubject.trim() || 'Direct Support Message from Admin',
+        directMessageBody.trim(),
+        directMessageCategory
+      );
+      showFeedback('success', `Message dispatched to ${directMessageTarget.name} (${directMessageTarget.email}).`);
+      setShowDirectMessageModal(false);
+      setDirectMessageBody('');
+      setDirectMessageSubject('');
+      setSelectedTicketId(tktId);
+      setTab('tickets');
+    } catch {
+      showFeedback('error', 'Failed to send direct message.');
+    } finally {
+      setIsSendingDirectMessage(false);
+    }
   };
 
   // ─── ORDER HANDLERS ───────────────────────────────────────────────
@@ -1523,20 +1558,37 @@ export default function AdminPortalPage() {
                       <td className="p-4 text-slate-400">{u.joinedDate ? new Date(u.joinedDate).toLocaleDateString() : '—'}</td>
                       <td className="p-4 font-bold text-emerald-400">${(u.lifetimeSpend || 0).toFixed(2)}</td>
                       <td className="p-4 text-right">
-                        {isOwner ? (
-                          <span className="text-[10px] text-slate-500 italic">Primary Superadmin</span>
-                        ) : isSuperAdmin ? (
-                          <select
-                            value={u.role}
-                            onChange={e => adminUpdateUserRole(u.id, e.target.value as any).then(() => showFeedback('success', 'User role updated.'))}
-                            className="px-2.5 py-1.5 rounded-xl bg-zinc-800 border border-white/10 text-xs text-white focus:outline-none"
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              const cust = getCustomerInfo(u.id, u.email, u.name);
+                              setDirectMessageTarget({ id: u.id, name: cust.name, email: u.email, avatar: cust.avatar });
+                              setDirectMessageSubject('');
+                              setDirectMessageBody('');
+                              setShowDirectMessageModal(true);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 transition-all flex items-center gap-1.5 text-xs font-bold"
+                            title="Direct message user"
                           >
-                            <option value="customer">Customer</option>
-                            <option value="admin">Administrator</option>
-                          </select>
-                        ) : (
-                          <span className="text-[10px] text-slate-500">Superadmin required</span>
-                        )}
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span>Message</span>
+                          </button>
+
+                          {isOwner ? (
+                            <span className="text-[10px] text-slate-500 italic">Superadmin</span>
+                          ) : isSuperAdmin ? (
+                            <select
+                              value={u.role}
+                              onChange={e => adminUpdateUserRole(u.id, e.target.value as any).then(() => showFeedback('success', 'User role updated.'))}
+                              className="px-2.5 py-1.5 rounded-xl bg-zinc-800 border border-white/10 text-xs text-white focus:outline-none"
+                            >
+                              <option value="customer">Customer</option>
+                              <option value="admin">Administrator</option>
+                            </select>
+                          ) : (
+                            <span className="text-[10px] text-slate-500">Superadmin required</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1730,7 +1782,22 @@ export default function AdminPortalPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left: Ticket list */}
           <div className="lg:col-span-4 space-y-2">
-            <h2 className="text-sm font-bold text-white mb-3">All Customer Tickets ({allTickets.length})</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-white">All Customer Tickets ({allTickets.length})</h2>
+              <button
+                onClick={() => {
+                  const defaultTarget = allUsers.length > 0 ? getCustomerInfo(allUsers[0].id, allUsers[0].email, allUsers[0].name) : null;
+                  setDirectMessageTarget(defaultTarget ? { id: defaultTarget.email, name: defaultTarget.name, email: defaultTarget.email, avatar: defaultTarget.avatar } : null);
+                  setDirectMessageSubject('');
+                  setDirectMessageBody('');
+                  setShowDirectMessageModal(true);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Message User</span>
+              </button>
+            </div>
             {allTickets.length === 0 ? (
               <p className="text-slate-500 text-sm text-center py-10">No support tickets found.</p>
             ) : allTickets.map(t => {
@@ -2156,6 +2223,144 @@ export default function AdminPortalPage() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* DIRECT MESSAGE MODAL (Admin to any User)                    */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {showDirectMessageModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          onClick={() => setShowDirectMessageModal(false)}
+        >
+          <div
+            className="relative w-full max-w-lg rounded-3xl bg-zinc-950 border border-white/15 p-6 shadow-2xl space-y-5"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/[0.08] pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Send Direct Message to Customer</h3>
+                  <p className="text-[11px] text-slate-400">Dispatches an instant live ticket message to the user</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDirectMessageModal(false)}
+                className="p-1.5 rounded-xl bg-zinc-900 text-slate-400 hover:text-white border border-white/10"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendDirectMessage} className="space-y-4">
+              {/* Recipient User Picker */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 block">Select Recipient Customer</label>
+                <select
+                  value={directMessageTarget?.email || ''}
+                  onChange={e => {
+                    const selected = allUsers.find(u => u.email === e.target.value);
+                    if (selected) {
+                      const cust = getCustomerInfo(selected.id, selected.email, selected.name);
+                      setDirectMessageTarget({ id: selected.id, name: cust.name, email: selected.email, avatar: cust.avatar });
+                    }
+                  }}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  required
+                >
+                  <option value="" disabled>Choose a registered user…</option>
+                  {allUsers.map(u => {
+                    const cust = getCustomerInfo(u.id, u.email, u.name);
+                    return (
+                      <option key={u.id} value={u.email}>
+                        {cust.name} ({u.email})
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {/* Recipient Preview Card */}
+                {directMessageTarget && (
+                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-900/80 border border-white/[0.06] mt-2">
+                    <img
+                      src={directMessageTarget.avatar}
+                      alt={directMessageTarget.name}
+                      className="h-9 w-9 rounded-full object-cover border border-white/15 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs font-bold text-white truncate">{directMessageTarget.name}</div>
+                      <div className="text-[11px] text-slate-400 truncate">{directMessageTarget.email}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Inquiry Category */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300 block">Topic / Category</label>
+                <select
+                  value={directMessageCategory}
+                  onChange={e => setDirectMessageCategory(e.target.value as SupportTicket['category'])}
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="general">General Support / Update</option>
+                  <option value="credential_issue">Account Credentials & Login Help</option>
+                  <option value="payment_issue">Payment & Transaction Verification</option>
+                  <option value="renewal_help">Warranty & Renewal Assistance</option>
+                </select>
+              </div>
+
+              {/* Subject */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300 block">Message Subject</label>
+                <input
+                  type="text"
+                  value={directMessageSubject}
+                  onChange={e => setDirectMessageSubject(e.target.value)}
+                  placeholder="e.g. Update regarding your ChatGPT Plus subscription"
+                  className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500"
+                  required
+                />
+              </div>
+
+              {/* Message Content */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300 block">Message Content</label>
+                <textarea
+                  rows={4}
+                  value={directMessageBody}
+                  onChange={e => setDirectMessageBody(e.target.value)}
+                  placeholder="Type your official admin message to this customer..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+                  required
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setShowDirectMessageModal(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-white text-xs font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingDirectMessage || !directMessageTarget || !directMessageBody.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  {isSendingDirectMessage ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
