@@ -7,7 +7,7 @@ import {
   Clock, Plus, RefreshCw, Send, Lock, Download, LogIn, ShoppingBag,
   User, X, Eye, EyeOff, Copy, Check, ExternalLink, ShieldCheck,
   CreditCard, Sparkles, Image as ImageIcon, Loader2, ArrowUpRight,
-  Bell, Globe, LogOut, Phone, Shield, Search, CheckCircle,
+  Bell, Globe, LogOut, Phone, Shield, Search, CheckCircle, Upload, Camera,
 } from 'lucide-react';
 import { calculateDaysRemaining, calculateExpiryProgress } from '@/lib/utils';
 import { compressImageToDataUrl } from '@/lib/image-compression';
@@ -63,12 +63,39 @@ export default function CustomerDashboardPage() {
   const [editName, setEditName] = useState(user?.name || '');
   const [editAvatar, setEditAvatar] = useState(user?.avatar || '');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user?.name) setEditName(user.name);
     if (user?.avatar) setEditAvatar(user.avatar);
   }, [user]);
+
+  const handleAvatarFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setSaveSuccessMsg('Image size exceeds 5MB limit. Please choose a smaller file.');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const compressedDataUrl = await compressImageToDataUrl(file, 400, 400, 0.85);
+      setEditAvatar(compressedDataUrl);
+      await updateUserProfile({
+        avatar: compressedDataUrl,
+      });
+      setSaveSuccessMsg('✓ Profile photo uploaded and updated!');
+      setTimeout(() => setSaveSuccessMsg(null), 3500);
+    } catch {
+      setSaveSuccessMsg('Failed to compress avatar image file.');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   // Copy helper with visual feedback
   const handleCopy = (text: string, key: string) => {
@@ -928,28 +955,70 @@ export default function CustomerDashboardPage() {
           </div>
 
           <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-6 shadow-xl">
-            {/* User Identity Header */}
-            <div className="flex items-center gap-4">
-              <img
-                src={editAvatar || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=200`}
-                alt={user.name}
-                className="h-16 w-16 rounded-2xl object-cover ring-2 ring-white/15 shadow-lg shrink-0"
-                onError={e => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=200`; }}
-              />
-              <div className="space-y-1">
-                <p className="text-base font-bold text-white">{user.name}</p>
-                <p className="text-xs text-slate-400 font-mono">{user.email}</p>
-                <div className="flex items-center gap-2 pt-0.5">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
-                    {user.role === 'admin' ? '🛡️ Administrator' : 'Standard Customer'}
-                  </span>
-                  {orders.length > 0 && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      ✓ Verified Buyer
+            {/* Hidden Avatar File Input */}
+            <input
+              ref={avatarFileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarFileUpload}
+              className="hidden"
+            />
+
+            {/* User Identity Header with Upload Avatar Action */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-950/80 border border-white/[0.06]">
+              <div className="flex items-center gap-4">
+                <div className="relative group shrink-0">
+                  <img
+                    src={editAvatar || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=200`}
+                    alt={user.name}
+                    className="h-16 w-16 rounded-2xl object-cover ring-2 ring-white/15 shadow-lg"
+                    onError={e => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=200`; }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => avatarFileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 rounded-2xl flex items-center justify-center text-white transition-opacity cursor-pointer"
+                    title="Upload profile picture"
+                  >
+                    {isUploadingAvatar ? <Loader2 className="h-5 w-5 animate-spin text-cyan-400" /> : <Camera className="h-5 w-5 text-white" />}
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-base font-bold text-white">{user.name}</p>
+                  <p className="text-xs text-slate-400 font-mono">{user.email}</p>
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-600/20 text-indigo-300 border border-indigo-500/30">
+                      {user.role === 'admin' ? '🛡️ Administrator' : 'Standard Customer'}
                     </span>
-                  )}
+                    {orders.length > 0 && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        ✓ Verified Buyer
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => avatarFileInputRef.current?.click()}
+                disabled={isUploadingAvatar}
+                className="px-4 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm shrink-0"
+              >
+                {isUploadingAvatar ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Upload Profile Image</span>
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Profile Edit Form */}
@@ -970,15 +1039,26 @@ export default function CustomerDashboardPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">Avatar Image URL (Optional)</label>
-                  <input
-                    type="url"
-                    value={editAvatar}
-                    onChange={e => setEditAvatar(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
-                  />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-300 block">Profile Picture (URL or File Upload)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="url"
+                      value={editAvatar}
+                      onChange={e => setEditAvatar(e.target.value)}
+                      placeholder="https://... or upload photo"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="px-3 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-750 border border-white/10 text-xs font-bold text-slate-200 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                      title="Choose image file from device"
+                    >
+                      <Upload className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>Upload File</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
