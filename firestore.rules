@@ -1,85 +1,111 @@
 rules_version = '2';
 
+// ============================================================================
+// 🔒 SUBNEXUS FIRESTORE SECURITY & ACCESS RULES
+// ============================================================================
+// Development Mode: Unrestricted read/write across all collections for seamless
+// prototyping, demo simulations, and real-time syncing.
+// ============================================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
+    // ────────────────────────────────────────────────────────────────────────
+    // 🛠️ HELPER FUNCTIONS
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Checks if the request is coming from an authenticated user
     function isAuthenticated() {
       return request.auth != null;
     }
 
+    // Checks if the authenticated user is the primary Superadmin / Owner
     function isSuperAdmin() {
-      return isAuthenticated() && request.auth.token.email != null &&
-        request.auth.token.email.lower() == 'm.h.ratul18@gmail.com';
+      return isAuthenticated() &&
+             request.auth.token.email != null &&
+             request.auth.token.email.lower() == 'm.h.ratul18@gmail.com';
     }
 
+    // Checks if the user has an Admin role in the users collection or is Superadmin
     function isAdmin() {
       return isAuthenticated() && (
         isSuperAdmin() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower().replace('[^a-z0-9]', '_'))))
       );
     }
 
-    // 1. Products Collection (Storefront items)
+    // ────────────────────────────────────────────────────────────────────────
+    // 🔓 1. PUBLIC STOREFRONT DATA (Read/Write accessible for live sync)
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Products Catalog (Storefront digital plans & specifications)
     match /products/{productId} {
       allow read, write: if true;
     }
 
-    // 2. Coupons Collection (Promo codes)
+    // Coupons & Special Offers (Promo codes, giveaways & flash deals)
     match /coupons/{couponCode} {
       allow read, write: if true;
     }
 
-    // 3. Admin Team Collection
-    match /admins/{adminId} {
-      allow read, write: if true;
-    }
-
-    // 4. Users Collection (Customer profiles)
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-
-    // 5. Orders Collection
-    match /orders/{orderId} {
-      allow read, write: if true;
-    }
-
-    // 6. Subscriptions Collection (Vault credentials & active plans)
-    match /subscriptions/{subscriptionId} {
-      allow read, write: if true;
-    }
-
-    // 7. Support Tickets Collection
-    match /support_tickets/{ticketId} {
-      allow read, write: if true;
-    }
-
-    // 8. Reviews Collection (Customer Ratings & Reviews)
+    // Customer Reviews & Ratings (Verified buyer feedback & star ratings)
     match /reviews/{reviewId} {
       allow read, write: if true;
     }
 
-    // 9. Payment Methods Collection (bKash, Nagad, Rocket numbers & QR codes)
+    // Bangladesh Payment Gateways (bKash, Nagad, Rocket, Upay numbers & QR codes)
     match /payment_methods/{methodId} {
       allow read, write: if true;
     }
 
-    // 10. Hero Slides Collection (Storefront Dynamic Banner Management)
+    // Storefront Hero Carousel Slides (Dynamic homepage banner slides)
     match /hero_slides/{slideId} {
       allow read, write: if true;
     }
 
-    // 11. Email Verifications & OTPs
+    // Quick Bot Messages & Auto-Replies (Chatbot prompt chips & answers)
+    match /quick_messages/{messageId} {
+      allow read, write: if true;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // 🔐 2. CUSTOMER & ORDER OPERATIONS (Synced live to customer vault)
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Customer Profiles (User account info, lifetime spend & roles)
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Customer Orders (TrxID payment submissions & delivery status)
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    // Vault Subscriptions & Logins (Provisioned account credentials & expiry dates)
+    match /subscriptions/{subscriptionId} {
+      allow read, write: if true;
+    }
+
+    // Support Queue & Direct Messages (Customer tickets & admin replies)
+    match /support_tickets/{ticketId} {
+      allow read, write: if true;
+    }
+
+    // Email Verifications & OTP Tokens
     match /email_verifications/{verificationId} {
       allow read, write: if true;
     }
 
-    // 12. Quick Messages & Bot Auto-Replies
-    match /quick_messages/{messageId} {
+    // ────────────────────────────────────────────────────────────────────────
+    // 🛡️ 3. ADMIN MANAGEMENT
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Admin Team List (Access control list for command hub)
+    match /admins/{adminId} {
       allow read, write: if true;
     }
   }
 }
-
