@@ -1,6 +1,46 @@
 import React from 'react';
 
 export const JsonLd: React.FC = () => {
+  const merchantReturnPolicy = {
+    '@type': 'MerchantReturnPolicy',
+    'applicableCountry': 'BD',
+    'returnPolicyCategory': 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    'merchantReturnDays': 30,
+    'returnMethod': 'https://schema.org/ReturnByMail',
+    'returnFees': 'https://schema.org/FreeReturn',
+    'customerRemorseReturnFees': 'https://schema.org/FreeReturn',
+    'itemDefectReturnFees': 'https://schema.org/FreeReturn',
+    'refundType': 'https://schema.org/ExchangeRefund',
+  };
+
+  const digitalDeliveryShippingDetails = {
+    '@type': 'OfferShippingDetails',
+    'shippingRate': {
+      '@type': 'MonetaryAmount',
+      'value': '0.00',
+      'currency': 'USD',
+    },
+    'shippingDestination': {
+      '@type': 'DefinedRegion',
+      'addressCountry': 'BD',
+    },
+    'deliveryTime': {
+      '@type': 'ShippingDeliveryTime',
+      'handlingTime': {
+        '@type': 'QuantitativeValue',
+        'minValue': 0,
+        'maxValue': 0,
+        'unitCode': 'MIN',
+      },
+      'transitTime': {
+        '@type': 'QuantitativeValue',
+        'minValue': 0,
+        'maxValue': 1,
+        'unitCode': 'MIN',
+      },
+    },
+  };
+
   const schema = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -77,7 +117,7 @@ export const JsonLd: React.FC = () => {
         },
       },
 
-      // 4. ItemList of Core Subscriptions
+      // 4. ItemList of Core Subscriptions with Full Merchant Details
       {
         '@type': 'ItemList',
         '@id': 'https://keyoon.com/#catalog',
@@ -91,13 +131,22 @@ export const JsonLd: React.FC = () => {
               'name': 'ChatGPT Plus (GPT-4o & Canvas)',
               'description': 'Genuine OpenAI ChatGPT Plus subscription with GPT-4o, DALL-E 3 image generation, Code Interpreter, and Canvas mode with instant vault credentials.',
               'image': 'https://keyoon.com/images/cards/chatgpt.jpg',
+              'sku': 'KYN-GPT4O-PLUS',
+              'mpn': 'KYN-GPT4O-01',
+              'brand': {
+                '@type': 'Brand',
+                'name': 'OpenAI',
+              },
               'offers': {
                 '@type': 'Offer',
                 'price': '8.99',
                 'priceCurrency': 'USD',
                 'availability': 'https://schema.org/InStock',
+                'validFrom': '2026-01-01',
                 'priceValidUntil': '2027-12-31',
                 'url': 'https://keyoon.com',
+                'hasMerchantReturnPolicy': merchantReturnPolicy,
+                'shippingDetails': digitalDeliveryShippingDetails,
                 'seller': {
                   '@type': 'Organization',
                   'name': 'Keyoon',
@@ -118,13 +167,22 @@ export const JsonLd: React.FC = () => {
               'name': 'Claude 3.5 Sonnet Pro',
               'description': 'Anthropic Claude 3.5 Sonnet Pro subscription with 5x higher usage limits, Artifacts workspace, and fast reasoning speeds.',
               'image': 'https://keyoon.com/images/cards/claude.jpg',
+              'sku': 'KYN-CLAUDE-PRO',
+              'mpn': 'KYN-CLAUDE-02',
+              'brand': {
+                '@type': 'Brand',
+                'name': 'Anthropic',
+              },
               'offers': {
                 '@type': 'Offer',
                 'price': '9.49',
                 'priceCurrency': 'USD',
                 'availability': 'https://schema.org/InStock',
+                'validFrom': '2026-01-01',
                 'priceValidUntil': '2027-12-31',
                 'url': 'https://keyoon.com',
+                'hasMerchantReturnPolicy': merchantReturnPolicy,
+                'shippingDetails': digitalDeliveryShippingDetails,
                 'seller': {
                   '@type': 'Organization',
                   'name': 'Keyoon',
@@ -145,13 +203,22 @@ export const JsonLd: React.FC = () => {
               'name': 'Netflix 4K UHD Premium Plan',
               'description': 'Ultra HD 4K Dolby Atmos private or shared profile slot with pin lock and 100% full-term replacement warranty.',
               'image': 'https://keyoon.com/images/cards/netflix.jpg',
+              'sku': 'KYN-NETFLIX-4K',
+              'mpn': 'KYN-NETFLIX-03',
+              'brand': {
+                '@type': 'Brand',
+                'name': 'Netflix',
+              },
               'offers': {
                 '@type': 'Offer',
                 'price': '3.99',
                 'priceCurrency': 'USD',
                 'availability': 'https://schema.org/InStock',
+                'validFrom': '2026-01-01',
                 'priceValidUntil': '2027-12-31',
                 'url': 'https://keyoon.com',
+                'hasMerchantReturnPolicy': merchantReturnPolicy,
+                'shippingDetails': digitalDeliveryShippingDetails,
                 'seller': {
                   '@type': 'Organization',
                   'name': 'Keyoon',
@@ -172,13 +239,22 @@ export const JsonLd: React.FC = () => {
               'name': 'Google Gemini Advanced 2.0',
               'description': 'Google One AI Premium tier with 2TB cloud storage, Gemini 1.5 Pro deep reasoning, and workspace integration.',
               'image': 'https://keyoon.com/images/cards/gemini.jpg',
+              'sku': 'KYN-GEMINI-ADV',
+              'mpn': 'KYN-GEMINI-04',
+              'brand': {
+                '@type': 'Brand',
+                'name': 'Google',
+              },
               'offers': {
                 '@type': 'Offer',
                 'price': '6.99',
                 'priceCurrency': 'USD',
                 'availability': 'https://schema.org/InStock',
+                'validFrom': '2026-01-01',
                 'priceValidUntil': '2027-12-31',
                 'url': 'https://keyoon.com',
+                'hasMerchantReturnPolicy': merchantReturnPolicy,
+                'shippingDetails': digitalDeliveryShippingDetails,
                 'seller': {
                   '@type': 'Organization',
                   'name': 'Keyoon',
@@ -194,7 +270,7 @@ export const JsonLd: React.FC = () => {
         ],
       },
 
-      // 5. Rich FAQPage Schema (Google Search Expandable Rich Snippets)
+      // 5. Rich FAQPage Schema
       {
         '@type': 'FAQPage',
         '@id': 'https://keyoon.com/#faq',
