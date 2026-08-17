@@ -757,6 +757,149 @@ export default function AdminPortalPage() {
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Badge (Optional)</label>
+                    <input
+                      value={editingProduct.badge || ''}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, badge: e.target.value } : null)}
+                      placeholder="e.g. POPULAR, BEST DEAL"
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-400 block mb-1 font-semibold">Delivery Time Estimate</label>
+                    <input
+                      value={editingProduct.deliveryTimeEstimate || 'Instant (< 30s)'}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, deliveryTimeEstimate: e.target.value } : null)}
+                      placeholder="e.g. Instant (< 30s)"
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Gallery & GIFs */}
+                  <div className="col-span-2">
+                    <label className="text-slate-400 block mb-1 font-semibold">Gallery Image / GIF URLs (1 per line or comma-separated)</label>
+                    <textarea
+                      rows={2}
+                      value={(editingProduct.images || []).join('\n')}
+                      onChange={e => {
+                        const urls = e.target.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                        setEditingProduct(prev => prev ? { ...prev, images: urls } : null);
+                      }}
+                      placeholder="https://i.giphy.com/...&#10;https://images.unsplash.com/..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono text-[11px]"
+                    />
+                  </div>
+
+                  {/* Features Checklist */}
+                  <div className="col-span-2">
+                    <label className="text-slate-400 block mb-1 font-semibold">Features Checklist (1 per line)</label>
+                    <textarea
+                      rows={3}
+                      value={(editingProduct.features || []).join('\n')}
+                      onChange={e => {
+                        const items = e.target.value.split('\n').map(s => s.trim()).filter(Boolean);
+                        setEditingProduct(prev => prev ? { ...prev, features: items } : null);
+                      }}
+                      placeholder="GPT-4o & Canvas access&#10;Advanced Voice Mode&#10;Full term warranty"
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Step-by-Step Documentation / Activation Protocol */}
+                  <div className="col-span-2">
+                    <label className="text-slate-400 block mb-1 font-semibold">Step-by-Step Activation Protocol / Documentation (1 step per line)</label>
+                    <textarea
+                      rows={3}
+                      value={(editingProduct.instructions || []).join('\n')}
+                      onChange={e => {
+                        const items = e.target.value.split('\n').map(s => s.trim()).filter(Boolean);
+                        setEditingProduct(prev => prev ? { ...prev, instructions: items } : null);
+                      }}
+                      placeholder="Copy credentials from your Vault.&#10;Log in at official portal.&#10;Enjoy full unlocked premium features."
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  {/* Technical Specifications */}
+                  <div className="col-span-2 p-3.5 rounded-2xl bg-zinc-950 border border-white/[0.06] space-y-3">
+                    <span className="text-xs font-bold text-slate-200">Technical Specifications</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Supported Platforms</label>
+                        <input
+                          value={(editingProduct.specs?.platforms || []).join(', ')}
+                          onChange={e => {
+                            const plats = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                            setEditingProduct(prev => prev ? {
+                              ...prev,
+                              specs: { ...(prev.specs || { warranty: 'Full Replacement', quality: 'HD/4K', region: 'Global', platforms: [] }), platforms: plats }
+                            } : null);
+                          }}
+                          placeholder="Web, iOS, Android, macOS"
+                          className="w-full px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Quality / Resolution</label>
+                        <input
+                          value={editingProduct.specs?.quality || ''}
+                          onChange={e => {
+                            setEditingProduct(prev => prev ? {
+                              ...prev,
+                              specs: { ...(prev.specs || { warranty: 'Full Replacement', region: 'Global', platforms: [] }), quality: e.target.value }
+                            } : null);
+                          }}
+                          placeholder="4K Ultra HD / Max Speed"
+                          className="w-full px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Warranty Policy</label>
+                        <input
+                          value={editingProduct.specs?.warranty || ''}
+                          onChange={e => {
+                            setEditingProduct(prev => prev ? {
+                              ...prev,
+                              specs: { ...(prev.specs || { quality: 'HD', region: 'Global', platforms: [] }), warranty: e.target.value }
+                            } : null);
+                          }}
+                          placeholder="Full Period Replacement"
+                          className="w-full px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Region / Lock Status</label>
+                        <input
+                          value={editingProduct.specs?.region || ''}
+                          onChange={e => {
+                            setEditingProduct(prev => prev ? {
+                              ...prev,
+                              specs: { ...(prev.specs || { warranty: 'Full', quality: 'HD', platforms: [] }), region: e.target.value }
+                            } : null);
+                          }}
+                          placeholder="Global / No VPN Required"
+                          className="w-full px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[11px] text-slate-400 block mb-1">Allowed Screens/Profiles</label>
+                        <input
+                          type="number"
+                          value={editingProduct.specs?.screens || 1}
+                          onChange={e => {
+                            setEditingProduct(prev => prev ? {
+                              ...prev,
+                              specs: { ...(prev.specs || { warranty: 'Full', quality: 'HD', platforms: [], region: 'Global' }), screens: Number(e.target.value) }
+                            } : null);
+                          }}
+                          className="w-full px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10 text-white text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Pricing Tiers */}

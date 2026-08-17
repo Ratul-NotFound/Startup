@@ -318,16 +318,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const prods = snapshot.docs.map(d => {
           const data = d.data() as Product;
           const fallback = MOCK_PRODUCTS.find(p => p.id === d.id || p.slug === data.slug);
-          const gallery = (fallback?.images && fallback.images.length > 0)
-            ? fallback.images
-            : (data.images && data.images.length > 0)
-              ? data.images
+          const gallery = (data.images && data.images.length > 0)
+            ? data.images
+            : (fallback?.images && fallback.images.length > 0)
+              ? fallback.images
               : [data.logo || fallback?.logo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'];
 
           return {
+            ...fallback,
             ...data,
             id: d.id,
             images: gallery,
+            features: (data.features && data.features.length > 0) ? data.features : (fallback?.features || ['Full access included', 'Fast reliable delivery', 'Replacement warranty']),
+            instructions: (data.instructions && data.instructions.length > 0) ? data.instructions : (fallback?.instructions || ['Log in with credentials from your Vault.', 'Start using the premium service immediately.']),
+            specs: {
+              screens: data.specs?.screens ?? fallback?.specs?.screens ?? 1,
+              quality: data.specs?.quality || fallback?.specs?.quality || 'Ultra High Definition',
+              warranty: data.specs?.warranty || fallback?.specs?.warranty || 'Full Period Replacement Warranty',
+              platforms: (data.specs?.platforms && data.specs.platforms.length > 0) ? data.specs.platforms : (fallback?.specs?.platforms || ['Web', 'iOS', 'Android', 'macOS', 'Windows']),
+              region: data.specs?.region || fallback?.specs?.region || 'Global / Region-free',
+            },
           } as Product;
         });
         setProducts(prods);

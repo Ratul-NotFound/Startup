@@ -1,16 +1,63 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
-import { X, ShoppingBag, Zap, ShieldCheck, Star, CheckCircle2, Share2, Link2 } from 'lucide-react';
+import {
+  X, ShoppingBag, Zap, ShieldCheck, Star, CheckCircle2,
+  Share2, Link2, BookOpen, Layers, MessageSquare, ThumbsUp,
+  Monitor, Globe, Lock, AlertCircle, HelpCircle, Check,
+  ChevronRight, Sparkles, UserCheck, Clock, ExternalLink
+} from 'lucide-react';
+import { Review } from '@/types';
+
+type ModalTab = 'overview' | 'docs' | 'reviews';
 
 export const ProductModal: React.FC = () => {
-  const { selectedProduct, setSelectedProduct, addToCart, setIsCartOpen } = useApp();
+  const {
+    selectedProduct,
+    setSelectedProduct,
+    addToCart,
+    setIsCartOpen,
+    reviews,
+    likeReview,
+    setIsWriteReviewOpen,
+    setTargetReviewProduct,
+  } = useApp();
+
+  const [activeTab, setActiveTab] = useState<ModalTab>('overview');
   const [selectedPlanIndex, setSelectedPlanIndex] = useState<number>(0);
   const [customEmail, setCustomEmail] = useState('');
   const [added, setAdded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (selectedProduct) {
+      const popIdx = selectedProduct.pricingTiers.findIndex(t => t.isPopular);
+      setSelectedPlanIndex(popIdx !== -1 ? popIdx : 0);
+      setCustomEmail('');
+      setAdded(false);
+      setActiveImageIndex(0);
+      setActiveTab('overview');
+      setExpandedFaq(null);
+    }
+  }, [selectedProduct]);
+
+  // Product-specific reviews
+  const productReviews = useMemo(() => {
+    if (!selectedProduct) return [];
+    const directMatches = reviews.filter(
+      r => r.productId === selectedProduct.id ||
+      r.productName.toLowerCase() === selectedProduct.name.toLowerCase()
+    );
+    // If no direct reviews yet, show top verified reviews as social proof
+    if (directMatches.length === 0) {
+      return reviews.slice(0, 3);
+    }
+    return directMatches;
+  }, [reviews, selectedProduct]);
 
   const handleShare = async () => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/?product=${selectedProduct?.id}` : '';
@@ -28,15 +75,6 @@ export const ProductModal: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (selectedProduct) {
-      const popIdx = selectedProduct.pricingTiers.findIndex(t => t.isPopular);
-      setSelectedPlanIndex(popIdx !== -1 ? popIdx : 0);
-      setCustomEmail('');
-      setAdded(false);
-    }
-  }, [selectedProduct]);
-
   const currentPlan = selectedProduct
     ? selectedProduct.pricingTiers[selectedPlanIndex] ?? selectedProduct.pricingTiers[0]
     : null;
@@ -51,208 +89,608 @@ export const ProductModal: React.FC = () => {
     }, 500);
   };
 
-  const heroImage = selectedProduct?.images?.[0] ?? selectedProduct?.logo;
+  const handleOpenWriteReview = () => {
+    if (!selectedProduct) return;
+    setTargetReviewProduct(selectedProduct);
+    setIsWriteReviewOpen(true);
+  };
+
+  if (!selectedProduct || !currentPlan) return null;
+
+  const galleryImages = (selectedProduct.images && selectedProduct.images.length > 0)
+    ? selectedProduct.images
+    : [selectedProduct.logo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'];
+
+  const currentImage = galleryImages[activeImageIndex] || galleryImages[0];
+
+  // Dynamic FAQs based on product attributes
+  const faqs = [
+    {
+      q: `How do I receive my ${selectedProduct.name} credentials?`,
+      a: `Immediately after checkout confirmation, your credentials and activation guide are unlocked in your private SubNexus Vault under your account dashboard (${selectedProduct.deliveryTimeEstimate}).`,
+    },
+    {
+      q: `What is the warranty and replacement policy?`,
+      a: `Every subscription comes with a 100% Full-Term Replacement Warranty. If you ever experience issues, our automated auto-renewal & support engine resolves or replaces your slot immediately.`,
+    },
+    {
+      q: `Can I use this on multiple devices?`,
+      a: `Yes! Supported platforms include ${selectedProduct.specs.platforms.join(', ')}. ${selectedProduct.specs.screens ? `You can use up to ${selectedProduct.specs.screens} simultaneous screen(s)/profile(s).` : 'Standard personal multi-device login supported.'}`,
+    },
+    {
+      q: `Will my personal history/playlists/chats be preserved?`,
+      a: selectedProduct.accountType === 'direct_upgrade' || selectedProduct.accountType === 'private_account'
+        ? 'Yes, this is an official dedicated license applied directly or allocated as a private master workspace.'
+        : 'Yes, your dedicated slot or profile is strictly PIN-locked and isolated for your private use.',
+    },
+  ];
 
   return (
     <AnimatePresence>
-      {selectedProduct && currentPlan && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setSelectedProduct(null)}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
-          />
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 overflow-y-auto">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={() => setSelectedProduct(null)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-md"
+        />
 
-          {/* Modal */}
-          <motion.div
-            layoutId={`product-card-container-${selectedProduct.id}`}
-            initial={{ opacity: 0, y: 24, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.97 }}
-            transition={{ type: 'spring', damping: 30, stiffness: 380 }}
-            className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl bg-zinc-900 border border-white/10 shadow-2xl z-10 overflow-hidden"
-          >
-            {/* Hero Image */}
-            <div className="relative h-44 w-full bg-zinc-950 overflow-hidden">
-              {heroImage && (
-                <img
-                  src={heroImage}
-                  alt={selectedProduct.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover opacity-80"
-                  onError={e => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/40 to-transparent" />
+        {/* Modal Window */}
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 30, scale: 0.96 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 360 }}
+          className="relative w-full max-w-2xl max-h-[92vh] flex flex-col rounded-t-[28px] sm:rounded-[28px] bg-zinc-950/95 border border-white/10 shadow-[0_25px_70px_rgba(0,0,0,0.9)] z-10 overflow-hidden"
+        >
+          {/* Top Header Banner */}
+          <div className="relative shrink-0 h-44 sm:h-52 w-full bg-zinc-950 overflow-hidden">
+            <img
+              src={currentImage}
+              alt={selectedProduct.name}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover opacity-60 transition-opacity duration-300"
+              onError={e => {
+                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80';
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-zinc-950/80 via-transparent to-zinc-950/80" />
 
-              {/* Actions: Share + Close */}
-              <div className="absolute top-4 right-4 flex items-center gap-2">
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleShare}
-                  title="Share this product"
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/50 text-white border border-white/10 backdrop-blur-md text-[11px] font-semibold"
-                >
-                  {copied ? (
-                    <><Link2 className="h-3.5 w-3.5 text-emerald-400" /><span className="text-emerald-400">Copied!</span></>
-                  ) : (
-                    <><Share2 className="h-3.5 w-3.5" /><span>Share</span></>
-                  )}
-                </motion.button>
+            {/* Top Action Buttons (Share & Close) */}
+            <div className="absolute top-3.5 right-3.5 flex items-center gap-2 z-20">
+              <motion.button
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                onClick={handleShare}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white border border-white/15 backdrop-blur-md text-xs font-semibold shadow-lg transition-colors"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-400" />
+                    <span className="text-emerald-400 text-[11px]">Link Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="h-3.5 w-3.5 text-zinc-300" />
+                    <span className="text-[11px] text-zinc-200">Share</span>
+                  </>
+                )}
+              </motion.button>
 
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setSelectedProduct(null)}
-                  className="p-1.5 rounded-full bg-black/50 text-white border border-white/10 backdrop-blur-md"
-                >
-                  <X className="h-4 w-4" />
-                </motion.button>
-              </div>
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setSelectedProduct(null)}
+                className="p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-zinc-300 hover:text-white border border-white/15 backdrop-blur-md shadow-lg transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </motion.button>
+            </div>
 
-              {/* Product Identity */}
-              <div className="absolute bottom-4 left-4 flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl overflow-hidden border border-white/15 bg-zinc-800 shrink-0">
+            {/* Identity & Badges overlay */}
+            <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl overflow-hidden border border-white/20 bg-zinc-900 shadow-xl shrink-0 p-0.5">
                   <img
                     src={selectedProduct.logo}
                     alt={selectedProduct.name}
                     referrerPolicy="no-referrer"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover rounded-xl"
                   />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold text-white leading-tight">{selectedProduct.name}</h2>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span className="text-[11px] text-zinc-300">{selectedProduct.rating.toFixed(1)}</span>
-                    <span className="text-zinc-600 text-[11px]">·</span>
-                    <span className="text-[11px] text-zinc-400">{selectedProduct.reviewCount.toLocaleString()} reviews</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="p-5 space-y-5">
-
-              {/* Description */}
-              <p className="text-xs text-zinc-400 leading-relaxed">{selectedProduct.tagline || selectedProduct.description}</p>
-
-              {/* Key perks — top 3 features */}
-              <div className="space-y-1.5">
-                {selectedProduct.features.slice(0, 3).map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs text-zinc-300">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    {f}
-                  </div>
-                ))}
-              </div>
-
-              {/* Plan Selector */}
-              <div className="space-y-2">
-                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Duration</span>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {selectedProduct.pricingTiers.map((tier, idx) => {
-                    const active = idx === selectedPlanIndex;
-                    return (
-                      <button
-                        key={tier.duration}
-                        type="button"
-                        onClick={() => setSelectedPlanIndex(idx)}
-                        className={`relative py-2.5 rounded-xl text-center text-xs transition-all ${
-                          active
-                            ? 'bg-white text-zinc-950 font-bold shadow-sm'
-                            : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200'
-                        }`}
-                      >
-                        {tier.isPopular && !active && (
-                          <span className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-[7px] font-black uppercase bg-cyan-500 text-white px-1 rounded">
-                            Best
-                          </span>
-                        )}
-                        <div className="font-bold text-[11px]">
-                          {tier.label.replace(' Months', 'mo').replace(' Month', 'mo').replace(' (1 Year)', 'yr')}
-                        </div>
-                        <div className={`text-[10px] mt-0.5 ${active ? 'text-zinc-600' : 'text-zinc-500'}`}>
-                          ${tier.price.toFixed(2)}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Delivery & Warranty */}
-              <div className="flex gap-3">
-                <div className="flex-1 flex items-center gap-2 p-2.5 rounded-xl bg-zinc-800/60 border border-white/[0.06]">
-                  <Zap className="h-4 w-4 text-emerald-400 shrink-0" />
-                  <div>
-                    <div className="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Delivery</div>
-                    <div className="text-xs font-semibold text-white">{selectedProduct.deliveryTimeEstimate}</div>
-                  </div>
-                </div>
-                <div className="flex-1 flex items-center gap-2 p-2.5 rounded-xl bg-zinc-800/60 border border-white/[0.06]">
-                  <ShieldCheck className="h-4 w-4 text-cyan-400 shrink-0" />
-                  <div>
-                    <div className="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Warranty</div>
-                    <div className="text-xs font-semibold text-white">Full Period</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Custom Email */}
-              {(selectedProduct.accountType === 'direct_upgrade' || selectedProduct.deliveryType === 'custom_email') && (
-                <input
-                  type="email"
-                  value={customEmail}
-                  onChange={e => setCustomEmail(e.target.value)}
-                  placeholder="Your email (optional for invite)"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-800 border border-white/[0.08] text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 transition-colors"
-                />
-              )}
-
-              {/* CTA Row */}
-              <div className="flex items-center justify-between pt-1 border-t border-white/[0.07]">
-                <div>
-                  <div className="text-[10px] text-zinc-500 font-medium">Total</div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-black text-white">${currentPlan.price.toFixed(2)}</span>
-                    {currentPlan.discountPercentage && (
-                      <span className="text-[10px] text-emerald-400 font-bold">-{currentPlan.discountPercentage}%</span>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">{selectedProduct.name}</h2>
+                    {selectedProduct.badge && (
+                      <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-md bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                        {selectedProduct.badge}
+                      </span>
                     )}
                   </div>
+
+                  <div className="flex items-center gap-2 mt-1">
+                    <button
+                      onClick={() => setActiveTab('reviews')}
+                      className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition-colors group cursor-pointer"
+                    >
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      <span className="text-xs font-bold text-amber-300">{selectedProduct.rating.toFixed(2)}</span>
+                      <span className="text-zinc-500 text-[11px]">·</span>
+                      <span className="text-[11px] text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                        {productReviews.length} Reviews
+                      </span>
+                    </button>
+
+                    <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      In Stock ({selectedProduct.stockCount})
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Gallery Image Selector Thumbnails */}
+              {galleryImages.length > 1 && (
+                <div className="hidden sm:flex items-center gap-1.5 bg-black/50 backdrop-blur-md p-1 rounded-xl border border-white/10">
+                  {galleryImages.slice(0, 4).map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIndex(idx)}
+                      className={`h-7 w-7 rounded-lg overflow-hidden border transition-all ${
+                        activeImageIndex === idx
+                          ? 'border-cyan-400 ring-2 ring-cyan-400/40 scale-105'
+                          : 'border-white/10 opacity-60 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive Navigation Tabs */}
+          <div className="shrink-0 flex items-center gap-2 px-4 sm:px-6 pt-3 pb-2 border-b border-white/[0.08] bg-zinc-950/80">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'overview'
+                  ? 'bg-white text-zinc-950 shadow-md'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Overview & Pricing
+            </button>
+
+            <button
+              onClick={() => setActiveTab('docs')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'docs'
+                  ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+              }`}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              Docs & Guide
+            </button>
+
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'reviews'
+                  ? 'bg-amber-400 text-zinc-950 shadow-md shadow-amber-400/20'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900'
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Reviews ({productReviews.length})
+            </button>
+          </div>
+
+          {/* Tab Content Body (Scrollable) */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-h-[50vh] sm:max-h-[54vh] scrollbar-thin">
+            
+            {/* ═════════ TAB 1: OVERVIEW & PRICING ═════════ */}
+            {activeTab === 'overview' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-5"
+              >
+                {/* Tagline */}
+                <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal">
+                  {selectedProduct.tagline || selectedProduct.description}
+                </p>
+
+                {/* Key Features Pill Matrix */}
+                <div className="space-y-2">
+                  <h4 className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Features Included</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {selectedProduct.features.map((feature, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2 p-2.5 rounded-xl bg-zinc-900/90 border border-white/[0.06] text-xs text-zinc-200"
+                      >
+                        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleAddToCart}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-white text-zinc-950 font-bold text-xs tracking-wide transition-all shadow-sm hover:bg-zinc-100"
-                >
-                  {added ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      Added!
-                    </>
+                {/* Plan Selection Duration Grid */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Select Duration</span>
+                    <span className="text-[11px] text-cyan-400 font-semibold">Save up to {Math.max(...selectedProduct.pricingTiers.map(t => t.discountPercentage))}%</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {selectedProduct.pricingTiers.map((tier, idx) => {
+                      const active = idx === selectedPlanIndex;
+                      return (
+                        <button
+                          key={tier.duration}
+                          type="button"
+                          onClick={() => setSelectedPlanIndex(idx)}
+                          className={`relative p-3 rounded-2xl text-left transition-all border ${
+                            active
+                              ? 'bg-zinc-800 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.15)] ring-1 ring-cyan-400'
+                              : 'bg-zinc-900/80 border-white/[0.08] hover:bg-zinc-850 hover:border-white/20'
+                          }`}
+                        >
+                          {tier.isPopular && (
+                            <span className="absolute -top-2 right-2 text-[8px] font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-2 py-0.5 rounded-full shadow-md">
+                              Popular
+                            </span>
+                          )}
+
+                          <div className={`font-bold text-xs ${active ? 'text-white' : 'text-zinc-300'}`}>
+                            {tier.label}
+                          </div>
+
+                          <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="text-sm font-black text-white">${tier.price.toFixed(2)}</span>
+                            {tier.originalPrice && (
+                              <span className="text-[10px] text-zinc-500 line-through">${tier.originalPrice.toFixed(2)}</span>
+                            )}
+                          </div>
+
+                          {tier.discountPercentage > 0 && (
+                            <div className="mt-1 text-[10px] font-semibold text-emerald-400">
+                              Save {tier.discountPercentage}%
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Specs / Assurance Quick Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.06]">
+                    <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] uppercase font-bold">
+                      <Zap className="h-3 w-3 text-emerald-400" />
+                      Delivery
+                    </div>
+                    <div className="text-xs font-semibold text-white mt-1 truncate">{selectedProduct.deliveryTimeEstimate}</div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.06]">
+                    <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] uppercase font-bold">
+                      <ShieldCheck className="h-3 w-3 text-cyan-400" />
+                      Warranty
+                    </div>
+                    <div className="text-xs font-semibold text-white mt-1 truncate">Full Replacement</div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.06]">
+                    <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] uppercase font-bold">
+                      <Globe className="h-3 w-3 text-indigo-400" />
+                      Region
+                    </div>
+                    <div className="text-xs font-semibold text-white mt-1 truncate">{selectedProduct.specs.region || 'Global'}</div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-zinc-900/60 border border-white/[0.06]">
+                    <div className="flex items-center gap-1.5 text-zinc-500 text-[10px] uppercase font-bold">
+                      <Lock className="h-3 w-3 text-purple-400" />
+                      Account
+                    </div>
+                    <div className="text-xs font-semibold text-white mt-1 capitalize truncate">
+                      {selectedProduct.accountType.replace('_', ' ')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Custom Email Input (if direct upgrade) */}
+                {(selectedProduct.accountType === 'direct_upgrade' || selectedProduct.deliveryType === 'custom_email') && (
+                  <div className="space-y-1.5 p-3 rounded-2xl bg-zinc-900/90 border border-cyan-500/20">
+                    <label className="text-[11px] font-bold text-cyan-300 flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3" />
+                      Direct Account Upgrade Email (Optional)
+                    </label>
+                    <input
+                      type="email"
+                      value={customEmail}
+                      onChange={e => setCustomEmail(e.target.value)}
+                      placeholder="Enter the email address you want upgraded"
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors"
+                    />
+                    <p className="text-[10px] text-zinc-400">
+                      Leave blank if you prefer receiving dedicated credentials in your private Vault instead.
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* ═════════ TAB 2: DOCUMENTATION & GUIDE ═════════ */}
+            {activeTab === 'docs' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-5"
+              >
+                {/* Step-by-Step Activation Guide */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
+                    <BookOpen className="h-4 w-4" />
+                    Step-by-Step Activation Protocol
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {selectedProduct.instructions.map((inst, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-3 p-3 rounded-2xl bg-zinc-900/80 border border-white/[0.08]"
+                      >
+                        <div className="h-6 w-6 rounded-full bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 font-black text-xs flex items-center justify-center shrink-0">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-zinc-200 leading-relaxed">{inst}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Technical Specifications Matrix */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2 text-zinc-400 text-xs font-bold uppercase tracking-wider">
+                    <Layers className="h-4 w-4 text-indigo-400" />
+                    Product Specifications
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    <div className="p-3 rounded-xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between">
+                      <span className="text-zinc-400">Supported Platforms:</span>
+                      <span className="font-semibold text-white">{selectedProduct.specs.platforms.join(', ')}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between">
+                      <span className="text-zinc-400">Streaming / Quality:</span>
+                      <span className="font-semibold text-white">{selectedProduct.specs.quality || 'Ultra HD / Max'}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between">
+                      <span className="text-zinc-400">Warranty Coverage:</span>
+                      <span className="font-semibold text-emerald-400">{selectedProduct.specs.warranty}</span>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-zinc-900/60 border border-white/[0.06] flex items-center justify-between">
+                      <span className="text-zinc-400">Region Lock:</span>
+                      <span className="font-semibold text-cyan-300">{selectedProduct.specs.region || 'Worldwide / No VPN Required'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Important Rules & Best Practices */}
+                <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-300 text-xs font-bold">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    Account Safety & Usage Rules
+                  </div>
+                  <ul className="text-[11px] text-zinc-300 space-y-1.5 pl-5 list-disc">
+                    <li>Always use the designated PIN or slot assigned in your Vault.</li>
+                    <li>Do not change account recovery credentials or billing settings to protect warranty validity.</li>
+                    <li>Our automated heartbeat monitor checks uptime 24/7; any credentials flagged for renewal are refreshed in under 60 seconds.</li>
+                  </ul>
+                </div>
+
+                {/* FAQs Accordion */}
+                <div className="space-y-2">
+                  <div className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Frequently Asked Questions</div>
+                  <div className="space-y-1.5">
+                    {faqs.map((faq, idx) => {
+                      const isOpen = expandedFaq === idx;
+                      return (
+                        <div key={idx} className="rounded-xl bg-zinc-900/70 border border-white/[0.06] overflow-hidden">
+                          <button
+                            onClick={() => setExpandedFaq(isOpen ? null : idx)}
+                            className="w-full p-3 text-left flex items-center justify-between gap-2 text-xs font-semibold text-zinc-200 hover:text-white"
+                          >
+                            <span>{faq.q}</span>
+                            <ChevronRight className={`h-3.5 w-3.5 text-zinc-500 transition-transform ${isOpen ? 'rotate-90 text-cyan-400' : ''}`} />
+                          </button>
+                          {isOpen && (
+                            <div className="px-3 pb-3 text-xs text-zinc-400 leading-relaxed border-t border-white/[0.04] pt-2">
+                              {faq.a}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ═════════ TAB 3: CUSTOMER REVIEWS ═════════ */}
+            {activeTab === 'reviews' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-5"
+              >
+                {/* Rating Overview Header Card */}
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-900 border border-amber-500/20 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-2xl bg-amber-400/20 border border-amber-400/30 flex flex-col items-center justify-center">
+                      <span className="text-lg font-black text-amber-300 leading-none">{selectedProduct.rating.toFixed(1)}</span>
+                      <div className="flex items-center gap-0.5 mt-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="h-2 w-2 fill-amber-400 text-amber-400" />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">Verified Customer Rating</h4>
+                      <p className="text-[11px] text-zinc-400">Based on {selectedProduct.reviewCount.toLocaleString()} verified customer checkouts</p>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleOpenWriteReview}
+                    className="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-bold text-xs tracking-wide transition-all shadow-md shrink-0 flex items-center gap-1.5"
+                  >
+                    <Star className="h-3.5 w-3.5 fill-zinc-950" />
+                    Write Review
+                  </motion.button>
+                </div>
+
+                {/* Review Items List */}
+                <div className="space-y-3">
+                  {productReviews.length === 0 ? (
+                    <div className="p-6 text-center rounded-2xl bg-zinc-900/60 border border-white/[0.06] space-y-2">
+                      <Star className="h-8 w-8 text-zinc-600 mx-auto" />
+                      <p className="text-xs text-zinc-400">No written reviews for this tier yet. Be the first to leave one!</p>
+                      <button
+                        onClick={handleOpenWriteReview}
+                        className="text-xs text-amber-400 font-bold hover:underline"
+                      >
+                        Write a Review now
+                      </button>
+                    </div>
                   ) : (
-                    <>
-                      <ShoppingBag className="h-4 w-4" />
-                      Add to Cart
-                    </>
+                    productReviews.map((rev) => (
+                      <div
+                        key={rev.id}
+                        className="p-3.5 rounded-2xl bg-zinc-900/80 border border-white/[0.07] space-y-2 hover:border-white/15 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <img
+                              src={rev.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.userName)}&background=27272a&color=f4f4f5`}
+                              alt={rev.userName}
+                              className="h-7 w-7 rounded-full object-cover border border-white/10"
+                            />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-white">{rev.userName}</span>
+                                {rev.verifiedPurchase && (
+                                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded-full border border-emerald-500/20">
+                                    <CheckCircle2 className="h-2.5 w-2.5" />
+                                    Verified
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-2.5 w-2.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-zinc-600'}`}
+                                  />
+                                ))}
+                                {rev.planDuration && (
+                                  <span className="text-[10px] text-zinc-500 ml-1.5">· {rev.planDuration} Plan</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Likes Button */}
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => likeReview(rev.id)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 border border-white/[0.06] text-[11px] transition-colors"
+                          >
+                            <ThumbsUp className="h-3 w-3" />
+                            <span>{rev.likes || 0}</span>
+                          </motion.button>
+                        </div>
+
+                        {rev.title && (
+                          <h5 className="text-xs font-bold text-zinc-200 leading-snug">{rev.title}</h5>
+                        )}
+
+                        <p className="text-xs text-zinc-400 leading-relaxed">{rev.comment}</p>
+                      </div>
+                    ))
                   )}
-                </motion.button>
+                </div>
+              </motion.div>
+            )}
+
+          </div>
+
+          {/* Persistent Footer CTA Row */}
+          <div className="shrink-0 p-4 sm:p-5 border-t border-white/[0.08] bg-zinc-950/95 flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[10px] uppercase font-bold text-zinc-500">Plan: {currentPlan.label}</div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-white">${currentPlan.price.toFixed(2)}</span>
+                {currentPlan.originalPrice && (
+                  <span className="text-xs text-zinc-500 line-through">${currentPlan.originalPrice.toFixed(2)}</span>
+                )}
+                {currentPlan.discountPercentage > 0 && (
+                  <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    -{currentPlan.discountPercentage}%
+                  </span>
+                )}
               </div>
             </div>
-          </motion.div>
-        </div>
-      )}
+
+            <div className="flex items-center gap-2">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={handleAddToCart}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-zinc-950 font-bold text-xs sm:text-sm tracking-wide transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-zinc-100"
+              >
+                {added ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span>Added to Cart!</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>Add to Cart</span>
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
     </AnimatePresence>
   );
 };
