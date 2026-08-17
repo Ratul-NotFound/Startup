@@ -63,7 +63,7 @@ export const ProductModal: React.FC = () => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/?product=${selectedProduct?.id}` : '';
     const shareData = {
       title: selectedProduct?.name ?? '',
-      text: `${selectedProduct?.tagline ?? selectedProduct?.description ?? ''} — from SubNexus`,
+      text: `${selectedProduct?.tagline ?? selectedProduct?.description ?? ''} — from Keyoon`,
       url,
     };
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -107,7 +107,7 @@ export const ProductModal: React.FC = () => {
   const faqs = [
     {
       q: `How do I receive my ${selectedProduct.name} credentials?`,
-      a: `Immediately after checkout confirmation, your credentials and activation guide are unlocked in your private SubNexus Vault under your account dashboard (${selectedProduct.deliveryTimeEstimate}).`,
+      a: `Immediately after checkout confirmation, your credentials and activation guide are unlocked in your private Keyoon Vault under your account dashboard (${selectedProduct.deliveryTimeEstimate}).`,
     },
     {
       q: `What is the warranty and replacement policy?`,

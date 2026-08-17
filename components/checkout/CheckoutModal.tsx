@@ -30,6 +30,7 @@ export const CheckoutModal: React.FC = () => {
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'auth_required' | 'details' | 'processing' | 'success'>('details');
+  const [zoomQrUrl, setZoomQrUrl] = useState<string | null>(null);
   const [latestOrderInfo, setLatestOrderInfo] = useState<{
     orderNumber: string;
     totalBdt: number;
@@ -371,37 +372,49 @@ export const CheckoutModal: React.FC = () => {
                 </div>
 
                 {/* Account Number & QR Row */}
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  {/* QR code thumbnail */}
+                <div className="flex flex-col sm:flex-row items-center gap-3.5">
+                  {/* Big Scannable QR code */}
                   {currentMethod.qrCodeImage && (
-                    <div className="h-20 w-20 rounded-xl bg-white p-1 shrink-0 flex items-center justify-center shadow-md">
-                      <img
-                        src={currentMethod.qrCodeImage}
-                        alt="QR Code"
-                        className="h-full w-full object-contain"
-                      />
+                    <div className="flex flex-col items-center gap-1 shrink-0">
+                      <div
+                        onClick={() => setZoomQrUrl(currentMethod.qrCodeImage!)}
+                        className="group relative h-28 w-28 sm:h-32 sm:w-32 rounded-2xl bg-white p-2 shrink-0 flex items-center justify-center shadow-lg border border-white/20 cursor-pointer hover:scale-105 transition-all overflow-hidden"
+                        title="Click to zoom QR Code"
+                      >
+                        <img
+                          src={currentMethod.qrCodeImage}
+                          alt="QR Code"
+                          className="h-full w-full object-contain"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                          <span className="text-[10px] font-bold text-white bg-black/80 px-2 py-1 rounded-md">
+                            🔍 Zoom QR
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-zinc-500 font-semibold uppercase tracking-wider">Tap QR to zoom</span>
                     </div>
                   )}
 
                   {/* Number & Type */}
-                  <div className="flex-1 w-full space-y-1">
+                  <div className="flex-1 w-full space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] text-zinc-400 font-semibold">{currentMethod.name} Number:</span>
-                      <span className="text-[10px] text-emerald-400 font-bold px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-500/20">
+                      <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/30">
                         {currentMethod.accountType}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between p-2 rounded-xl bg-zinc-900 border border-white/10">
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-900 border border-white/10 shadow-inner">
                       <span className="font-mono font-black text-sm text-white tracking-wider">
                         {currentMethod.accountNumber}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleCopy(currentMethod.accountNumber.replace(/[^0-9]/g, ''), 'number')}
-                        className="px-2.5 py-1 rounded-lg bg-white text-zinc-950 text-[11px] font-bold flex items-center gap-1 transition-colors"
+                        className="px-3 py-1.5 rounded-lg bg-white text-zinc-950 text-xs font-bold flex items-center gap-1 transition-colors hover:bg-zinc-100 cursor-pointer shadow-sm"
                       >
-                        {copiedNumber ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                        {copiedNumber ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                         <span>{copiedNumber ? 'Copied!' : 'Copy'}</span>
                       </button>
                     </div>
@@ -409,7 +422,7 @@ export const CheckoutModal: React.FC = () => {
                 </div>
 
                 {/* Instructions note */}
-                <p className="text-[11px] text-zinc-400 leading-relaxed bg-zinc-900/50 p-2 rounded-lg border border-white/5">
+                <p className="text-[11px] text-zinc-400 leading-relaxed bg-zinc-900/50 p-2.5 rounded-xl border border-white/5">
                   {currentMethod.instructions || 'Send Money to the number above, then submit the Sender Number and TrxID below.'}
                 </p>
               </div>
@@ -449,43 +462,37 @@ export const CheckoutModal: React.FC = () => {
                 </label>
 
                 <input
-                  ref={fileInputRef}
                   type="file"
+                  ref={fileInputRef}
                   accept="image/*"
                   onChange={handleImageUpload}
                   className="hidden"
                 />
 
                 {screenshotBase64 ? (
-                  <div className="relative rounded-2xl bg-zinc-950 border border-white/10 p-2 flex items-center justify-between gap-3">
+                  <div className="relative p-2.5 rounded-xl bg-zinc-950 border border-white/10 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <img
                         src={screenshotBase64}
-                        alt="Proof Preview"
-                        className="h-10 w-10 rounded-lg object-cover border border-white/10"
+                        alt="Screenshot"
+                        className="h-10 w-10 object-cover rounded-lg border border-white/10"
                       />
-                      <div>
-                        <span className="text-xs font-bold text-white block">Screenshot Attached</span>
-                        <span className="text-[10px] text-emerald-400 font-medium">✓ Ready for verification</span>
-                      </div>
+                      <span className="text-[11px] text-emerald-400 font-medium">✓ Screenshot Attached</span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setScreenshotBase64(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                      }}
-                      className="text-zinc-500 hover:text-red-400 text-xs px-2 py-1 rounded-lg hover:bg-zinc-900 transition-colors"
+                      onClick={() => setScreenshotBase64(null)}
+                      className="p-1 rounded-md text-zinc-400 hover:text-white"
                     >
-                      Remove
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ) : (
                   <button
                     type="button"
-                    disabled={isCompressing}
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-3 px-4 rounded-2xl bg-zinc-950 hover:bg-zinc-800/60 border border-dashed border-white/15 text-zinc-400 hover:text-white flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    disabled={isCompressing}
+                    className="w-full py-2.5 rounded-xl border border-dashed border-white/15 hover:border-white/30 bg-zinc-950/60 hover:bg-zinc-950 text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2"
                   >
                     {isCompressing ? (
                       <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
@@ -504,7 +511,7 @@ export const CheckoutModal: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isProcessing || !senderNumber.trim() || !transactionId.trim()}
-                  className="w-full py-3 rounded-2xl bg-white text-zinc-950 hover:bg-zinc-100 font-black text-xs transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-2xl bg-white text-zinc-950 hover:bg-zinc-100 font-black text-xs transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   <span>Submit Payment Verification</span>
@@ -513,6 +520,34 @@ export const CheckoutModal: React.FC = () => {
             </form>
           )}
         </motion.div>
+
+        {/* QR Code Full Zoom Lightbox */}
+        {zoomQrUrl && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md"
+            onClick={() => setZoomQrUrl(null)}
+          >
+            <div
+              className="relative max-w-sm rounded-3xl bg-white p-6 shadow-2xl space-y-3 text-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setZoomQrUrl(null)}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-zinc-100 text-zinc-600 hover:text-zinc-950"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="w-56 h-56 mx-auto">
+                <img
+                  src={zoomQrUrl}
+                  alt="QR Zoom"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <p className="text-xs font-bold text-zinc-800">Scan with your mobile banking App</p>
+            </div>
+          </div>
+        )}
       </div>
     </AnimatePresence>
   );
