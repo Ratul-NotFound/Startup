@@ -228,6 +228,20 @@ export default function AdminPortalPage() {
     p.category.toLowerCase().includes(productSearch.toLowerCase())
   );
 
+  // ─── CUSTOMER LOOKUP HELPER ──────────────────────────────────────
+  const getCustomerInfo = (userId?: string, userEmail?: string, fallbackName?: string) => {
+    const byId = allUsers.find(u => u.id === userId);
+    if (byId && byId.name) return { name: byId.name, avatar: byId.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(byId.name)}&background=6366f1&color=fff`, email: byId.email };
+    const byEmail = allUsers.find(u => u.email?.toLowerCase() === userEmail?.toLowerCase());
+    if (byEmail && byEmail.name) return { name: byEmail.name, avatar: byEmail.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(byEmail.name)}&background=6366f1&color=fff`, email: byEmail.email };
+    const name = fallbackName || (userEmail ? userEmail.split('@')[0].replace(/[._-]/g, ' ') : 'Customer');
+    return {
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      email: userEmail || '',
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=6366f1&color=fff`,
+    };
+  };
+
   // ─── ORDER HANDLERS ───────────────────────────────────────────────
   const filteredOrders = allOrders.filter(o =>
     o.orderNumber.toLowerCase().includes(orderSearch.toLowerCase()) ||
@@ -1035,9 +1049,26 @@ export default function AdminPortalPage() {
                       return (
                         <tr key={o.id} className="hover:bg-white/[0.02] transition-colors">
                           <td className="p-4">
-                            <div className="font-mono font-bold text-white text-xs">#{o.orderNumber}</div>
-                            <div className="text-[11px] text-slate-400">{o.userEmail}</div>
-                            <div className="text-[10px] text-slate-500">{new Date(o.createdAt).toLocaleString()}</div>
+                            {(() => {
+                              const cust = getCustomerInfo(o.userId, o.userEmail);
+                              return (
+                                <div className="flex items-center gap-2.5">
+                                  <img
+                                    src={cust.avatar}
+                                    alt={cust.name}
+                                    className="h-8 w-8 rounded-full object-cover border border-white/15 shrink-0 shadow-sm"
+                                  />
+                                  <div>
+                                    <div className="font-bold text-white text-xs">{cust.name}</div>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className="font-mono text-[10px] text-cyan-400 font-bold">#{o.orderNumber}</span>
+                                      <span className="text-[10px] text-slate-500">·</span>
+                                      <span className="text-[10px] text-slate-400 truncate max-w-[120px]">{o.userEmail}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </td>
 
                           <td className="p-4 max-w-[200px]">
@@ -1702,77 +1733,160 @@ export default function AdminPortalPage() {
             <h2 className="text-sm font-bold text-white mb-3">All Customer Tickets ({allTickets.length})</h2>
             {allTickets.length === 0 ? (
               <p className="text-slate-500 text-sm text-center py-10">No support tickets found.</p>
-            ) : allTickets.map(t => (
-              <div key={t.id} onClick={() => setSelectedTicketId(t.id)}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
-                  (activeTicket?.id === t.id) ? 'bg-blue-950/50 border-blue-500/50 shadow-lg' : 'bg-zinc-900 border-white/[0.06] hover:bg-zinc-800'
-                }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-mono text-cyan-400 font-bold">{t.ticketNumber}</span>
-                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
-                    t.status === 'open' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
-                    t.status === 'in_progress' ? 'bg-blue-950/60 text-blue-400 border-blue-500/30' :
-                    'bg-zinc-800 text-zinc-400 border-white/10'
-                  }`}>{t.status.replace('_', ' ')}</span>
+            ) : allTickets.map(t => {
+              const cust = getCustomerInfo(t.userId, t.userEmail, t.messages[0]?.senderName);
+              const isSelected = activeTicket?.id === t.id;
+
+              return (
+                <div
+                  key={t.id}
+                  onClick={() => setSelectedTicketId(t.id)}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all space-y-2.5 ${
+                    isSelected
+                      ? 'bg-blue-950/50 border-blue-500/50 shadow-lg ring-1 ring-blue-500/40'
+                      : 'bg-zinc-900 border-white/[0.06] hover:bg-zinc-850'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-cyan-400 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/20">
+                      {t.ticketNumber}
+                    </span>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
+                      t.status === 'open' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
+                      t.status === 'in_progress' ? 'bg-blue-950/60 text-blue-400 border-blue-500/30' :
+                      'bg-zinc-800 text-zinc-400 border-white/10'
+                    }`}>
+                      {t.status.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  {/* Customer Identity: Name & Avatar */}
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={cust.avatar}
+                      alt={cust.name}
+                      className="h-8 w-8 rounded-full object-cover border border-white/15 shrink-0 shadow-sm"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-white truncate">{cust.name}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{t.userEmail}</p>
+                    </div>
+                  </div>
+
+                  {/* Subject Tag */}
+                  <div className="text-xs font-medium text-slate-300 truncate bg-zinc-950/70 px-2.5 py-1.5 rounded-xl border border-white/[0.04]">
+                    {t.subject}
+                  </div>
                 </div>
-                <p className="text-xs font-bold text-white truncate">{t.subject}</p>
-                <p className="text-[10px] text-slate-400 mt-1">{t.userEmail}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Right: Ticket thread & reply */}
           <div className="lg:col-span-8">
             {activeTicket ? (
-              <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] flex flex-col" style={{ height: 600 }}>
-                <div className="p-4 border-b border-white/[0.06] bg-zinc-950 flex items-center justify-between rounded-t-3xl">
-                  <div>
-                    <span className="text-[10px] font-mono text-cyan-400 font-bold">{activeTicket.ticketNumber}</span>
-                    <h4 className="text-sm font-bold text-white">{activeTicket.subject}</h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{activeTicket.userEmail} · Category: <span className="text-slate-200 capitalize">{activeTicket.category.replace('_', ' ')}</span></p>
-                  </div>
-                  {activeTicket.status !== 'closed' && (
-                    <button onClick={() => adminCloseTicket(activeTicket.id).then(() => showFeedback('success', 'Ticket closed.'))}
-                      className="px-3.5 py-1.5 rounded-xl bg-zinc-800 border border-white/10 text-xs text-slate-300 hover:text-white font-bold transition-all">
-                      Close Ticket
-                    </button>
-                  )}
-                </div>
+              (() => {
+                const activeCust = getCustomerInfo(activeTicket.userId, activeTicket.userEmail, activeTicket.messages[0]?.senderName);
 
-                <div className="flex-1 p-5 overflow-y-auto space-y-4">
-                  {activeTicket.messages.map(msg => {
-                    const isAgent = msg.sender === 'agent';
-                    return (
-                      <div key={msg.id} className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'}`}>
-                        <span className="text-[11px] text-slate-400 mb-1">{msg.senderName} · {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        <div className={`p-3.5 rounded-2xl max-w-sm text-xs leading-relaxed ${
-                          isAgent ? 'bg-blue-600 text-white rounded-tr-none shadow-md' : 'bg-zinc-800 text-slate-200 border border-white/[0.06] rounded-tl-none'
-                        }`}>
-                          {msg.content}
+                return (
+                  <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] flex flex-col" style={{ height: 600 }}>
+                    {/* Customer Identity Header */}
+                    <div className="p-4 border-b border-white/[0.06] bg-zinc-950 flex items-center justify-between rounded-t-3xl gap-4">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={activeCust.avatar}
+                          alt={activeCust.name}
+                          className="h-11 w-11 rounded-2xl object-cover border border-white/20 shadow-md shrink-0 ring-2 ring-white/10"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-black text-white">{activeCust.name}</h4>
+                            <span className="text-[10px] font-mono text-cyan-400 font-bold bg-cyan-950/80 px-2 py-0.5 rounded-md border border-cyan-500/30">
+                              {activeTicket.ticketNumber}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
+                            <span>{activeTicket.userEmail}</span>
+                            <span>·</span>
+                            <span className="text-slate-200 capitalize font-medium">{activeTicket.category.replace('_', ' ')}</span>
+                          </p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
 
-                {activeTicket.status !== 'closed' ? (
-                  <div className="p-4 border-t border-white/[0.06] bg-zinc-950 flex gap-2 rounded-b-3xl">
-                    <input value={ticketReply} onChange={e => setTicketReply(e.target.value)}
-                      placeholder="Type official admin reply to customer…"
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
-                      onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReplyTicket(activeTicket.id); } }}
-                    />
-                    <button onClick={() => handleReplyTicket(activeTicket.id)}
-                      className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all">
-                      Send Reply
-                    </button>
+                      {activeTicket.status !== 'closed' && (
+                        <button
+                          onClick={() => adminCloseTicket(activeTicket.id).then(() => showFeedback('success', 'Ticket closed.'))}
+                          className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-xs text-slate-300 hover:text-white font-bold transition-all shrink-0"
+                        >
+                          Close Ticket
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Chat Messages */}
+                    <div className="flex-1 p-5 overflow-y-auto space-y-4 scrollbar-thin">
+                      {activeTicket.messages.map(msg => {
+                        const isAgent = msg.sender === 'agent';
+                        const avatarUrl = isAgent
+                          ? 'https://ui-avatars.com/api/?name=SubNexus+Ops&background=2563eb&color=fff'
+                          : activeCust.avatar;
+
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex items-start gap-2.5 ${isAgent ? 'flex-row-reverse' : 'flex-row'}`}
+                          >
+                            <img
+                              src={avatarUrl}
+                              alt={msg.senderName}
+                              className="h-7 w-7 rounded-full object-cover border border-white/10 shrink-0 mt-0.5 shadow-sm"
+                            />
+                            <div className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'}`}>
+                              <div className="flex items-center gap-1.5 mb-1 px-1">
+                                <span className="text-[11px] font-bold text-slate-300">{msg.senderName}</span>
+                                <span className="text-[9px] text-slate-600">·</span>
+                                <span className="text-[10px] text-slate-400">
+                                  {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <div className={`p-3.5 rounded-2xl max-w-md text-xs leading-relaxed ${
+                                isAgent
+                                  ? 'bg-blue-600 text-white rounded-tr-none shadow-md'
+                                  : 'bg-zinc-800 text-slate-200 border border-white/[0.08] rounded-tl-none shadow-sm'
+                              }`}>
+                                {msg.content}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Admin Reply Bar */}
+                    {activeTicket.status !== 'closed' ? (
+                      <div className="p-4 border-t border-white/[0.06] bg-zinc-950 flex gap-2 rounded-b-3xl">
+                        <input
+                          value={ticketReply}
+                          onChange={e => setTicketReply(e.target.value)}
+                          placeholder="Type official admin reply to customer…"
+                          className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReplyTicket(activeTicket.id); } }}
+                        />
+                        <button
+                          onClick={() => handleReplyTicket(activeTicket.id)}
+                          className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-md"
+                        >
+                          Send Reply
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="p-3 text-center text-xs text-slate-500 bg-zinc-950 border-t border-white/[0.06] rounded-b-3xl">
+                        This support ticket is closed.
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <div className="p-3 text-center text-xs text-slate-500 bg-zinc-950 border-t border-white/[0.06] rounded-b-3xl">
-                    This support ticket is closed.
-                  </div>
-                )}
-              </div>
+                );
+              })()
             ) : (
               <div className="h-60 rounded-3xl bg-zinc-900 border border-white/[0.08] flex items-center justify-center text-slate-500 text-sm">
                 Select a ticket to view the conversation.

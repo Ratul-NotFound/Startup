@@ -8,6 +8,7 @@ import { ProductModal } from '@/components/store/ProductModal';
 import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { CredentialVaultModal } from '@/components/vault/CredentialVaultModal';
 import { WriteReviewModal } from '@/components/reviews/WriteReviewModal';
+import { FloatingLiveChat } from '@/components/chat/FloatingLiveChat';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { InteractiveCursorGlow } from '@/components/ui/InteractiveCursorGlow';
@@ -92,6 +93,7 @@ export default function RootLayout({
             <CheckoutModal />
             <CredentialVaultModal />
             <WriteReviewModal />
+            <FloatingLiveChat />
           </div>
         </AppProvider>
       </body>
