@@ -367,7 +367,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     bdtRate: 125,
   };
   const [currencySettings, setCurrencySettings] = useState<CurrencySettings>(DEFAULT_CURRENCY_SETTINGS);
-  const [detectedCurrency, setDetectedCurrency] = useState<'BDT' | 'USD'>('USD');
+  const [detectedCurrency, setDetectedCurrency] = useState<'BDT' | 'USD'>('BDT');
 
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -401,18 +401,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Category Configuration state (admin-controlled sequence & visibility)
-  const [categoryConfigs, setCategoryConfigs] = useState<CategoryConfig[]>(() => {
+  const [categoryConfigs, setCategoryConfigs] = useState<CategoryConfig[]>(DEFAULT_CATEGORY_CONFIGS);
+
+  // Special Offers & Exclusive Deals Section configuration state
+  const [specialOffersSettings, setSpecialOffersSettings] = useState<SpecialOffersSettings>(DEFAULT_SPECIAL_OFFERS_SETTINGS);
+
+  // Load client-side local cache safely in useEffect to prevent React hydration mismatch (#418)
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem('keyoon_category_configs');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        const savedCat = localStorage.getItem('keyoon_category_configs');
+        if (savedCat) {
+          const parsed = JSON.parse(savedCat);
+          if (Array.isArray(parsed) && parsed.length > 0) setCategoryConfigs(parsed);
+        }
+      } catch { }
+
+      try {
+        const savedOffers = localStorage.getItem('keyoon_special_offers_settings');
+        if (savedOffers) {
+          const parsed = JSON.parse(savedOffers);
+          if (parsed && typeof parsed === 'object') setSpecialOffersSettings(parsed);
         }
       } catch { }
     }
-    return DEFAULT_CATEGORY_CONFIGS;
-  });
+  }, []);
 
   const adminUpdateCategoryConfigs = async (configs: CategoryConfig[]) => {
     // Normalize orderIndex
@@ -457,20 +470,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminReorderProduct = async (productId: string, newOrderIndex: number) => {
     await adminUpdateProduct(productId, { orderIndex: newOrderIndex });
   };
-
-  // Special Offers & Exclusive Deals Section configuration state
-  const [specialOffersSettings, setSpecialOffersSettings] = useState<SpecialOffersSettings>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('keyoon_special_offers_settings');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && typeof parsed === 'object') return parsed;
-        }
-      } catch { }
-    }
-    return DEFAULT_SPECIAL_OFFERS_SETTINGS;
-  });
 
   const updateSpecialOffersSettings = async (updates: Partial<SpecialOffersSettings>) => {
     const nextSettings = {
