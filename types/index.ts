@@ -53,8 +53,11 @@ export interface SpecialProductConfig {
   campaignBadge?: string;          // e.g. "⚡ Exclusive Mission Deal"
   campaignDescription?: string;    // e.g. "Complete all tasks to unlock 25% OFF this product"
   unlockedCouponCode?: string;     // e.g. "SPECIAL25" (unlocked upon completing tasks)
-  discountPercent?: number;        // e.g. 25
+  discountPercent?: number;        // e.g. 25 or 100 for 100% Free
   isSpecialOfferSynced?: boolean;  // Automatically sync and display in Special Offers & Deals hub
+  isFreeProduct?: boolean;         // 100% Free Claim Mode (Tasks required, no payment needed)
+  noPaymentRequired?: boolean;     // Explicit flag allowing 0 payment instant checkout
+  claimSuccessMessage?: string;    // Custom instant allocation message
   tasks: SpecialProductTask[];
 }
 
@@ -90,6 +93,7 @@ export interface Product {
   orderIndex?: number;
   instructions: string[];
   productType?: ProductType; // 'general' | 'special'
+  isFreeProduct?: boolean;   // Directly marked as 100% free claimable product
   specialConfig?: SpecialProductConfig;
 }
 
@@ -138,7 +142,7 @@ export interface SpecialOffersSettings {
   updatedAt?: string;
 }
 
-export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'crypto_usdt' | 'card_stripe' | 'custom';
+export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'crypto_usdt' | 'card_stripe' | 'free_claim' | 'custom';
 
 export interface BangladeshPaymentMethod {
   id: string;

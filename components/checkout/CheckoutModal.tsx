@@ -133,6 +133,8 @@ export const CheckoutModal: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const isFreeOrder = totalInBdt <= 0 || cartTotal <= 0 || (appliedCoupon && appliedCoupon.discountPercent === 100);
+
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -140,7 +142,8 @@ export const CheckoutModal: React.FC = () => {
       setStep('auth_required');
       return;
     }
-    if (!senderNumber.trim() || !transactionId.trim()) {
+
+    if (!isFreeOrder && (!senderNumber.trim() || !transactionId.trim())) {
       setSubmitError('Please enter both your Sender Phone Number and Transaction ID (TrxID).');
       return;
     }
@@ -149,27 +152,30 @@ export const CheckoutModal: React.FC = () => {
     setStep('processing');
 
     try {
-      const order = await processCheckout(currentMethod.type, firebaseUser.email || user.email, {
-        senderNumber: senderNumber.trim(),
-        transactionId: transactionId.trim().toUpperCase(),
-        screenshotUrl: screenshotBase64 || '',
-        paymentMethodName: currentMethod.name,
-        totalBdt: totalInBdt,
+      const paymentMethodType = isFreeOrder ? 'free_claim' : currentMethod.type;
+      const paymentMethodName = isFreeOrder ? '🎁 100% Free Special Reward' : currentMethod.name;
+
+      const order = await processCheckout(paymentMethodType, firebaseUser.email || user.email, {
+        senderNumber: isFreeOrder ? 'FREE_CLAIM' : senderNumber.trim(),
+        transactionId: isFreeOrder ? '' : transactionId.trim().toUpperCase(),
+        screenshotUrl: isFreeOrder ? '' : (screenshotBase64 || ''),
+        paymentMethodName,
+        totalBdt: isFreeOrder ? 0 : totalInBdt,
       });
 
       setLatestOrderInfo({
         orderNumber: order.orderNumber,
-        totalBdt: totalInBdt,
-        methodName: currentMethod.name,
+        totalBdt: isFreeOrder ? 0 : totalInBdt,
+        methodName: paymentMethodName,
       });
       setStep('success');
 
       try {
         confetti({
-          particleCount: 100,
-          spread: 70,
+          particleCount: 120,
+          spread: 80,
           origin: { y: 0.6 },
-          colors: ['#e2136e', '#f7931e', '#06b6d4', '#10b981'],
+          colors: ['#10b981', '#06b6d4', '#f59e0b', '#8b5cf6'],
         });
       } catch { }
     } catch (err: any) {
@@ -226,7 +232,7 @@ export const CheckoutModal: React.FC = () => {
                 <Lock className="h-6 w-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-white">Sign In to Complete Checkout</h3>
+                <h3 className="text-lg font-bold text-white">Sign In to Complete Order</h3>
                 <p className="text-xs text-zinc-400 max-w-xs mx-auto">
                   Your subscriptions and vault credentials will be tied securely to your Google account.
                 </p>
@@ -249,8 +255,12 @@ export const CheckoutModal: React.FC = () => {
             <div className="py-12 text-center space-y-4">
               <Loader2 className="h-10 w-10 text-cyan-400 animate-spin mx-auto" />
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">Submitting Payment Proof...</h3>
-                <p className="text-xs text-zinc-400">Recording your transaction in real time.</p>
+                <h3 className="text-base font-bold text-white">
+                  {isFreeOrder ? 'Claiming Your Free Subscription...' : 'Submitting Payment Proof...'}
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {isFreeOrder ? 'Allocating credentials to your private vault.' : 'Recording your transaction in real time.'}
+                </p>
               </div>
             </div>
           )}
@@ -258,44 +268,38 @@ export const CheckoutModal: React.FC = () => {
           {/* 3. SUCCESS / TRACKING STATE */}
           {step === 'success' && latestOrderInfo && (
             <div className="py-4 text-center space-y-4">
-              <div className="h-14 w-14 rounded-full bg-emerald-950/90 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 className="h-7 w-7" />
+              <div className="h-16 w-16 rounded-3xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/10">
+                <CheckCircle2 className="h-8 w-8" />
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
-                  Order Submitted
+                <span className="text-[11px] font-mono text-emerald-400 uppercase tracking-wider font-bold">
+                  {isFreeOrder ? '🎉 Free Claim Successful!' : 'Order Placed Successfully'}
                 </span>
-                <h3 className="text-xl font-black text-white pt-1">Payment Proof Received!</h3>
+                <h3 className="text-xl font-black text-white">
+                  {latestOrderInfo.orderNumber}
+                </h3>
                 <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-                  Your order <span className="text-white font-mono font-bold">#{latestOrderInfo.orderNumber}</span> has been routed to our verification queue.
+                  {isFreeOrder
+                    ? 'Your free subscription has been verified and registered in your private vault!'
+                    : 'Our verification bot is processing your TrxID. Track status in your dashboard.'}
                 </p>
               </div>
 
-              {/* Status Timeline */}
-              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/5 text-left space-y-3 text-xs">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <span className="text-zinc-400">Total Paid</span>
-                  <span className="font-bold text-white font-mono">৳{latestOrderInfo.totalBdt.toLocaleString()} BDT (${(latestOrderInfo.totalBdt / bdtRate).toFixed(2)} USD)</span>
+              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-left space-y-2 text-xs">
+                <div className="flex justify-between text-zinc-400">
+                  <span>Order Type:</span>
+                  <span className="text-white font-medium">{latestOrderInfo.methodName}</span>
                 </div>
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <span className="text-zinc-400">Payment Method</span>
-                  <span className="font-semibold text-white">{latestOrderInfo.methodName}</span>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Payable Amount:</span>
+                  <span className="text-emerald-400 font-mono font-bold">
+                    {latestOrderInfo.totalBdt === 0 ? '৳0 (FREE REWARD)' : `৳${latestOrderInfo.totalBdt.toLocaleString('en-BD')} BDT`}
+                  </span>
                 </div>
-
-                <div className="space-y-2 pt-1">
-                  <div className="flex items-center gap-2 text-emerald-400 text-[11px] font-bold">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span>1. Transaction Submitted</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-amber-400 text-[11px] font-bold animate-pulse">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>2. Admin Verification in Progress (5-15 mins)</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-zinc-500 text-[11px]">
-                    <div className="h-3.5 w-3.5 rounded-full border border-zinc-700 flex items-center justify-center text-[9px]">3</div>
-                    <span>3. Instant Account Credentials Delivered to Vault</span>
-                  </div>
+                <div className="flex justify-between text-zinc-400">
+                  <span>Vault Delivery:</span>
+                  <span className="text-cyan-400 font-medium">Instant Access</span>
                 </div>
               </div>
 
@@ -307,238 +311,323 @@ export const CheckoutModal: React.FC = () => {
                     setStep('details');
                     window.location.href = '/dashboard';
                   }}
-                  className="w-full py-3 rounded-2xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-100 transition-colors shadow-md"
+                  className="w-full py-3 rounded-2xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-100 transition-colors shadow-md cursor-pointer"
                 >
-                  View Order in Dashboard
+                  View Subscription in Vault / Dashboard
                 </button>
               </div>
             </div>
           )}
 
-          {/* 4. PAYMENT FORM STATE */}
+          {/* 4. DETAILS STEP (FREE CLAIM vs PAID BANGLADESH FLOW) */}
           {step === 'details' && (
             <form onSubmit={handleSubmitPayment} className="space-y-4">
-              {/* Header */}
-              <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-800 text-cyan-400 text-[10px] font-bold">
-                  <ShieldCheck className="h-3 w-3" />
-                  <span>BANGLADESH INSTANT PAYMENT</span>
-                </div>
-                <h2 className="text-xl font-black tracking-tight text-white">Select Payment Method</h2>
-              </div>
+              {isFreeOrder ? (
+                /* ═══════════ ZERO-PAYMENT / 100% FREE SPECIAL CLAIM FLOW ═══════════ */
+                <div className="space-y-4">
+                  {/* Header */}
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/30 uppercase tracking-wider">
+                      <Sparkles className="h-3 w-3 text-emerald-400" />
+                      <span>100% FREE SPECIAL REWARD</span>
+                    </div>
+                    <h2 className="text-xl font-black tracking-tight text-white">
+                      Claim Your Free Subscription
+                    </h2>
+                    <p className="text-xs text-slate-400">
+                      No payment or transaction ID required. All task &amp; campaign requirements have been fulfilled.
+                    </p>
+                  </div>
 
-              {/* Payment Method Switcher */}
-              <div className="grid grid-cols-3 gap-2">
-                {activeMethods.map((m) => {
-                  const isSelected = selectedMethodId === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setSelectedMethodId(m.id)}
-                      style={{
-                        borderColor: isSelected ? (m.color || '#06b6d4') : 'rgba(255,255,255,0.08)',
-                      }}
-                      className={`p-3 rounded-2xl border text-center transition-all relative ${
-                        isSelected
-                          ? 'bg-zinc-800/90 shadow-md shadow-black/40'
-                          : 'bg-zinc-950/60 hover:bg-zinc-900 text-zinc-400'
-                      }`}
-                    >
-                      <div
-                        className="h-2 w-2 rounded-full absolute top-2 right-2"
-                        style={{ backgroundColor: m.color || '#06b6d4' }}
-                      />
-                      <p className="font-bold text-xs text-white">{m.name}</p>
-                      <span className="text-[10px] text-zinc-400 block">{m.accountType}</span>
-                    </button>
-                  );
-                })}
-              </div>
+                  {/* Summary of Free Items */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-950/40 via-zinc-950 to-zinc-950 border border-emerald-500/30 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Claim Summary</span>
+                      <span className="text-xs font-black text-emerald-400 font-mono">৳0 BDT ($0.00)</span>
+                    </div>
 
-              {/* Payment Box with Account Number, QR & Amount */}
-              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
-                {/* Total in BDT & USD */}
-                <div className="flex items-center justify-between bg-zinc-900/90 p-2.5 rounded-xl border border-white/5">
-                  <div>
-                    <span className="text-[10px] text-zinc-400 block font-semibold">TOTAL PAYABLE AMOUNT</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-base font-black text-white font-mono">
-                        ৳{totalInBdt.toLocaleString('en-BD')} BDT
+                    <div className="space-y-2">
+                      {cart.map((item, cIdx) => (
+                        <div key={cIdx} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2.5">
+                            <img src={item.product.logo} alt="" className="h-6 w-6 rounded-lg object-contain bg-zinc-900 border border-white/10 p-0.5" />
+                            <div>
+                              <span className="font-bold text-white block">{item.product.name}</span>
+                              <span className="text-[10px] text-slate-400 block">{item.selectedPlan.label} · Qty: {item.quantity}</span>
+                            </div>
+                          </div>
+                          <span className="font-mono text-emerald-400 font-bold text-xs">100% FREE</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {appliedCoupon && (
+                      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-300">
+                        <span>Applied Mission Coupon:</span>
+                        <span className="font-mono font-bold bg-emerald-900/60 px-2 py-0.5 rounded text-emerald-200">
+                          {appliedCoupon.code} (-{appliedCoupon.discountPercent}%)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Allocation Notice */}
+                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/10 text-xs text-slate-300 flex items-start gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-white block">Instant Vault Allocation</span>
+                      <span className="text-[11px] text-slate-400">
+                        This subscription will be credited directly to <strong className="text-white">{firebaseUser?.email || user.email}</strong>.
                       </span>
-                      <span className="text-[11px] text-zinc-500 font-medium">(≈ ${totalInUsd} USD)</span>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(totalInBdt.toString(), 'amount')}
-                    className="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-colors"
-                  >
-                    {copiedAmount ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                    <span>{copiedAmount ? 'Copied' : 'Copy'}</span>
-                  </button>
-                </div>
 
-                {/* Account Number & QR Row */}
-                <div className="flex flex-col sm:flex-row items-center gap-3.5">
-                  {/* Big Scannable QR code */}
-                  {currentMethod.qrCodeImage && currentMethod.showQrCode !== false && (
-                    <div className="flex flex-col items-center gap-1 shrink-0">
-                      <div
-                        onClick={() => setZoomQrUrl(currentMethod.qrCodeImage!)}
-                        className="group relative h-28 w-28 sm:h-32 sm:w-32 rounded-2xl bg-white p-2 shrink-0 flex items-center justify-center shadow-lg border border-white/20 cursor-pointer hover:scale-105 transition-all overflow-hidden"
-                        title="Click to zoom QR Code"
-                      >
-                        <img
-                          src={currentMethod.qrCodeImage}
-                          alt="QR Code"
-                          className="h-full w-full object-contain"
-                        />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                          <span className="text-[10px] font-bold text-white bg-black/80 px-2 py-1 rounded-md">
-                            🔍 Zoom QR
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-[9px] text-zinc-500 font-semibold uppercase tracking-wider">Tap QR to zoom</span>
+                  {/* Error Alert Banner */}
+                  {submitError && (
+                    <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 flex items-center gap-2 text-rose-300 text-xs font-semibold">
+                      <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                      <span>{submitError}</span>
                     </div>
                   )}
 
-                  {/* Number & Type */}
-                  <div className="flex-1 w-full space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-zinc-400 font-semibold">{currentMethod.name} Number:</span>
-                      <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/30">
-                        {currentMethod.accountType}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-900 border border-white/10 shadow-inner">
-                      <span className="font-mono font-black text-sm text-white tracking-wider">
-                        {currentMethod.accountNumber}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => handleCopy(currentMethod.accountNumber.replace(/[^0-9]/g, ''), 'number')}
-                        className="px-3 py-1.5 rounded-lg bg-white text-zinc-950 text-xs font-bold flex items-center gap-1 transition-colors hover:bg-zinc-100 cursor-pointer shadow-sm"
-                      >
-                        {copiedNumber ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                        <span>{copiedNumber ? 'Copied!' : 'Copy'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Instructions note */}
-                <p className="text-[11px] text-zinc-400 leading-relaxed bg-zinc-900/50 p-2.5 rounded-xl border border-white/5">
-                  {currentMethod.instructions || 'Send Money to the number above, then submit the Sender Number and TrxID below.'}
-                </p>
-              </div>
-
-              {/* Form Inputs: Sender Phone & TrxID */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="space-y-1">
-                  <label className="font-bold text-zinc-300 block">Sender Phone Number</label>
-                  <input
-                    type="text"
-                    required
-                    autoComplete="off"
-                    data-lpignore="true"
-                    data-form-type="other"
-                    placeholder="e.g. 017XXXXXXXX"
-                    value={senderNumber}
-                    onChange={e => setSenderNumber(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-white/30"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold text-zinc-300 block">Transaction ID (TrxID)</label>
-                  <input
-                    type="text"
-                    required
-                    autoComplete="off"
-                    data-lpignore="true"
-                    data-form-type="other"
-                    placeholder="e.g. 9L87X5ZP0A"
-                    value={transactionId}
-                    onChange={e => setTransactionId(e.target.value.toUpperCase())}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 font-mono uppercase focus:outline-none focus:border-white/30"
-                  />
-                </div>
-              </div>
-
-              {/* Screenshot Upload (Optional / Compressed) */}
-              <div className="space-y-1 text-xs">
-                <label className="font-bold text-zinc-300 flex items-center justify-between">
-                  <span>Payment Screenshot Proof</span>
-                  <span className="text-[10px] text-zinc-500 font-normal">(Auto-compressed · Optional)</span>
-                </label>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-
-                {screenshotBase64 ? (
-                  <div className="relative p-2.5 rounded-xl bg-zinc-950 border border-white/10 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <img
-                        src={screenshotBase64}
-                        alt="Screenshot"
-                        className="h-10 w-10 object-cover rounded-lg border border-white/10"
-                      />
-                      <span className="text-[11px] text-emerald-400 font-medium">✓ Screenshot Attached</span>
-                    </div>
+                  {/* Submit CTA */}
+                  <div className="pt-2">
                     <button
-                      type="button"
-                      onClick={() => setScreenshotBase64(null)}
-                      className="p-1 rounded-md text-zinc-400 hover:text-white"
+                      type="submit"
+                      disabled={isProcessing}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-black text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <Sparkles className="h-4 w-4 fill-zinc-950" />
+                      <span>⚡ Confirm &amp; Claim Free Access Instantly (৳0)</span>
                     </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isCompressing}
-                    className="w-full py-2.5 rounded-xl border border-dashed border-white/15 hover:border-white/30 bg-zinc-950/60 hover:bg-zinc-950 text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2"
-                  >
-                    {isCompressing ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
-                    ) : (
-                      <Upload className="h-4 w-4 text-cyan-400" />
-                    )}
-                    <span className="text-xs font-semibold">
-                      {isCompressing ? 'Compressing Screenshot...' : 'Click to Upload Payment Screenshot'}
-                    </span>
-                  </button>
-                )}
-              </div>
-
-              {/* Error Alert Banner */}
-              {submitError && (
-                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 flex items-center gap-2 text-rose-300 text-xs font-semibold">
-                  <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
-                  <span>{submitError}</span>
                 </div>
-              )}
+              ) : (
+                /* ═══════════ REGULAR PAID BANGLADESH FLOW ═══════════ */
+                <>
+                  {/* Header */}
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-zinc-800 text-cyan-400 text-[10px] font-bold">
+                      <ShieldCheck className="h-3 w-3" />
+                      <span>BANGLADESH INSTANT PAYMENT</span>
+                    </div>
+                    <h2 className="text-xl font-black tracking-tight text-white">Select Payment Method</h2>
+                  </div>
 
-              {/* Submit CTA */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isProcessing || !senderNumber.trim() || !transactionId.trim()}
-                  className="w-full py-3 rounded-2xl bg-white text-zinc-950 hover:bg-zinc-100 font-black text-xs transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  <span>Submit Payment Verification</span>
-                </button>
-              </div>
+                  {/* Payment Method Switcher */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {activeMethods.map((m) => {
+                      const isSelected = selectedMethodId === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => setSelectedMethodId(m.id)}
+                          style={{
+                            borderColor: isSelected ? (m.color || '#06b6d4') : 'rgba(255,255,255,0.08)',
+                          }}
+                          className={`p-3 rounded-2xl border text-center transition-all relative ${
+                            isSelected
+                              ? 'bg-zinc-800/90 shadow-md shadow-black/40'
+                              : 'bg-zinc-950/60 hover:bg-zinc-900 text-zinc-400'
+                          }`}
+                        >
+                          <div
+                            className="h-2 w-2 rounded-full absolute top-2 right-2"
+                            style={{ backgroundColor: m.color || '#06b6d4' }}
+                          />
+                          <p className="font-bold text-xs text-white">{m.name}</p>
+                          <span className="text-[10px] text-zinc-400 block">{m.accountType}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Payment Box with Account Number, QR & Amount */}
+                  <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
+                    {/* Total in BDT & USD */}
+                    <div className="flex items-center justify-between bg-zinc-900/90 p-2.5 rounded-xl border border-white/5">
+                      <div>
+                        <span className="text-[10px] text-zinc-400 block font-semibold">TOTAL PAYABLE AMOUNT</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-base font-black text-white font-mono">
+                            ৳{totalInBdt.toLocaleString('en-BD')} BDT
+                          </span>
+                          <span className="text-[11px] text-zinc-500 font-medium">(≈ ${totalInUsd} USD)</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(totalInBdt.toString(), 'amount')}
+                        className="px-2.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-300 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-colors"
+                      >
+                        {copiedAmount ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        <span>{copiedAmount ? 'Copied' : 'Copy'}</span>
+                      </button>
+                    </div>
+
+                    {/* Account Number & QR Row */}
+                    <div className="flex flex-col sm:flex-row items-center gap-3.5">
+                      {/* Big Scannable QR code */}
+                      {currentMethod.qrCodeImage && currentMethod.showQrCode !== false && (
+                        <div className="flex flex-col items-center gap-1 shrink-0">
+                          <div
+                            onClick={() => setZoomQrUrl(currentMethod.qrCodeImage!)}
+                            className="group relative h-28 w-28 sm:h-32 sm:w-32 rounded-2xl bg-white p-2 shrink-0 flex items-center justify-center shadow-lg border border-white/20 cursor-pointer hover:scale-105 transition-all overflow-hidden"
+                            title="Click to zoom QR Code"
+                          >
+                            <img
+                              src={currentMethod.qrCodeImage}
+                              alt="QR Code"
+                              className="h-full w-full object-contain"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                              <span className="text-[10px] font-bold text-white bg-black/80 px-2 py-1 rounded-md">
+                                🔍 Zoom QR
+                              </span>
+                            </div>
+                          </div>
+                          <span className="text-[9px] text-zinc-500 font-semibold uppercase tracking-wider">Tap QR to zoom</span>
+                        </div>
+                      )}
+
+                      {/* Number & Type */}
+                      <div className="flex-1 w-full space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] text-zinc-400 font-semibold">{currentMethod.name} Number:</span>
+                          <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-500/30">
+                            {currentMethod.accountType}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-900 border border-white/10 shadow-inner">
+                          <span className="font-mono font-black text-sm text-white tracking-wider">
+                            {currentMethod.accountNumber}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(currentMethod.accountNumber.replace(/[^0-9]/g, ''), 'number')}
+                            className="px-3 py-1.5 rounded-lg bg-white text-zinc-950 text-xs font-bold flex items-center gap-1 transition-colors hover:bg-zinc-100 cursor-pointer shadow-sm"
+                          >
+                            {copiedNumber ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                            <span>{copiedNumber ? 'Copied!' : 'Copy'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Instructions note */}
+                    <p className="text-[11px] text-zinc-400 leading-relaxed bg-zinc-900/50 p-2.5 rounded-xl border border-white/5">
+                      {currentMethod.instructions || 'Send Money to the number above, then submit the Sender Number and TrxID below.'}
+                    </p>
+                  </div>
+
+                  {/* Form Inputs: Sender Phone & TrxID */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="space-y-1">
+                      <label className="font-bold text-zinc-300 block">Sender Phone Number</label>
+                      <input
+                        type="text"
+                        required
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-form-type="other"
+                        placeholder="e.g. 017XXXXXXXX"
+                        value={senderNumber}
+                        onChange={e => setSenderNumber(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="font-bold text-zinc-300 block">Transaction ID (TrxID)</label>
+                      <input
+                        type="text"
+                        required
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-form-type="other"
+                        placeholder="e.g. 9L87X5ZP0A"
+                        value={transactionId}
+                        onChange={e => setTransactionId(e.target.value.toUpperCase())}
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 font-mono uppercase focus:outline-none focus:border-white/30"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Screenshot Upload (Optional / Compressed) */}
+                  <div className="space-y-1 text-xs">
+                    <label className="font-bold text-zinc-300 flex items-center justify-between">
+                      <span>Payment Screenshot Proof</span>
+                      <span className="text-[10px] text-zinc-500 font-normal">(Auto-compressed · Optional)</span>
+                    </label>
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+
+                    {screenshotBase64 ? (
+                      <div className="relative p-2.5 rounded-xl bg-zinc-950 border border-white/10 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <img
+                            src={screenshotBase64}
+                            alt="Screenshot"
+                            className="h-10 w-10 object-cover rounded-lg border border-white/10"
+                          />
+                          <span className="text-[11px] text-emerald-400 font-medium">✓ Screenshot Attached</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setScreenshotBase64(null)}
+                          className="p-1 rounded-md text-zinc-400 hover:text-white"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isCompressing}
+                        className="w-full py-2.5 rounded-xl border border-dashed border-white/15 hover:border-white/30 bg-zinc-950/60 hover:bg-zinc-950 text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2"
+                      >
+                        {isCompressing ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+                        ) : (
+                          <Upload className="h-4 w-4 text-cyan-400" />
+                        )}
+                        <span className="text-xs font-semibold">
+                          {isCompressing ? 'Compressing Screenshot...' : 'Click to Upload Payment Screenshot'}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Error Alert Banner */}
+                  {submitError && (
+                    <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 flex items-center gap-2 text-rose-300 text-xs font-semibold">
+                      <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
+
+                  {/* Submit CTA */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isProcessing || !senderNumber.trim() || !transactionId.trim()}
+                      className="w-full py-3 rounded-2xl bg-white text-zinc-950 hover:bg-zinc-100 font-black text-xs transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>Submit Payment Verification</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </form>
           )}
         </motion.div>

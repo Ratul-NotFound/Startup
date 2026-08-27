@@ -540,7 +540,7 @@ export function ProductEditorModal({
                               };
                             });
                           }}
-                          placeholder="e.g. SPECIAL25 (auto-applied when tasks complete)"
+                          placeholder="e.g. SPECIAL25 or FREE100"
                           className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-cyan-300 font-mono font-bold"
                         />
                       </div>
@@ -549,7 +549,7 @@ export function ProductEditorModal({
                         <label className="font-bold text-slate-300">Extra Reward Discount %</label>
                         <input
                           type="number"
-                          value={editingProduct.specialConfig?.discountPercent || 20}
+                          value={editingProduct.specialConfig?.discountPercent ?? (editingProduct.specialConfig?.isFreeProduct ? 100 : 20)}
                           onChange={e => {
                             const val = Number(e.target.value);
                             setEditingProduct(prev => {
@@ -560,9 +560,55 @@ export function ProductEditorModal({
                               };
                             });
                           }}
-                          placeholder="20"
+                          placeholder="20 (or 100 for Free)"
                           className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-bold"
                         />
+                      </div>
+
+                      {/* 100% FREE CLAIM MODE TOGGLE */}
+                      <div className="col-span-1 sm:col-span-2 pt-1">
+                        <label className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
+                          editingProduct.specialConfig?.isFreeProduct || editingProduct.isFreeProduct
+                            ? 'bg-emerald-950/50 border-emerald-500/50 shadow-lg shadow-emerald-950/30 ring-1 ring-emerald-500/30'
+                            : 'bg-zinc-900/80 border-white/5 hover:border-white/15'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={!!(editingProduct.specialConfig?.isFreeProduct || editingProduct.isFreeProduct)}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setEditingProduct(prev => {
+                                if (!prev) return null;
+                                return {
+                                  ...prev,
+                                  isFreeProduct: checked,
+                                  specialConfig: {
+                                    ...(prev.specialConfig || { tasks: [] }),
+                                    isFreeProduct: checked,
+                                    discountPercent: checked ? 100 : (prev.specialConfig?.discountPercent || 20),
+                                    unlockedCouponCode: checked && !prev.specialConfig?.unlockedCouponCode ? 'FREE100' : prev.specialConfig?.unlockedCouponCode,
+                                  }
+                                };
+                              });
+                            }}
+                            className="h-4 w-4 rounded bg-zinc-950 border-white/20 text-emerald-500 focus:ring-emerald-500 mt-0.5"
+                          />
+                          <div className="space-y-0.5 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-emerald-300 text-xs flex items-center gap-1.5">
+                                🎁 100% Free Claim Mode (Tasks Unlock Without Payment)
+                              </span>
+                              {(editingProduct.specialConfig?.isFreeProduct || editingProduct.isFreeProduct) && (
+                                <span className="px-2 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black uppercase">
+                                  Free Claim Active
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-slate-400 block leading-relaxed">
+                              When turned on, users who finish the required tasks can claim this product for <strong className="text-emerald-400">0 ৳ (100% Free)</strong> without having to go through bKash/Nagad manual payment verification.
+                            </span>
+                          </div>
+                        </label>
                       </div>
 
                       <div className="col-span-1 sm:col-span-2 space-y-1">

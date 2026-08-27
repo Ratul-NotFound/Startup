@@ -1693,8 +1693,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     paymentMethod: PaymentMethod,
     customEmail?: string,
     paymentProof?: {
-      senderNumber: string;
-      transactionId: string;
+      senderNumber?: string;
+      transactionId?: string;
       screenshotUrl?: string;
       paymentMethodName?: string;
       totalBdt?: number;
@@ -1704,7 +1704,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       throw new Error('Your cart is empty. Please add items to checkout.');
     }
 
-    if (paymentProof?.transactionId) {
+    const isFreeOrder = cartTotal <= 0 || paymentMethod === 'free_claim';
+
+    // Only validate duplicate transaction ID for paid orders that provide a TrxID
+    if (!isFreeOrder && paymentProof?.transactionId) {
       const cleanTrx = paymentProof.transactionId.trim().toUpperCase();
       
       // Check local state first (user orders & admin allOrders)
@@ -1734,7 +1737,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const orderId = generateRandomId('ord');
     const orderNum = generateOrderNumber();
-    const isBangladesh = ['bkash', 'nagad', 'rocket', 'upay', 'custom'].includes(paymentMethod);
+    const isBangladesh = !isFreeOrder && ['bkash', 'nagad', 'rocket', 'upay', 'custom'].includes(paymentMethod);
 
     const currentUid = firebaseUser ? firebaseUser.uid : user.id;
     const currentEmail = (customEmail || (firebaseUser ? firebaseUser.email : user.email) || user.email || '').toLowerCase().trim();
@@ -1758,42 +1761,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       discount: cartDiscount,
       couponCode: appliedCoupon?.code,
       couponDiscount: cartDiscount,
-      total: cartTotal,
-      totalBdt: paymentProof?.totalBdt || (cartTotal * 125),
-      paymentMethod,
-      paymentMethodName: paymentProof?.paymentMethodName || paymentMethod.toUpperCase(),
-      paymentStatus: isBangladesh ? 'pending' : 'paid',
-      deliveryStatus: isBangladesh ? 'processing' : 'delivered',
+      total: isFreeOrder ? 0 : cartTotal,
+      totalBdt: isFreeOrder ? 0 : (paymentProof?.totalBdt || (cartTotal * 125)),
+      paymentMethod: isFreeOrder ? 'free_claim' : paymentMethod,
+      paymentMethodName: isFreeOrder
+        ? (paymentProof?.paymentMethodName || '🎁 100% Free Special Reward')
+        : (paymentProof?.paymentMethodName || paymentMethod.toUpperCase()),
+      paymentStatus: isFreeOrder ? 'paid' : (isBangladesh ? 'pending' : 'paid'),
+      deliveryStatus: isFreeOrder ? 'processing' : (isBangladesh ? 'processing' : 'delivered'),
       generatedSubscriptionIds: [],
-      senderNumber: paymentProof?.senderNumber || '',
-      transactionId: paymentProof?.transactionId || '',
-      screenshotUrl: paymentProof?.screenshotUrl || '',
+      senderNumber: isFreeOrder ? 'FREE_CLAIM' : (paymentProof?.senderNumber || ''),
+      transactionId: isFreeOrder ? `FREE_${orderNum}` : (paymentProof?.transactionId || ''),
+      screenshotUrl: isFreeOrder ? '' : (paymentProof?.screenshotUrl || ''),
     };
 
-    // If auto-verified / instant test card
-    if (!isBangladesh) {
+    // If free order or auto-verified instant card, generate vault subscriptions immediately
+    if (isFreeOrder || !isBangladesh) {
       const generatedSubIds: string[] = [];
-      // ONE subscription per cart LINE ITEM (not per unit quantity)
       for (const item of cart) {
         const subId = generateRandomId('sub');
         generatedSubIds.push(subId);
-        const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+        const daysMap: Record<string, number> = { '1_day': 1, '3_days': 3, '7_days': 7, '14_days': 14, '1_month': 30, '2_months': 60, '3_months': 90, '6_months': 180, '12_months': 365, '24_months': 730, 'lifetime': 3650 };
         const durationDays = daysMap[item.selectedPlan.duration] || 30;
         const startDate = new Date().toISOString();
         const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
         const sub: UserSubscription = {
-          id: subId, orderId,
+          id: subId,
+          orderId,
           orderNumber: orderNum,
-          productId: item.product.id, productName: item.product.name, productLogo: item.product.logo,
-          planDuration: item.selectedPlan.duration, durationLabel: item.selectedPlan.label,
-          pricePaid: item.selectedPlan.price * item.quantity, status: 'active', startDate, expiryDate,
-          autoRenew: true, autoRenewReminderDays: 3, accountType: item.product.accountType,
-          warrantyValidUntil: expiryDate, paymentMethod,
+          productId: item.product.id,
+          productName: item.product.name,
+          productLogo: item.product.logo,
+          planDuration: item.selectedPlan.duration,
+          durationLabel: item.selectedPlan.label,
+          pricePaid: isFreeOrder ? 0 : (item.selectedPlan.price * item.quantity),
+          status: 'active',
+          startDate,
+          expiryDate,
+          autoRenew: false,
+          autoRenewReminderDays: 3,
+          accountType: item.product.accountType,
+          warrantyValidUntil: expiryDate,
+          paymentMethod: isFreeOrder ? 'free_claim' : paymentMethod,
           credentials: {
             email: '',
             password: '',
             pinCode: '',
-            notes: 'Admin will provision credentials shortly.',
+            notes: isFreeOrder ? '100% Free Special Reward Access - Credentials allocated to your private vault.' : 'Admin will provision credentials shortly.',
           },
           credentialsConfigured: false,
           userId: currentUid,
@@ -1807,7 +1821,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const userRef = doc(db, 'users', user.id);
         await updateDoc(userRef, {
-          lifetimeSpend: (user.lifetimeSpend || 0) + cartTotal,
+          lifetimeSpend: (user.lifetimeSpend || 0) + (isFreeOrder ? 0 : cartTotal),
           activeSubscriptionsCount: (user.activeSubscriptionsCount || 0) + generatedSubIds.length,
         });
       } catch { }
@@ -1816,6 +1830,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Write order to Firestore & propagate error if saving fails
     try {
       await setDoc(doc(db, 'orders', orderId), newOrder);
+      if (isFreeOrder) {
+        await logAdminActivity('FREE_ORDER_CLAIMED', 'orders', `Free subscription claimed for ${newOrder.items.map(i => i.productName).join(', ')}`, orderId);
+      }
       if (appliedCoupon?.code) {
         const couponRef = doc(db, 'coupons', appliedCoupon.code);
         await updateDoc(couponRef, {

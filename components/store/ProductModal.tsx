@@ -19,6 +19,8 @@ export const ProductModal: React.FC = () => {
     setSelectedProduct,
     addToCart,
     setIsCartOpen,
+    setIsCheckoutOpen,
+    applyCoupon,
     reviews,
     likeReview,
     setIsWriteReviewOpen,
@@ -846,50 +848,114 @@ export const ProductModal: React.FC = () => {
           </div>
 
           {/* Persistent Footer CTA Row */}
-          <div className="shrink-0 p-4 sm:p-5 border-t border-white/[0.08] bg-zinc-950/95 flex items-center justify-between gap-4">
-            <div>
-              <div className="text-[10px] uppercase font-bold text-zinc-500">Plan: {currentPlan.label}</div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-white">{formatPrice(currentPlan.price)}</span>
-                {currentPlan.originalPrice && (
-                  <span className="text-xs text-zinc-500 line-through">{formatPrice(currentPlan.originalPrice)}</span>
-                )}
-                {currentPlan.discountPercentage > 0 && (
-                  <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                    -{currentPlan.discountPercentage}%
-                  </span>
-                )}
-              </div>
-            </div>
+          {(() => {
+            const isSpecial = selectedProduct.productType === 'special';
+            const isFreeReward = isSpecial && (selectedProduct.specialConfig?.isFreeProduct || selectedProduct.isFreeProduct || currentPlan.price === 0);
+            const tasks = isSpecial ? (selectedProduct.specialConfig?.tasks || []) : [];
+            const completedCount = tasks.filter(t => {
+              if (t.type === 'write_review') {
+                const hasReviewed = reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email));
+                return hasReviewed || isTaskCompleted(selectedProduct.id, t.id);
+              }
+              return isTaskCompleted(selectedProduct.id, t.id);
+            }).length;
+            const isTasksCompleted = tasks.length === 0 || completedCount === tasks.length;
 
-            <div className="flex items-center gap-2">
-              <motion.button
-                whileHover={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 1.03 }}
-                whileTap={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 0.97 }}
-                disabled={(selectedProduct.stockCount ?? 0) <= 0}
-                onClick={() => (selectedProduct.stockCount ?? 0) > 0 && handleAddToCart()}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${
-                  (selectedProduct.stockCount ?? 0) <= 0
-                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/10 opacity-70'
-                    : 'bg-white text-zinc-950 shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-zinc-100'
-                }`}
-              >
-                {(selectedProduct.stockCount ?? 0) <= 0 ? (
-                  <span>Out of Stock</span>
-                ) : added ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <span>Added to Cart!</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="h-4 w-4" />
-                    <span>Add to Cart</span>
-                  </>
-                )}
-              </motion.button>
-            </div>
-          </div>
+            return (
+              <div className="shrink-0 p-4 sm:p-5 border-t border-white/[0.08] bg-zinc-950/95 flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-[10px] uppercase font-bold text-zinc-500">Plan: {currentPlan.label}</div>
+                  <div className="flex items-baseline gap-2">
+                    {isFreeReward ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-2xl font-black text-emerald-400 font-mono">0 ৳ BDT</span>
+                        <span className="text-[10px] font-black text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-full border border-emerald-500/30 uppercase">
+                          🎁 100% Free Claim
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-2xl font-black text-white">{formatPrice(currentPlan.price)}</span>
+                        {currentPlan.originalPrice && (
+                          <span className="text-xs text-zinc-500 line-through">{formatPrice(currentPlan.originalPrice)}</span>
+                        )}
+                        {currentPlan.discountPercentage > 0 && (
+                          <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                            -{currentPlan.discountPercentage}%
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isFreeReward ? (
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      disabled={(selectedProduct.stockCount ?? 0) <= 0}
+                      onClick={() => {
+                        if (!isTasksCompleted) {
+                          setActiveTab('overview');
+                          return;
+                        }
+                        addToCart(selectedProduct, { ...currentPlan, price: 0 }, customEmail || undefined);
+                        if (selectedProduct.specialConfig?.unlockedCouponCode) {
+                          applyCoupon(selectedProduct.specialConfig.unlockedCouponCode);
+                        }
+                        setSelectedProduct(null);
+                        setIsCheckoutOpen(true);
+                      }}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-lg cursor-pointer ${
+                        !isTasksCompleted
+                          ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20'
+                          : 'bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-zinc-950 shadow-emerald-500/20 font-black'
+                      }`}
+                    >
+                      {!isTasksCompleted ? (
+                        <>
+                          <Zap className="h-4 w-4" />
+                          <span>⚡ Complete Tasks to Claim Free</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 fill-zinc-950" />
+                          <span>🎁 Claim 100% Free Access Now (0 ৳)</span>
+                        </>
+                      )}
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      whileHover={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 1.03 }}
+                      whileTap={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 0.97 }}
+                      disabled={(selectedProduct.stockCount ?? 0) <= 0}
+                      onClick={() => (selectedProduct.stockCount ?? 0) > 0 && handleAddToCart()}
+                      className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${
+                        (selectedProduct.stockCount ?? 0) <= 0
+                          ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/10 opacity-70'
+                          : 'bg-white text-zinc-950 shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-zinc-100'
+                      }`}
+                    >
+                      {(selectedProduct.stockCount ?? 0) <= 0 ? (
+                        <span>Out of Stock</span>
+                      ) : added ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <span>Added to Cart!</span>
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingBag className="h-4 w-4" />
+                          <span>Add to Cart</span>
+                        </>
+                      )}
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </motion.div>
       </div>
     </AnimatePresence>
