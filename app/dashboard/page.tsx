@@ -459,68 +459,83 @@ export default function CustomerDashboardPage() {
 
                         {showCreds && (
                           <div className="px-3.5 pb-3 space-y-2 border-t border-white/[0.05] pt-2.5">
-                            {sub.credentials?.email && (
-                              <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
-                                <span className="text-slate-400">Email:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-mono text-white select-all">{sub.credentials.email}</span>
-                                  <button
-                                    onClick={() => handleCopy(sub.credentials?.email || '', `${sub.id}-email`)}
-                                    className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
-                                    title="Copy Email"
-                                  >
-                                    {copiedKey === `${sub.id}-email` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                                  </button>
+                            {(!sub.credentials?.email && !sub.credentials?.password) ? (
+                              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+                                <div className="font-bold flex items-center gap-1.5">
+                                  <Clock className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                                  <span>Credentials Being Provisioned</span>
                                 </div>
+                                <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                                  Our operations team is preparing and verifying your subscription login details. They will be dispatched directly to your email and revealed here in your vault shortly.
+                                </p>
                               </div>
-                            )}
+                            ) : (
+                              <>
+                                {sub.credentials?.email && (
+                                  <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
+                                    <span className="text-slate-400">Email:</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-mono text-white select-all">{sub.credentials.email}</span>
+                                      <button
+                                        onClick={() => handleCopy(sub.credentials?.email || '', `${sub.id}-email`)}
+                                        className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
+                                        title="Copy Email"
+                                      >
+                                        {copiedKey === `${sub.id}-email` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
 
-                            {sub.credentials?.password && (
-                              <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
-                                <span className="text-slate-400">Password:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-mono text-cyan-300 font-bold select-all">{sub.credentials.password}</span>
-                                  <button
-                                    onClick={() => handleCopy(sub.credentials?.password || '', `${sub.id}-pwd`)}
-                                    className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
-                                    title="Copy Password"
-                                  >
-                                    {copiedKey === `${sub.id}-pwd` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                                  </button>
-                                </div>
-                              </div>
-                            )}
+                                {sub.credentials?.password && (
+                                  <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
+                                    <span className="text-slate-400">Password:</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-mono text-cyan-300 font-bold select-all">{sub.credentials.password}</span>
+                                      <button
+                                        onClick={() => handleCopy(sub.credentials?.password || '', `${sub.id}-pwd`)}
+                                        className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
+                                        title="Copy Password"
+                                      >
+                                        {copiedKey === `${sub.id}-pwd` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
 
-                            {sub.credentials?.pinCode && (
-                              <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
-                                <span className="text-slate-400">Profile PIN:</span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-mono text-amber-300 font-bold">{sub.credentials.pinCode}</span>
-                                  <button
-                                    onClick={() => handleCopy(sub.credentials?.pinCode || '', `${sub.id}-pin`)}
-                                    className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
-                                  >
-                                    {copiedKey === `${sub.id}-pin` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                                  </button>
-                                </div>
-                              </div>
-                            )}
+                                {sub.credentials?.pinCode && (
+                                  <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
+                                    <span className="text-slate-400">Profile PIN:</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="font-mono text-amber-300 font-bold">{sub.credentials.pinCode}</span>
+                                      <button
+                                        onClick={() => handleCopy(sub.credentials?.pinCode || '', `${sub.id}-pin`)}
+                                        className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
+                                        title="Copy PIN"
+                                      >
+                                        {copiedKey === `${sub.id}-pin` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
 
-                            {sub.credentials?.notes && (
-                              <p className="text-[10px] text-slate-400 leading-tight bg-zinc-900/40 p-2 rounded-lg border border-white/[0.04]">
-                                ℹ️ {sub.credentials.notes}
-                              </p>
-                            )}
+                                {sub.credentials?.notes && (
+                                  <p className="text-[10px] text-slate-400 leading-tight bg-zinc-900/40 p-2 rounded-lg border border-white/[0.04]">
+                                    ℹ️ {sub.credentials.notes}
+                                  </p>
+                                )}
 
-                            {/* Service portal link */}
-                            <a
-                              href={serviceUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-1 w-full py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors"
-                            >
-                              <ExternalLink className="h-3 w-3" /> Launch Service Portal
-                            </a>
+                                {/* Service portal link */}
+                                <a
+                                  href={serviceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="mt-1 w-full py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors"
+                                >
+                                  <ExternalLink className="h-3 w-3" /> Launch Service Portal
+                                </a>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -582,6 +597,7 @@ export default function CustomerDashboardPage() {
                     {orders.map(order => {
                       const isPending = order.paymentStatus === 'pending';
                       const isPaid = order.paymentStatus === 'paid';
+                      const isDelivered = order.deliveryStatus === 'delivered';
 
                       return (
                         <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
@@ -622,11 +638,12 @@ export default function CustomerDashboardPage() {
                           <td className="p-4">
                             <div className="space-y-1">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border inline-flex items-center gap-1.5 ${
-                                isPaid ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/30' :
+                                isDelivered ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/30' :
+                                isPaid ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/30' :
                                 isPending ? 'bg-amber-950/80 text-amber-400 border-amber-500/30 animate-pulse' :
                                 'bg-red-950/80 text-red-400 border-red-500/30'
                               }`}>
-                                {isPending ? '● Verifying TrxID' : isPaid ? '✓ Delivered' : order.paymentStatus}
+                                {isPending ? '● Verifying TrxID' : isDelivered ? '✓ Delivered & Active' : isPaid ? '⚡ Payment Verified' : order.paymentStatus}
                               </span>
 
                               {order.transactionId && (

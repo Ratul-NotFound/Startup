@@ -2055,20 +2055,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const generatedSubIds: string[] = [];
       const generatedSubs: UserSubscription[] = [];
-      const daysMap: Record<string, number> = { '1_month': 30, '3_months': 90, '6_months': 180, '12_months': 365, 'lifetime': 3650 };
+      const daysMap: Record<string, number> = {
+        '1_day': 1,
+        '3_days': 3,
+        '7_days': 7,
+        '14_days': 14,
+        '1_month': 30,
+        '2_months': 60,
+        '3_months': 90,
+        '6_months': 180,
+        '12_months': 365,
+        '24_months': 730,
+        'lifetime': 3650,
+      };
 
-      // Create ONE subscription per order LINE ITEM with per-item credentials
+      // Create or update ONE subscription per order LINE ITEM with per-item credentials
       for (let idx = 0; idx < ord.items.length; idx++) {
         const item = ord.items[idx];
         const creds = perItemCreds[idx] || perItemCreds[0] || { email: '', password: '' };
-        const subId = generateRandomId('sub');
+        // Reuse existing subscription ID if already pre-generated during free claim/checkout
+        const existingSubId = ord.generatedSubscriptionIds && ord.generatedSubscriptionIds[idx];
+        const subId = existingSubId || generateRandomId('sub');
         generatedSubIds.push(subId);
         const durationDays = daysMap[item.duration] || 30;
         const startDate = new Date().toISOString();
         const expiryDate = new Date(Date.now() + durationDays * 86400000).toISOString();
 
         const pricePaid = item.price * (item.quantity || 1);
-        const isGiveaway = pricePaid === 0 || (ord.discount > 0 && ord.total === 0);
+        const isGiveaway = pricePaid === 0 || (ord.discount > 0 && ord.total === 0) || ord.paymentMethod === 'free_claim';
         const renewalPrice = isGiveaway ? (item.price > 0 ? item.price : 9.99) : pricePaid;
 
         const sub: UserSubscription = {
@@ -2100,7 +2114,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
           userId: ord.userId,
           userEmail: (ord.userEmail || '').toLowerCase().trim(),
-          credentialsConfigured: !!(creds.email && creds.password),
+          claimEmail: (ord.claimEmail || ord.userEmail || '').toLowerCase().trim(),
+          credentialsConfigured: true,
         };
 
         generatedSubs.push(sub);
