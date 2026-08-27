@@ -154,14 +154,16 @@ export function PaymentsTab({
 
         {/* Live preview */}
         {editBdtEnabled && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/80 border border-white/5">
-            <div className="text-xs text-slate-400">Live Preview:</div>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/80 border border-white/5 flex-wrap">
+            <div className="text-xs text-slate-400 font-bold">Live Conversion Example:</div>
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-zinc-500 line-through font-mono">$10.00 USD</span>
+              <span className="font-black text-emerald-400 font-mono text-sm">৳500 BDT (Admin Base Price)</span>
               <span className="text-slate-500">→</span>
-              <span className="font-black text-emerald-400 font-mono text-sm">৳{previewBdt.toLocaleString()} BDT</span>
+              <span className="text-cyan-300 font-mono font-bold">${(500 / (editBdtRate || 125)).toFixed(2)} USD</span>
             </div>
-            <div className="ml-auto text-[10px] text-slate-500">for visitors in: <span className="text-cyan-400 font-bold">{editBdtCountries || 'BD'}</span></div>
+            <div className="ml-auto text-[10px] text-slate-400">
+              BD visitors see <strong className="text-emerald-400">৳500</strong> · Other countries see <strong className="text-cyan-400">${(500 / (editBdtRate || 125)).toFixed(2)}</strong>
+            </div>
           </div>
         )}
 

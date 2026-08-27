@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import { Product } from '@/types';
 import { compressImageToDataUrl } from '@/lib/image-compression';
+import { useApp } from '@/context/AppContext';
 import {
   Package, X, ImageIcon, DollarSign, Zap, CheckCircle2, Shield, BookOpen,
   Loader2, Upload, Sparkles, Plus, Trash2, Star, Save,
@@ -33,6 +34,7 @@ export function ProductEditorModal({
   handleSaveProduct,
   showFeedback,
 }: ProductEditorModalProps) {
+  const { bdtRate } = useApp();
   const productLogoInputRef = useRef<HTMLInputElement>(null);
   const productBannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -396,7 +398,12 @@ export function ProductEditorModal({
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-slate-400 font-semibold block">Sale Price (৳ BDT)</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-slate-400 font-semibold block">Sale Price (৳ BDT)</label>
+                          <span className="text-[10px] text-cyan-400 font-mono font-bold">
+                            ≈ ${(tier.price / (bdtRate || 125)).toFixed(2)} USD
+                          </span>
+                        </div>
                         <input
                           type="number"
                           step="1"
@@ -409,13 +416,20 @@ export function ProductEditorModal({
                             tiers[tIdx] = { ...tiers[tIdx], price: p, discountPercentage: disc };
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
-                          placeholder="e.g. 999"
+                          placeholder="e.g. 50 or 999"
                           className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-mono font-bold"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-slate-400 font-semibold block">Original Price (৳ BDT)</label>
+                        <div className="flex items-center justify-between">
+                          <label className="text-slate-400 font-semibold block">Original (৳ BDT)</label>
+                          {tier.originalPrice ? (
+                            <span className="text-[10px] text-slate-500 font-mono">
+                              ≈ ${(tier.originalPrice / (bdtRate || 125)).toFixed(2)} USD
+                            </span>
+                          ) : null}
+                        </div>
                         <input
                           type="number"
                           step="1"
@@ -428,7 +442,7 @@ export function ProductEditorModal({
                             tiers[tIdx] = { ...tiers[tIdx], originalPrice: orig, discountPercentage: disc };
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
-                          placeholder="e.g. 2000"
+                          placeholder="e.g. 100 or 2000"
                           className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-slate-400 font-mono line-through"
                         />
                       </div>

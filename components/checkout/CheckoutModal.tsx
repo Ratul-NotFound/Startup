@@ -76,7 +76,8 @@ export const CheckoutModal: React.FC = () => {
     };
 
   const bdtRate = currentMethod.bdtRate || 125;
-  const totalInBdt = Math.round(cartTotal * bdtRate);
+  const totalInBdt = Math.round(cartTotal);
+  const totalInUsd = (totalInBdt / bdtRate).toFixed(2);
 
   const handleCopy = (text: string, type: 'number' | 'amount') => {
     navigator.clipboard.writeText(text);
@@ -275,7 +276,7 @@ export const CheckoutModal: React.FC = () => {
               <div className="p-4 rounded-2xl bg-zinc-950 border border-white/5 text-left space-y-3 text-xs">
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                   <span className="text-zinc-400">Total Paid</span>
-                  <span className="font-bold text-white font-mono">৳{latestOrderInfo.totalBdt.toLocaleString()} BDT (${cartTotal.toFixed(2)})</span>
+                  <span className="font-bold text-white font-mono">৳{latestOrderInfo.totalBdt.toLocaleString()} BDT (${(latestOrderInfo.totalBdt / bdtRate).toFixed(2)} USD)</span>
                 </div>
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
                   <span className="text-zinc-400">Payment Method</span>
@@ -363,9 +364,9 @@ export const CheckoutModal: React.FC = () => {
                     <span className="text-[10px] text-zinc-400 block font-semibold">TOTAL PAYABLE AMOUNT</span>
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-base font-black text-white font-mono">
-                        ৳{totalInBdt.toLocaleString()} BDT
+                        ৳{totalInBdt.toLocaleString('en-BD')} BDT
                       </span>
-                      <span className="text-[11px] text-zinc-500 font-medium">(${cartTotal.toFixed(2)} USD)</span>
+                      <span className="text-[11px] text-zinc-500 font-medium">(≈ ${totalInUsd} USD)</span>
                     </div>
                   </div>
                   <button

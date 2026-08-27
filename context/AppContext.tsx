@@ -536,21 +536,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Derived: the BDT exchange rate to use everywhere
   const bdtRate = currencySettings.bdtRate || 125;
 
-  // formatPrice: takes an amount in BDT (Taka) and returns the correctly formatted string.
-  // If the user is from Bangladesh (detectedCurrency === 'BDT'), displays directly in Bengali Taka (৳).
-  // If the user is from another country (detectedCurrency === 'USD'), converts BDT to USD ($) using bdtRate.
+  // formatPrice: takes an amount in BDT (Bangladeshi Taka) and returns the correctly formatted string.
+  // - If the user is from Bangladesh (detectedCurrency === 'BDT'), displays directly in Bengali Taka (৳).
+  // - If the user is from another country (detectedCurrency === 'USD'), converts BDT to USD ($) using bdtRate (amount / bdtRate).
   const formatPrice = useCallback((amount: number): string => {
     if (typeof amount !== 'number' || isNaN(amount)) return '৳0';
 
-    // Backward-compatibility: if amount is less than 100 (legacy USD price), scale to BDT
-    const amountBDT = amount < 100 ? amount * bdtRate : amount;
-
     if (detectedCurrency === 'BDT') {
-      const inBdt = Math.round(amountBDT);
+      const inBdt = Math.round(amount);
       return `৳${inBdt.toLocaleString('en-BD')}`;
     }
 
-    const convertedUSD = amountBDT / bdtRate;
+    // International visitor -> convert BDT to USD ($)
+    const convertedUSD = amount / bdtRate;
     return `$${convertedUSD.toFixed(2)}`;
   }, [detectedCurrency, bdtRate]);
 
