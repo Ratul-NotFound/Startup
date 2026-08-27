@@ -49,6 +49,7 @@ export function ProductsTab({
 }: ProductsTabProps) {
   const {
     categoryConfigs,
+    adminUpdateCategoryConfigs,
     adminToggleCategoryVisibility,
     adminReorderCategories,
     adminToggleProductVisibility,
@@ -59,6 +60,10 @@ export function ProductsTab({
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<SubscriptionCategory | 'all'>('all');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [movingProductId, setMovingProductId] = useState<string | null>(null);
+
+  const sortedCategoryConfigs = useMemo(() => {
+    return [...categoryConfigs].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }, [categoryConfigs]);
 
   // Filter & sort products
   const filteredProducts = useMemo(() => {
@@ -83,16 +88,33 @@ export function ProductsTab({
   }, [products, selectedCategoryFilter, productSearch]);
 
   // Handle move category Up / Down
-  const handleMoveCategory = async (index: number, direction: 'up' | 'down') => {
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= categoryConfigs.length) return;
+  const handleMoveCategory = async (catId: SubscriptionCategory, direction: 'up' | 'down') => {
+    const list = [...sortedCategoryConfigs];
+    const currentIndex = list.findIndex(c => c.id === catId);
+    if (currentIndex === -1) return;
 
-    const newConfigs = [...categoryConfigs];
-    const temp = newConfigs[index];
-    newConfigs[index] = newConfigs[targetIndex];
-    newConfigs[targetIndex] = temp;
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
 
-    await adminReorderCategories(newConfigs);
+    const temp = list[currentIndex];
+    list[currentIndex] = list[targetIndex];
+    list[targetIndex] = temp;
+
+    const reordered = list.map((c, idx) => ({ ...c, orderIndex: idx }));
+    await adminUpdateCategoryConfigs(reordered);
+  };
+
+  // Direct position changer
+  const handleSetCategoryPosition = async (catId: SubscriptionCategory, newPos: number) => {
+    const list = [...sortedCategoryConfigs];
+    const currentIndex = list.findIndex(c => c.id === catId);
+    if (currentIndex === -1 || currentIndex === newPos) return;
+
+    const [item] = list.splice(currentIndex, 1);
+    list.splice(newPos, 0, item);
+
+    const reordered = list.map((c, idx) => ({ ...c, orderIndex: idx }));
+    await adminUpdateCategoryConfigs(reordered);
   };
 
   // Handle move product Up / Down inside its category
@@ -173,19 +195,19 @@ export function ProductsTab({
                 Storefront Category Manager &amp; Sequence Controller
               </h3>
               <p className="text-[11px] text-slate-400">
-                Rearrange which category appears 1st, 2nd, 3rd on the storefront, or hide categories completely.
+                Arrange which category appears 1st, 2nd, 3rd on the storefront, or hide categories completely. Changes take effect on the customer store instantly.
               </p>
             </div>
             <button
               onClick={() => setShowCategoryManager(false)}
-              className="self-end sm:self-auto p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-slate-400 hover:text-white"
+              className="self-end sm:self-auto p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-slate-400 hover:text-white cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {categoryConfigs.map((cat, idx) => {
+            {sortedCategoryConfigs.map((cat, idx) => {
               const count = products.filter(p => p.category === cat.id).length;
               const isHidden = !!cat.isHidden;
 
@@ -194,16 +216,26 @@ export function ProductsTab({
                   key={cat.id}
                   className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 ${
                     isHidden
-                      ? 'bg-zinc-900/40 border-white/5 opacity-60'
+                      ? 'bg-zinc-900/40 border-rose-500/20'
                       : 'bg-zinc-900/90 border-white/10 hover:border-cyan-500/40'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-zinc-950 text-cyan-400 border border-white/10">
-                          #{idx + 1}
-                        </span>
+                        {/* Direct Position Dropdown */}
+                        <select
+                          value={idx}
+                          onChange={(e) => handleSetCategoryPosition(cat.id, Number(e.target.value))}
+                          className="text-[11px] font-mono font-bold px-2 py-1 rounded-lg bg-zinc-950 text-cyan-400 border border-cyan-500/30 cursor-pointer"
+                          title="Change Position Sequence Number"
+                        >
+                          {sortedCategoryConfigs.map((_, pIdx) => (
+                            <option key={pIdx} value={pIdx}>
+                              #{pIdx + 1}
+                            </option>
+                          ))}
+                        </select>
                         <h4 className="font-bold text-xs text-white">{cat.label}</h4>
                       </div>
                       <p className="text-[10px] text-slate-400 line-clamp-1">{cat.description}</p>
@@ -220,18 +252,18 @@ export function ProductsTab({
                       <button
                         type="button"
                         disabled={idx === 0}
-                        onClick={() => handleMoveCategory(idx, 'up')}
+                        onClick={() => handleMoveCategory(cat.id, 'up')}
                         className="p-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-slate-300 disabled:opacity-30 border border-white/5 transition-colors cursor-pointer"
-                        title="Move Category Up"
+                        title="Move Category Up (▲)"
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
                       </button>
                       <button
                         type="button"
-                        disabled={idx === categoryConfigs.length - 1}
-                        onClick={() => handleMoveCategory(idx, 'down')}
+                        disabled={idx === sortedCategoryConfigs.length - 1}
+                        onClick={() => handleMoveCategory(cat.id, 'down')}
                         className="p-1.5 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-slate-300 disabled:opacity-30 border border-white/5 transition-colors cursor-pointer"
-                        title="Move Category Down"
+                        title="Move Category Down (▼)"
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
                       </button>
@@ -243,19 +275,19 @@ export function ProductsTab({
                       onClick={() => adminToggleCategoryVisibility(cat.id)}
                       className={`px-3 py-1.5 rounded-xl font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer border ${
                         isHidden
-                          ? 'bg-rose-950/60 text-rose-300 border-rose-500/30 hover:bg-rose-900'
-                          : 'bg-emerald-950/60 text-emerald-300 border-emerald-500/30 hover:bg-emerald-900'
+                          ? 'bg-rose-950/80 text-rose-300 border-rose-500/40 hover:bg-rose-900'
+                          : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900'
                       }`}
                     >
                       {isHidden ? (
                         <>
-                          <EyeOff className="h-3.5 w-3.5" />
-                          <span>Hidden (Off)</span>
+                          <EyeOff className="h-3.5 w-3.5 text-rose-400" />
+                          <span>Hidden from Store</span>
                         </>
                       ) : (
                         <>
-                          <Eye className="h-3.5 w-3.5" />
-                          <span>Live (Visible)</span>
+                          <Eye className="h-3.5 w-3.5 text-emerald-400" />
+                          <span>Visible on Store</span>
                         </>
                       )}
                     </button>
@@ -267,7 +299,7 @@ export function ProductsTab({
         </div>
       )}
 
-      {/* 3. Category Filter Tabs */}
+      {/* 3. Category Filter Tabs with Direct Visibility Toggles */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none pb-1">
         <button
           type="button"
@@ -281,27 +313,50 @@ export function ProductsTab({
           All Products ({products.length})
         </button>
 
-        {categoryConfigs.map((cat) => {
+        {sortedCategoryConfigs.map((cat, cIdx) => {
           const count = products.filter(p => p.category === cat.id).length;
           const active = selectedCategoryFilter === cat.id;
+          const isHidden = !!cat.isHidden;
+
           return (
-            <button
+            <div
               key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategoryFilter(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              className={`flex items-center rounded-xl text-xs font-bold transition-all whitespace-nowrap border ${
                 active
-                  ? 'bg-cyan-500 text-zinc-950 shadow-md shadow-cyan-500/30'
-                  : cat.isHidden
-                    ? 'bg-zinc-900/60 text-slate-500 border border-white/5 line-through'
-                    : 'bg-zinc-900 text-slate-400 hover:text-white border border-white/5'
+                  ? 'bg-cyan-500 text-zinc-950 shadow-md shadow-cyan-500/30 border-cyan-400'
+                  : isHidden
+                    ? 'bg-zinc-950 text-slate-500 border-rose-500/30'
+                    : 'bg-zinc-900 text-slate-400 hover:text-white border-white/5'
               }`}
             >
-              <span>{cat.label}</span>
-              <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${active ? 'bg-zinc-950/20 text-zinc-950' : 'bg-zinc-800 text-slate-400'}`}>
-                {count}
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryFilter(cat.id)}
+                className="px-3 py-1.5 flex items-center gap-1.5 cursor-pointer"
+              >
+                <span className={`text-[10px] font-mono ${active ? 'text-zinc-950' : 'text-cyan-400'}`}>#{cIdx + 1}</span>
+                <span className={isHidden ? 'line-through opacity-70' : ''}>{cat.label}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${active ? 'bg-zinc-950/20 text-zinc-950' : 'bg-zinc-800 text-slate-400'}`}>
+                  {count}
+                </span>
+              </button>
+
+              {/* Direct Quick Toggle Icon on Chip */}
+              <button
+                type="button"
+                onClick={() => adminToggleCategoryVisibility(cat.id)}
+                className={`p-1.5 mr-1 rounded-lg transition-colors cursor-pointer ${
+                  active
+                    ? 'hover:bg-cyan-600 text-zinc-950'
+                    : isHidden
+                      ? 'text-rose-400 hover:bg-rose-950'
+                      : 'text-emerald-400 hover:bg-zinc-800'
+                }`}
+                title={isHidden ? 'Category is HIDDEN on storefront. Click to make Visible.' : 'Category is VISIBLE on storefront. Click to Hide.'}
+              >
+                {isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              </button>
+            </div>
           );
         })}
       </div>

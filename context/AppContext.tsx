@@ -385,12 +385,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Category Configuration state (admin-controlled sequence & visibility)
-  const [categoryConfigs, setCategoryConfigs] = useState<CategoryConfig[]>(DEFAULT_CATEGORY_CONFIGS);
+  const [categoryConfigs, setCategoryConfigs] = useState<CategoryConfig[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('keyoon_category_configs');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch { }
+    }
+    return DEFAULT_CATEGORY_CONFIGS;
+  });
 
   const adminUpdateCategoryConfigs = async (configs: CategoryConfig[]) => {
-    setCategoryConfigs(configs);
+    // Normalize orderIndex
+    const normalized = configs.map((c, idx) => ({
+      ...c,
+      orderIndex: idx,
+    }));
+
+    setCategoryConfigs(normalized);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('keyoon_category_configs', JSON.stringify(normalized));
+      } catch { }
+    }
+
     try {
-      await setDoc(doc(db, 'settings', 'categories'), { categories: configs, updatedAt: new Date().toISOString() }, { merge: true });
+      await setDoc(doc(db, 'settings', 'categories'), { categories: normalized, updatedAt: new Date().toISOString() }, { merge: true });
       await logAdminActivity('CATEGORY_SETTINGS_UPDATED', 'catalog', 'Updated category sequence & visibility in storefront');
     } catch (err) {
       console.warn('[AppContext] Error saving category settings to Firestore:', err);
@@ -403,8 +427,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminReorderCategories = async (newOrder: CategoryConfig[]) => {
-    const updated = newOrder.map((c, idx) => ({ ...c, orderIndex: idx }));
-    await adminUpdateCategoryConfigs(updated);
+    await adminUpdateCategoryConfigs(newOrder);
   };
 
   const adminToggleProductVisibility = async (productId: string) => {
@@ -604,7 +627,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await batch.commit();
       }
 
-      // 6. Ensure superadmin doc exists in admins collection
+      // 7. Seed Category Settings if empty
+      const catSnap = await getDoc(doc(db, 'settings', 'categories'));
+      if (!catSnap.exists()) {
+        await setDoc(doc(db, 'settings', 'categories'), {
+          categories: DEFAULT_CATEGORY_CONFIGS,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      // 8. Ensure superadmin doc exists in admins collection
       const superAdminRef = doc(db, 'admins', SUPERADMIN_EMAIL.toLowerCase().replace(/[^a-z0-9]/g, '_'));
       const superAdminSnap = await getDoc(superAdminRef);
       if (!superAdminSnap.exists()) {
@@ -815,23 +847,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const data = snap.data();
         if (Array.isArray(data?.categories) && data.categories.length > 0) {
           const loaded: CategoryConfig[] = data.categories;
-          const merged = DEFAULT_CATEGORY_CONFIGS.map(def => {
-            const found = loaded.find(l => l.id === def.id);
-            return found ? { ...def, ...found } : def;
+          // Build a map of loaded categories with their saved order and visibility
+          const validMap = new Map(loaded.map(c => [c.id, c]));
+          // Make sure all default categories are represented
+          const allCats: CategoryConfig[] = [];
+          
+          // First add all loaded items in their exact saved order
+          loaded.forEach((item, idx) => {
+            const def = DEFAULT_CATEGORY_CONFIGS.find(d => d.id === item.id);
+            if (def) {
+              allCats.push({
+                ...def,
+                ...item,
+                orderIndex: typeof item.orderIndex === 'number' ? item.orderIndex : idx,
+              });
+            }
           });
-          merged.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-          setCategoryConfigs(merged);
-        } else {
-          setCategoryConfigs(DEFAULT_CATEGORY_CONFIGS);
+
+          // Then add any missing default categories at the end
+          DEFAULT_CATEGORY_CONFIGS.forEach(def => {
+            if (!validMap.has(def.id)) {
+              allCats.push({
+                ...def,
+                orderIndex: allCats.length,
+              });
+            }
+          });
+
+          allCats.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+          const normalized = allCats.map((c, idx) => ({ ...c, orderIndex: idx }));
+          setCategoryConfigs(normalized);
+
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.setItem('keyoon_category_configs', JSON.stringify(normalized));
+            } catch { }
+          }
         }
-      } else {
-        setCategoryConfigs(DEFAULT_CATEGORY_CONFIGS);
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') {
         console.warn('[AppContext] Category settings listener error:', err);
       }
-      setCategoryConfigs(DEFAULT_CATEGORY_CONFIGS);
     });
 
     return () => {

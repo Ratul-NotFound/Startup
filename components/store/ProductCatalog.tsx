@@ -2,40 +2,11 @@
 
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useApp } from '@/context/AppContext';
+import { useApp, DEFAULT_CATEGORY_CONFIGS } from '@/context/AppContext';
 import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SubscriptionCategory } from '@/types';
 import { Interactive3DCard } from '@/components/ui/Interactive3DCard';
 import { ProductCardImageCarousel } from './ProductCardImageCarousel';
-
-// Module-level constant — never recreated on re-renders
-const CATEGORY_METADATA: { id: SubscriptionCategory; label: string; description: string }[] = [
-    {
-      id: 'ai',
-      label: 'AI & Productivity',
-      description: 'Top AI models, coding assistants & intelligent tools',
-    },
-    {
-      id: 'streaming',
-      label: 'Movies & Music Streaming',
-      description: '4K Ultra HD video, movies, music & ad-free entertainment',
-    },
-    {
-      id: 'dev',
-      label: 'Developer Tools',
-      description: 'AI code editors, coding workspaces & fast requests',
-    },
-    {
-      id: 'productivity',
-      label: 'Design & Creative Apps',
-      description: 'Full creative suites for graphic design, photo & video editing',
-    },
-    {
-      id: 'vpn_security',
-      label: 'VPN & Online Security',
-      description: 'Encrypted privacy tunnels, threat protection & fast proxies',
-    },
-];
 
 export const ProductCatalog: React.FC = () => {
   const {
@@ -91,9 +62,13 @@ export const ProductCatalog: React.FC = () => {
 
   // Group products by active categories in custom sequence
   const categoryGroups = useMemo(() => {
-    const activeCategories = (categoryConfigs && categoryConfigs.length > 0)
-      ? [...categoryConfigs].filter(c => !c.isHidden).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
-      : [];
+    const list = (categoryConfigs && categoryConfigs.length > 0)
+      ? categoryConfigs
+      : DEFAULT_CATEGORY_CONFIGS;
+
+    const activeCategories = [...list]
+      .filter((c) => !c.isHidden)
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
 
     return activeCategories
       .map((meta) => {
