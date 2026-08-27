@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Search, Eye, Check, X, Loader2, FileText, Edit2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Search, Eye, Check, X, Loader2, FileText, Edit2, Mail, Copy } from 'lucide-react';
 import { Order } from '@/types';
 import { printCleanInvoice } from '@/lib/invoice-printer';
 
@@ -38,6 +38,15 @@ export function OrdersTab({
   setCustomProvisionOrder,
   showFeedback,
 }: OrdersTabProps) {
+  const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
+
+  const handleCopyEmail = (orderId: string, email: string) => {
+    navigator.clipboard.writeText(email);
+    setCopiedEmailId(orderId);
+    setTimeout(() => setCopiedEmailId(null), 2000);
+    showFeedback('success', `Copied ${email} to clipboard!`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -68,7 +77,7 @@ export function OrdersTab({
             value={orderSearch}
             onChange={e => setOrderSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white focus:outline-none focus:border-white/30 placeholder-zinc-500"
-            placeholder="Search TrxID, sender number, email, order #…"
+            placeholder="Search TrxID, sender, claim email, order #…"
           />
         </div>
       </div>
@@ -79,6 +88,7 @@ export function OrdersTab({
             <thead className="bg-zinc-950 text-slate-400 uppercase border-b border-white/[0.06] text-[10px] font-bold tracking-wider">
               <tr>
                 <th className="p-4">Order &amp; Customer</th>
+                <th className="p-4">Delivery Claim Email</th>
                 <th className="p-4">Items</th>
                 <th className="p-4">Amount &amp; Method</th>
                 <th className="p-4">Sender Phone</th>
@@ -96,12 +106,14 @@ export function OrdersTab({
                   return (
                     o.orderNumber.toLowerCase().includes(q) ||
                     o.userEmail.toLowerCase().includes(q) ||
+                    (o.claimEmail && o.claimEmail.toLowerCase().includes(q)) ||
                     (o.transactionId && o.transactionId.toLowerCase().includes(q)) ||
                     (o.senderNumber && o.senderNumber.toLowerCase().includes(q))
                   );
                 })
                 .map(o => {
                   const isPending = o.paymentStatus === 'pending';
+                  const targetDeliveryEmail = o.claimEmail || o.userEmail;
 
                   return (
                     <tr key={o.id} className="hover:bg-white/[0.02] transition-colors">
@@ -126,6 +138,36 @@ export function OrdersTab({
                             </div>
                           );
                         })()}
+                      </td>
+
+                      {/* Delivery Claim Email Column */}
+                      <td className="p-4 max-w-[190px]">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-mono text-cyan-300 font-bold truncate block" title={targetDeliveryEmail}>
+                              {targetDeliveryEmail}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleCopyEmail(o.id, targetDeliveryEmail)}
+                              className="px-1.5 py-0.5 rounded bg-zinc-800 hover:bg-zinc-700 text-slate-300 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              title="Copy email to clipboard"
+                            >
+                              {copiedEmailId === o.id ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Copy className="h-2.5 w-2.5" />}
+                              <span>{copiedEmailId === o.id ? 'Copied' : 'Copy'}</span>
+                            </button>
+                            <a
+                              href={`mailto:${targetDeliveryEmail}?subject=Your%20Keyoon%20Subscription%20Order%20%23${o.orderNumber}`}
+                              className="px-1.5 py-0.5 rounded bg-blue-900/40 hover:bg-blue-800/60 text-blue-300 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              title="Send Email"
+                            >
+                              <Mail className="h-2.5 w-2.5" />
+                              <span>Email</span>
+                            </a>
+                          </div>
+                        </div>
                       </td>
 
                       <td className="p-4 max-w-[200px]">

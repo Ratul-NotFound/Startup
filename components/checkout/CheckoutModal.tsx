@@ -7,7 +7,7 @@ import { BangladeshPaymentMethod } from '@/types';
 import {
   X, ShieldCheck, QrCode, CheckCircle2,
   Lock, Loader2, Copy, Check, ArrowRight,
-  Upload, Image as ImageIcon, Sparkles, Clock, AlertCircle
+  Upload, Image as ImageIcon, Sparkles, Clock, AlertCircle, Mail
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -22,6 +22,7 @@ export const CheckoutModal: React.FC = () => {
   const activeMethods = paymentMethods.filter(pm => pm.isActive);
   const [selectedMethodId, setSelectedMethodId] = useState<string>('');
   
+  const [claimEmail, setClaimEmail] = useState('');
   const [senderNumber, setSenderNumber] = useState('');
   const [transactionId, setTransactionId] = useState('');
   const [screenshotBase64, setScreenshotBase64] = useState<string | null>(null);
@@ -35,11 +36,20 @@ export const CheckoutModal: React.FC = () => {
     orderNumber: string;
     totalBdt: number;
     methodName: string;
+    claimEmail?: string;
   } | null>(null);
 
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Auto-fill claim email with user's account email
+  useEffect(() => {
+    const defaultEmail = firebaseUser?.email || user?.email || '';
+    if (defaultEmail && !claimEmail) {
+      setClaimEmail(defaultEmail);
+    }
+  }, [firebaseUser, user, claimEmail]);
 
   // Set default method when methods change
   useEffect(() => {
@@ -143,6 +153,12 @@ export const CheckoutModal: React.FC = () => {
       return;
     }
 
+    const trimmedClaimEmail = (claimEmail.trim() || firebaseUser.email || user.email || '').toLowerCase();
+    if (!trimmedClaimEmail || !trimmedClaimEmail.includes('@')) {
+      setSubmitError('Please enter a valid email address where you want to receive your subscription credentials.');
+      return;
+    }
+
     if (!isFreeOrder && (!senderNumber.trim() || !transactionId.trim())) {
       setSubmitError('Please enter both your Sender Phone Number and Transaction ID (TrxID).');
       return;
@@ -155,7 +171,7 @@ export const CheckoutModal: React.FC = () => {
       const paymentMethodType = isFreeOrder ? 'free_claim' : currentMethod.type;
       const paymentMethodName = isFreeOrder ? '🎁 100% Free Special Reward' : currentMethod.name;
 
-      const order = await processCheckout(paymentMethodType, firebaseUser.email || user.email, {
+      const order = await processCheckout(paymentMethodType, trimmedClaimEmail, {
         senderNumber: isFreeOrder ? 'FREE_CLAIM' : senderNumber.trim(),
         transactionId: isFreeOrder ? '' : transactionId.trim().toUpperCase(),
         screenshotUrl: isFreeOrder ? '' : (screenshotBase64 || ''),
@@ -167,6 +183,7 @@ export const CheckoutModal: React.FC = () => {
         orderNumber: order.orderNumber,
         totalBdt: isFreeOrder ? 0 : totalInBdt,
         methodName: paymentMethodName,
+        claimEmail: trimmedClaimEmail,
       });
       setStep('success');
 
@@ -259,7 +276,7 @@ export const CheckoutModal: React.FC = () => {
                   {isFreeOrder ? 'Claiming Your Free Subscription...' : 'Submitting Payment Proof...'}
                 </h3>
                 <p className="text-xs text-zinc-400">
-                  {isFreeOrder ? 'Allocating credentials to your private vault.' : 'Recording your transaction in real time.'}
+                  {isFreeOrder ? 'Allocating credentials to your target email and vault.' : 'Recording your transaction in real time.'}
                 </p>
               </div>
             </div>
@@ -281,8 +298,8 @@ export const CheckoutModal: React.FC = () => {
                 </h3>
                 <p className="text-xs text-zinc-400 max-w-xs mx-auto">
                   {isFreeOrder
-                    ? 'Your free subscription has been verified and registered in your private vault!'
-                    : 'Our verification bot is processing your TrxID. Track status in your dashboard.'}
+                    ? 'Your free subscription has been registered. Credentials will be sent to your email and accessible in your private vault.'
+                    : 'Our verification team is checking your payment. Credentials will be delivered to your email & vault.'}
                 </p>
               </div>
 
@@ -292,14 +309,14 @@ export const CheckoutModal: React.FC = () => {
                   <span className="text-white font-medium">{latestOrderInfo.methodName}</span>
                 </div>
                 <div className="flex justify-between text-zinc-400">
+                  <span>Target Delivery Email:</span>
+                  <span className="text-cyan-300 font-mono font-bold">{latestOrderInfo.claimEmail || 'Account Email'}</span>
+                </div>
+                <div className="flex justify-between text-zinc-400">
                   <span>Payable Amount:</span>
                   <span className="text-emerald-400 font-mono font-bold">
                     {latestOrderInfo.totalBdt === 0 ? '৳0 (FREE REWARD)' : `৳${latestOrderInfo.totalBdt.toLocaleString('en-BD')} BDT`}
                   </span>
-                </div>
-                <div className="flex justify-between text-zinc-400">
-                  <span>Vault Delivery:</span>
-                  <span className="text-cyan-400 font-medium">Instant Access</span>
                 </div>
               </div>
 
@@ -335,7 +352,7 @@ export const CheckoutModal: React.FC = () => {
                       Claim Your Free Subscription
                     </h2>
                     <p className="text-xs text-slate-400">
-                      No payment or transaction ID required. All task &amp; campaign requirements have been fulfilled.
+                      No payment or transaction ID required. Enter your delivery email below to receive access.
                     </p>
                   </div>
 
@@ -371,15 +388,27 @@ export const CheckoutModal: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Allocation Notice */}
-                  <div className="p-3 rounded-xl bg-zinc-950 border border-white/10 text-xs text-slate-300 flex items-start gap-2.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                    <div>
-                      <span className="font-bold text-white block">Instant Vault Allocation</span>
-                      <span className="text-[11px] text-slate-400">
-                        This subscription will be credited directly to <strong className="text-white">{firebaseUser?.email || user.email}</strong>.
-                      </span>
+                  {/* Mandatory Claim / Delivery Email Input */}
+                  <div className="p-3.5 rounded-2xl bg-zinc-950 border border-cyan-500/30 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-xs text-slate-200 flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>Deliver / Claim to Email Address <strong className="text-rose-400">*</strong></span>
+                      </label>
+                      <span className="text-[10px] text-cyan-400 font-mono font-bold">Required</span>
                     </div>
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={claimEmail}
+                      onChange={e => setClaimEmail(e.target.value)}
+                      placeholder="e.g. yourname@gmail.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900 border border-white/10 focus:border-cyan-400 text-white font-medium text-xs focus:outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 block">
+                      Credentials will be emailed here and linked to your Keyoon account vault.
+                    </span>
                   </div>
 
                   {/* Error Alert Banner */}
@@ -394,8 +423,8 @@ export const CheckoutModal: React.FC = () => {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={isProcessing}
-                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-black text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                      disabled={isProcessing || !claimEmail.trim()}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-black text-xs transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       <Sparkles className="h-4 w-4 fill-zinc-950" />
                       <span>⚡ Confirm &amp; Claim Free Access Instantly (৳0)</span>
@@ -522,6 +551,29 @@ export const CheckoutModal: React.FC = () => {
                     </p>
                   </div>
 
+                  {/* Mandatory Delivery / Claim Email Field */}
+                  <div className="p-3 rounded-2xl bg-zinc-950 border border-cyan-500/30 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <label className="font-bold text-slate-200 flex items-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>Deliver / Claim to Email Address <strong className="text-rose-400">*</strong></span>
+                      </label>
+                      <span className="text-[10px] text-cyan-400 font-mono font-bold">Required</span>
+                    </div>
+                    <input
+                      type="email"
+                      required
+                      autoComplete="email"
+                      value={claimEmail}
+                      onChange={e => setClaimEmail(e.target.value)}
+                      placeholder="e.g. yourname@gmail.com"
+                      className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 focus:border-cyan-400 text-white font-medium text-xs focus:outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 block">
+                      Admin will provision credentials directly to this email and your private vault.
+                    </span>
+                  </div>
+
                   {/* Form Inputs: Sender Phone & TrxID */}
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="space-y-1">
@@ -619,7 +671,7 @@ export const CheckoutModal: React.FC = () => {
                   <div className="pt-2">
                     <button
                       type="submit"
-                      disabled={isProcessing || !senderNumber.trim() || !transactionId.trim()}
+                      disabled={isProcessing || !claimEmail.trim() || !senderNumber.trim() || !transactionId.trim()}
                       className="w-full py-3 rounded-2xl bg-white text-zinc-950 hover:bg-zinc-100 font-black text-xs transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <CheckCircle2 className="h-4 w-4 text-emerald-600" />

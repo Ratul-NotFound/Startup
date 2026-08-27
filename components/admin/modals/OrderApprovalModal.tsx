@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Order } from '@/types';
-import { X, ChevronRight, Loader2, Check } from 'lucide-react';
+import { X, ChevronRight, Loader2, Check, Mail, Copy, ExternalLink, Sparkles } from 'lucide-react';
 
 interface OrderApprovalModalProps {
   customProvisionOrder: Order | null;
@@ -48,7 +48,44 @@ export function OrderApprovalModal({
   adminApproveAndDeliverOrder,
   showFeedback,
 }: OrderApprovalModalProps) {
+  const [copiedEmailText, setCopiedEmailText] = useState(false);
+
   if (!customProvisionOrder) return null;
+
+  const targetDeliveryEmail = customProvisionOrder.claimEmail || customProvisionOrder.userEmail;
+
+  // Generate formatted email text for customer
+  const buildCustomerEmailText = () => {
+    const itemsText = customProvisionOrder.items.map((item, idx) => {
+      const c = perItemCreds[idx] || { email: '', password: '', pinCode: '', profileName: '', notes: '' };
+      return `📌 PRODUCT: ${item.productName} (${item.durationLabel})\n` +
+        `• Login Email: ${c.email || targetDeliveryEmail}\n` +
+        (c.password ? `• Password: ${c.password}\n` : '') +
+        (c.profileName ? `• Profile: ${c.profileName}\n` : '') +
+        (c.pinCode ? `• PIN Code: ${c.pinCode}\n` : '') +
+        (c.notes ? `• Instructions: ${c.notes}\n` : '');
+    }).join('\n');
+
+    return `Hello,\n\n` +
+      `Thank you for your order with Keyoon! Here are your subscription credentials for Order #${customProvisionOrder.orderNumber}:\n\n` +
+      `${itemsText}\n` +
+      `Your credentials have also been stored securely in your private Keyoon Vault under your account dashboard.\n\n` +
+      `If you have any questions or require warranty support, feel free to contact us anytime.\n\n` +
+      `Best regards,\nThe Keyoon Team`;
+  };
+
+  const handleCopyEmailTemplate = () => {
+    navigator.clipboard.writeText(buildCustomerEmailText());
+    setCopiedEmailText(true);
+    setTimeout(() => setCopiedEmailText(false), 2500);
+    showFeedback('success', 'Customer delivery email text copied to clipboard!');
+  };
+
+  const handleOpenMailto = () => {
+    const subject = encodeURIComponent(`Your Keyoon Subscription Credentials - Order #${customProvisionOrder.orderNumber}`);
+    const body = encodeURIComponent(buildCustomerEmailText());
+    window.open(`mailto:${targetDeliveryEmail}?subject=${subject}&body=${body}`, '_blank');
+  };
 
   return (
     <div
@@ -59,9 +96,22 @@ export function OrderApprovalModal({
         {/* Header */}
         <div className="flex items-start justify-between px-6 py-5 border-b border-white/10">
           <div>
-            <h2 className="text-xl font-black text-white">Order #{customProvisionOrder.orderNumber}</h2>
-            <p className="text-sm text-slate-400 mt-0.5">{customProvisionOrder.userEmail}</p>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-black text-white">Order #{customProvisionOrder.orderNumber}</h2>
+              {customProvisionOrder.paymentMethod === 'free_claim' && (
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase">
+                  🎁 Free Claim
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 mt-1 text-xs">
+              <span className="text-slate-400">Target Delivery Email:</span>
+              <span className="font-mono text-cyan-300 font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30">
+                {targetDeliveryEmail}
+              </span>
+            </div>
           </div>
+
           {/* Step indicator */}
           <div className="flex items-center gap-2 text-xs font-bold">
             {(['verify', 'credentials', 'confirm'] as const).map((s, si) => (
@@ -74,7 +124,7 @@ export function OrderApprovalModal({
               </div>
             ))}
           </div>
-          <button onClick={() => setCustomProvisionOrder(null)} className="text-slate-500 hover:text-white transition-colors">
+          <button onClick={() => setCustomProvisionOrder(null)} className="text-slate-500 hover:text-white transition-colors cursor-pointer">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -84,7 +134,13 @@ export function OrderApprovalModal({
           {approvalStep === 'verify' && (
             <div className="space-y-4">
               <div className="bg-zinc-800/60 rounded-2xl p-4 space-y-3">
-                <h3 className="text-sm font-black text-white">Step 1 — Payment Verification</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-white">Step 1 — Verification Check</h3>
+                  <div className="text-[11px] text-slate-400">
+                    Deliver to: <strong className="text-cyan-300 font-mono">{targetDeliveryEmail}</strong>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div>
                     <div className="text-slate-500 mb-0.5">Sender Number</div>
@@ -97,7 +153,9 @@ export function OrderApprovalModal({
                   <div>
                     <div className="text-slate-500 mb-0.5">Amount</div>
                     <div className="font-mono text-white font-black">
-                      {customProvisionOrder.totalBdt ? `৳${customProvisionOrder.totalBdt.toLocaleString()} BDT` : `$${customProvisionOrder.total.toFixed(2)}`}
+                      {customProvisionOrder.totalBdt != null ? (
+                        customProvisionOrder.totalBdt === 0 ? '৳0 (100% FREE REWARD)' : `৳${customProvisionOrder.totalBdt.toLocaleString()} BDT`
+                      ) : `$${customProvisionOrder.total.toFixed(2)}`}
                     </div>
                   </div>
                   {customProvisionOrder.couponCode && (
@@ -142,18 +200,24 @@ export function OrderApprovalModal({
               <div className="flex gap-2">
                 {!showRejectionInput ? (
                   <>
-                    <button onClick={() => setShowRejectionInput(true)} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 font-bold text-xs border border-white/10 transition-colors">Reject Payment</button>
+                    <button onClick={() => setShowRejectionInput(true)} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-slate-400 hover:text-red-400 font-bold text-xs border border-white/10 transition-colors cursor-pointer">
+                      Reject Order
+                    </button>
                     <button
                       onClick={async () => {
                         await adminVerifyPayment(customProvisionOrder.id);
                         setApprovalStep('credentials');
                       }}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors"
-                    >Payment Verified → Next</button>
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Payment / Claim Verified → Next
+                    </button>
                   </>
                 ) : (
                   <>
-                    <button onClick={() => setShowRejectionInput(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors">Cancel</button>
+                    <button onClick={() => setShowRejectionInput(false)} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors cursor-pointer">
+                      Cancel
+                    </button>
                     <button
                       onClick={async () => {
                         if (!rejectionReason.trim()) { showFeedback('error', 'Please enter a rejection reason.'); return; }
@@ -161,8 +225,10 @@ export function OrderApprovalModal({
                         showFeedback('error', `Order #${customProvisionOrder.orderNumber} rejected.`);
                         setCustomProvisionOrder(null);
                       }}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-xs transition-colors"
-                    >Confirm Rejection</button>
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-red-700 hover:bg-red-600 text-white font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      Confirm Rejection
+                    </button>
                   </>
                 )}
               </div>
@@ -172,27 +238,64 @@ export function OrderApprovalModal({
           {/* ── STEP 2: ENTER CREDENTIALS ── */}
           {approvalStep === 'credentials' && (
             <div className="space-y-4">
-              <p className="text-xs text-slate-400">Enter credentials for each item. These will be delivered to the customer&apos;s vault.</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-slate-400">
+                  Enter credentials to provision. These will be added to the customer&apos;s vault and ready for email dispatch.
+                </p>
+                <span className="text-[11px] font-mono text-cyan-300 font-bold">
+                  Target: {targetDeliveryEmail}
+                </span>
+              </div>
+
               {customProvisionOrder.items.map((item, idx) => (
                 <div key={idx} className="bg-zinc-800/60 rounded-2xl p-4 space-y-3 border border-white/5">
-                  <div className="flex items-center gap-2">
-                    {item.productLogo && <img src={item.productLogo} alt={item.productName} className="h-7 w-7 rounded-lg object-cover" />}
-                    <div>
-                      <div className="font-bold text-white text-sm">{item.productName}</div>
-                      <div className="text-[11px] text-cyan-400">{item.durationLabel} · Qty {item.quantity}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {item.productLogo && <img src={item.productLogo} alt={item.productName} className="h-7 w-7 rounded-lg object-cover" />}
+                      <div>
+                        <div className="font-bold text-white text-sm">{item.productName}</div>
+                        <div className="text-[11px] text-cyan-400">{item.durationLabel} · Qty {item.quantity}</div>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPerItemCreds(prev => {
+                          const n = [...prev];
+                          n[idx] = { ...n[idx], email: targetDeliveryEmail };
+                          return n;
+                        });
+                      }}
+                      className="px-2 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-[10px] text-cyan-400 font-bold border border-cyan-500/30 cursor-pointer"
+                    >
+                      Use Target Email
+                    </button>
                   </div>
+
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] text-slate-500 font-bold">Email / Username</label>
-                      <input type="text" value={perItemCreds[idx]?.email || ''} onChange={e => setPerItemCreds(prev => { const n = [...prev]; n[idx] = { ...n[idx], email: e.target.value }; return n; })} className="mt-0.5 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="email@provider.com" />
+                      <label className="text-[10px] text-slate-500 font-bold">Account / Provision Email</label>
+                      <input
+                        type="text"
+                        value={perItemCreds[idx]?.email || ''}
+                        onChange={e => setPerItemCreds(prev => { const n = [...prev]; n[idx] = { ...n[idx], email: e.target.value }; return n; })}
+                        className="mt-0.5 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                        placeholder={targetDeliveryEmail}
+                      />
                     </div>
                     <div>
                       <label className="text-[10px] text-slate-500 font-bold">Password</label>
                       <div className="flex gap-1 mt-0.5">
-                        <input type={showItemPassword[idx] ? 'text' : 'password'} value={perItemCreds[idx]?.password || ''} onChange={e => setPerItemCreds(prev => { const n = [...prev]; n[idx] = { ...n[idx], password: e.target.value }; return n; })} className="flex-1 bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="••••••••" />
-                        <button type="button" onClick={() => setShowItemPassword(prev => ({ ...prev, [idx]: !prev[idx] }))} className="px-2 rounded-lg bg-zinc-800 border border-white/10 text-slate-400 hover:text-white transition-colors">
-                          Eye
+                        <input
+                          type={showItemPassword[idx] ? 'text' : 'password'}
+                          value={perItemCreds[idx]?.password || ''}
+                          onChange={e => setPerItemCreds(prev => { const n = [...prev]; n[idx] = { ...n[idx], password: e.target.value }; return n; })}
+                          className="flex-1 bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                          placeholder="••••••••"
+                        />
+                        <button type="button" onClick={() => setShowItemPassword(prev => ({ ...prev, [idx]: !prev[idx] }))} className="px-2 rounded-lg bg-zinc-800 border border-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer text-xs">
+                          {showItemPassword[idx] ? 'Hide' : 'Show'}
                         </button>
                       </div>
                     </div>
@@ -206,14 +309,18 @@ export function OrderApprovalModal({
                     </div>
                   </div>
                   <div>
-                    <label className="text-[10px] text-slate-500 font-bold">Notes (optional)</label>
+                    <label className="text-[10px] text-slate-500 font-bold">Notes / Instructions (optional)</label>
                     <input type="text" value={perItemCreds[idx]?.notes || ''} onChange={e => setPerItemCreds(prev => { const n = [...prev]; n[idx] = { ...n[idx], notes: e.target.value }; return n; })} className="mt-0.5 w-full bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500" placeholder="Any extra instructions for customer..." />
                   </div>
                 </div>
               ))}
               <div className="flex gap-2">
-                <button onClick={() => setApprovalStep('verify')} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors">← Back</button>
-                <button onClick={() => setApprovalStep('confirm')} className="flex-1 px-4 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-xs transition-colors">Review &amp; Confirm →</button>
+                <button onClick={() => setApprovalStep('verify')} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors cursor-pointer">
+                  ← Back
+                </button>
+                <button onClick={() => setApprovalStep('confirm')} className="flex-1 px-4 py-2.5 rounded-xl bg-cyan-700 hover:bg-cyan-600 text-white font-bold text-xs transition-colors cursor-pointer">
+                  Review &amp; Confirm Email Dispatch →
+                </button>
               </div>
             </div>
           )}
@@ -222,34 +329,68 @@ export function OrderApprovalModal({
           {approvalStep === 'confirm' && (
             <div className="space-y-4">
               <div className="bg-emerald-950/30 rounded-2xl p-4 border border-emerald-500/20 space-y-3">
-                <h3 className="text-sm font-black text-emerald-400">Confirm Delivery</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-emerald-400">Confirm Delivery &amp; Email Dispatch</h3>
+                  <span className="text-[11px] font-mono text-cyan-300 font-bold">
+                    Recipient: {targetDeliveryEmail}
+                  </span>
+                </div>
+
                 {customProvisionOrder.items.map((item, idx) => (
                   <div key={idx} className="bg-zinc-900/60 rounded-xl p-3 text-xs space-y-1">
                     <div className="font-bold text-white">{item.productName} <span className="text-cyan-400">({item.durationLabel})</span></div>
-                    <div className="text-slate-400">Email: <span className="text-white font-mono">{perItemCreds[idx]?.email || '—'}</span></div>
+                    <div className="text-slate-400">Email: <span className="text-white font-mono">{perItemCreds[idx]?.email || targetDeliveryEmail}</span></div>
                     <div className="text-slate-400">Pass: <span className="text-white font-mono">{perItemCreds[idx]?.password ? '••••••' : '—'}</span></div>
                     {perItemCreds[idx]?.profileName && <div className="text-slate-400">Profile: <span className="text-white font-mono">{perItemCreds[idx].profileName}</span></div>}
+                    {perItemCreds[idx]?.pinCode && <div className="text-slate-400">PIN: <span className="text-white font-mono">{perItemCreds[idx].pinCode}</span></div>}
                   </div>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => setApprovalStep('credentials')} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors">← Edit Creds</button>
+
+              {/* Email dispatch shortcuts */}
+              <div className="p-3.5 rounded-2xl bg-zinc-950 border border-white/10 space-y-2">
+                <span className="text-xs font-bold text-slate-300 block">Manual Email Dispatch Options</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleOpenMailto}
+                    className="px-3 py-2 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/30 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    <span>Open Email App (mailto:)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyEmailTemplate}
+                    className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-200 border border-white/10 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                  >
+                    {copiedEmailText ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copiedEmailText ? 'Copied Template!' : 'Copy Email Message'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setApprovalStep('credentials')} className="flex-1 px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs border border-white/10 transition-colors cursor-pointer">
+                  ← Edit Creds
+                </button>
                 <button
                   onClick={async () => {
                     setApprovingOrderId(customProvisionOrder.id);
                     try {
                       await adminApproveAndDeliverOrder(customProvisionOrder.id, perItemCreds);
-                      showFeedback('success', `Order #${customProvisionOrder.orderNumber} approved & credentials delivered!`);
+                      showFeedback('success', `Order #${customProvisionOrder.orderNumber} approved & credentials delivered to vault!`);
                       setCustomProvisionOrder(null);
                     } finally {
                       setApprovingOrderId(null);
                     }
                   }}
                   disabled={!!approvingOrderId}
-                  className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-colors"
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   {approvingOrderId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                  Approve &amp; Deliver
+                  Approve &amp; Deliver to Vault
                 </button>
               </div>
             </div>

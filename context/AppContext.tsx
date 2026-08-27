@@ -1740,14 +1740,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isBangladesh = !isFreeOrder && ['bkash', 'nagad', 'rocket', 'upay', 'custom'].includes(paymentMethod);
 
     const currentUid = firebaseUser ? firebaseUser.uid : user.id;
-    const currentEmail = (customEmail || (firebaseUser ? firebaseUser.email : user.email) || user.email || '').toLowerCase().trim();
+    const accountEmail = (firebaseUser?.email || user.email || '').toLowerCase().trim();
+    const targetClaimEmail = (customEmail || accountEmail || '').toLowerCase().trim();
 
     const newOrder: Order = {
       id: orderId,
       orderNumber: orderNum,
       createdAt: new Date().toISOString(),
       userId: currentUid,
-      userEmail: currentEmail,
+      userEmail: accountEmail || targetClaimEmail,
+      claimEmail: targetClaimEmail || accountEmail,
       items: cart.map(item => ({
         productId: item.product.id,
         productName: item.product.name,
@@ -1811,7 +1813,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           },
           credentialsConfigured: false,
           userId: currentUid,
-          userEmail: currentEmail,
+          userEmail: accountEmail || targetClaimEmail,
+          claimEmail: targetClaimEmail || accountEmail,
         };
         try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
       }

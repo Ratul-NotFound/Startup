@@ -198,6 +198,7 @@ export interface UserSubscription {
   paymentMethod: PaymentMethod;
   userId?: string;
   userEmail?: string;
+  claimEmail?: string; // Target email where credentials/offer are delivered
   credentialsConfigured?: boolean; // false = admin needs to set real credentials
 }
 
@@ -208,6 +209,7 @@ export interface Order {
   createdAt: string;
   userId: string;
   userEmail: string;
+  claimEmail?: string; // Target email where user wants to claim/receive subscription
   items: {
     productId: string;
     productName: string;
