@@ -188,7 +188,26 @@ export const ProductCatalog: React.FC = () => {
 
       {/* 2. Category-Wise Horizontal Scrollable Rows with 3D Tilt & Scroll Reveal */}
       <div className="space-y-14">
-        {categoryGroups.map((group, groupIdx) => (
+        {categoryGroups.length === 0 ? (
+          <div className="py-16 text-center p-8 rounded-3xl bg-zinc-900/60 border border-white/10 space-y-4 max-w-md mx-auto">
+            <div className="h-14 w-14 rounded-2xl bg-zinc-800 border border-white/10 text-cyan-400 flex items-center justify-center mx-auto shadow-inner">
+              <Search className="h-7 w-7" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-white">No subscriptions found</h3>
+              <p className="text-xs text-zinc-400">
+                We couldn&apos;t find any digital services matching &quot;<span className="text-cyan-300 font-bold">{activeSearchQuery}</span>&quot;.
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveSearchQuery('')}
+              className="px-4 py-2 rounded-xl bg-white text-zinc-950 text-xs font-bold hover:bg-zinc-100 transition-colors shadow-md cursor-pointer"
+            >
+              Clear Search Filter
+            </button>
+          </div>
+        ) : (
+          categoryGroups.map((group, groupIdx) => (
           <motion.div
             key={group.id}
             initial={{ opacity: 0, y: 35 }}
@@ -404,7 +423,7 @@ export const ProductCatalog: React.FC = () => {
             </div>
 
           </motion.div>
-        ))}
+        )))}
       </div>
 
     </section>

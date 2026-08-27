@@ -407,17 +407,15 @@ export default function CustomerDashboardPage() {
 
                       {/* Expiry Countdown & Synced Progress Bar */}
                       <div className="space-y-2 p-3.5 rounded-2xl bg-zinc-950 border border-white/[0.05]">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-slate-400 flex items-center gap-1.5 font-medium">
-                            <Clock className="h-3.5 w-3.5 text-cyan-400" /> Plan Expiry
-                          </span>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400 font-medium">Subscription Health:</span>
                           <div className="flex items-center gap-1.5">
-                            <span className={`font-bold ${isExpired ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-white'}`}>
-                              {isExpired ? 'Expired' : `${daysLeft} days remaining`}
+                            <span className={`font-bold ${sub.planDuration === 'lifetime' ? 'text-emerald-400' : isExpired ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-white'}`}>
+                              {sub.planDuration === 'lifetime' ? '♾️ Lifetime Access' : isExpired ? 'Expired' : `${daysLeft} days remaining`}
                             </span>
                             {!isExpired && (
                               <span className="text-[10px] font-mono text-cyan-400 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
-                                {percentRemaining}%
+                                {sub.planDuration === 'lifetime' ? '100%' : `${percentRemaining}%`}
                               </span>
                             )}
                           </div>
@@ -427,7 +425,9 @@ export default function CustomerDashboardPage() {
                         <div className="w-full h-2 rounded-full bg-zinc-800/80 p-0.5 border border-white/5 overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 shadow-sm ${
-                              isExpired
+                              sub.planDuration === 'lifetime'
+                                ? 'bg-gradient-to-r from-emerald-500 to-cyan-400 shadow-emerald-500/30'
+                                : isExpired
                                 ? 'bg-red-500 shadow-red-500/50'
                                 : isUrgent
                                 ? 'bg-gradient-to-r from-amber-500 to-rose-500 shadow-amber-500/50'
@@ -435,12 +435,12 @@ export default function CustomerDashboardPage() {
                                 ? 'bg-gradient-to-r from-cyan-500 to-emerald-400 shadow-cyan-500/30'
                                 : 'bg-gradient-to-r from-indigo-500 to-cyan-400 shadow-cyan-500/30'
                             }`}
-                            style={{ width: `${isExpired ? 100 : Math.max(3, percentRemaining)}%` }}
+                            style={{ width: `${sub.planDuration === 'lifetime' ? 100 : isExpired ? 100 : Math.max(3, percentRemaining)}%` }}
                           />
                         </div>
 
                         <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 font-mono">
-                          <span>Expires: {new Date(sub.expiryDate).toLocaleDateString()}</span>
+                          <span>{sub.planDuration === 'lifetime' ? 'Expires: Never (Lifetime)' : `Expires: ${new Date(sub.expiryDate).toLocaleDateString()}`}</span>
                           <span className="text-slate-400">{sub.planDuration?.replace('_', ' ').toUpperCase() || 'PLAN'}</span>
                         </div>
                       </div>

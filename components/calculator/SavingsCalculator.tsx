@@ -45,7 +45,7 @@ export const SavingsCalculator: React.FC = () => {
   const handleBundleCheckout = () => {
     selectedItems.forEach((calcItem) => {
       const prod = products.find((p) => p.id === calcItem.id);
-      if (prod) {
+      if (prod && (prod.stockCount ?? 0) > 0) {
         const annualPlan = prod.pricingTiers.find((t) => t.duration === '12_months') || prod.pricingTiers[prod.pricingTiers.length - 1];
         addToCart(prod, annualPlan);
       }

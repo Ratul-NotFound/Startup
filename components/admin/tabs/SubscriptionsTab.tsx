@@ -349,14 +349,25 @@ export function SubscriptionsTab({
                     </td>
 
                     <td className="p-4">
-                      <div className="space-y-0.5">
-                        <span className={`text-xs font-bold block ${isExpired ? 'text-red-400' : isExpiring ? 'text-amber-400' : 'text-slate-200'}`}>
-                          {new Date(s.expiryDate).toLocaleDateString()}
-                        </span>
-                        <span className={`text-[10px] font-semibold ${isExpired ? 'text-red-400' : isExpiring ? 'text-amber-400' : 'text-slate-500'}`}>
-                          {isExpired ? 'Expired' : `${daysLeft} days left`}
-                        </span>
-                      </div>
+                      {s.planDuration === 'lifetime' ? (
+                        <div className="space-y-0.5">
+                          <span className="text-xs font-bold text-emerald-400 block font-mono">
+                            ♾️ Lifetime
+                          </span>
+                          <span className="text-[10px] font-semibold text-emerald-400">
+                            Never Expires
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="space-y-0.5">
+                          <span className={`text-xs font-bold block ${isExpired ? 'text-red-400' : isExpiring ? 'text-amber-400' : 'text-slate-200'}`}>
+                            {new Date(s.expiryDate).toLocaleDateString()}
+                          </span>
+                          <span className={`text-[10px] font-semibold ${isExpired ? 'text-red-400' : isExpiring ? 'text-amber-400' : 'text-slate-500'}`}>
+                            {isExpired ? 'Expired' : `${daysLeft} days left`}
+                          </span>
+                        </div>
+                      )}
                     </td>
 
                     <td className="p-4 text-right">

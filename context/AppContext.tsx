@@ -1232,6 +1232,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const clearCart = () => { setCart([]); setAppliedCoupon(null); };
 
+  // Auto-invalidate applied coupon if cart no longer contains any eligible items
+  useEffect(() => {
+    if (appliedCoupon) {
+      const hasEligible = cart.some(item => isItemEligibleForCoupon(item, appliedCoupon));
+      if (!hasEligible) {
+        setAppliedCoupon(null);
+      }
+    }
+  }, [cart, appliedCoupon, isItemEligibleForCoupon]);
+
   const applyCoupon = (code: string) => {
     const found = coupons.find(c => c.code.toUpperCase() === code.trim().toUpperCase());
     if (!found) return { success: false, message: 'Invalid promo code.' };
@@ -1284,6 +1294,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalBdt?: number;
     }
   ): Promise<Order> => {
+    if (cart.length === 0) {
+      throw new Error('Your cart is empty. Please add items to checkout.');
+    }
+
+    if (paymentProof?.transactionId) {
+      const cleanTrx = paymentProof.transactionId.trim().toUpperCase();
+      const isDuplicate = allOrders.some(
+        o => o.transactionId && o.transactionId.trim().toUpperCase() === cleanTrx && o.paymentStatus !== 'failed'
+      );
+      if (isDuplicate) {
+        throw new Error(`Transaction ID "${cleanTrx}" has already been submitted for a previous order.`);
+      }
+    }
+
     const orderId = generateRandomId('ord');
     const orderNum = generateOrderNumber();
     const isBangladesh = ['bkash', 'nagad', 'rocket', 'upay', 'custom'].includes(paymentMethod);
@@ -1774,9 +1798,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Admin: User management ────────────────────────────────────────
   const adminUpdateUserRole = async (userId: string, role: 'customer' | 'admin') => {
+    const currentUid = firebaseUser?.uid || user.id;
+    if (userId === currentUid && role === 'customer') {
+      throw new Error('Security Error: You cannot demote yourself to a customer.');
+    }
+    const targetUser = allUsers.find(u => u.id === userId);
+    if (targetUser?.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase() && role === 'customer') {
+      throw new Error('Security Error: Primary SuperAdmin role cannot be modified.');
+    }
+
     try {
       await updateDoc(doc(db, 'users', userId), { role });
-      const targetUser = allUsers.find(u => u.id === userId);
       if (targetUser?.email) {
         if (role === 'admin') {
           await adminAddAdmin(targetUser.email, targetUser.name);
@@ -1786,6 +1818,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (err) {
       console.error('adminUpdateUserRole error:', err);
+      throw err;
     }
   };
 

@@ -130,8 +130,11 @@ export const CheckoutModal: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
     if (!firebaseUser) {
       setStep('auth_required');
       return;
@@ -165,8 +168,9 @@ export const CheckoutModal: React.FC = () => {
           colors: ['#e2136e', '#f7931e', '#06b6d4', '#10b981'],
         });
       } catch { }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Checkout error:', err);
+      setSubmitError(err?.message || 'Checkout failed. Please try again.');
       setStep('details');
     } finally {
       setIsProcessing(false);
@@ -505,6 +509,14 @@ export const CheckoutModal: React.FC = () => {
                   </button>
                 )}
               </div>
+
+              {/* Error Alert Banner */}
+              {submitError && (
+                <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/40 flex items-center gap-2 text-rose-300 text-xs font-semibold">
+                  <AlertCircle className="h-4 w-4 text-rose-400 shrink-0" />
+                  <span>{submitError}</span>
+                </div>
+              )}
 
               {/* Submit CTA */}
               <div className="pt-2">
