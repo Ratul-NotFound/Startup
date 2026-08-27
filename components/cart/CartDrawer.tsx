@@ -36,6 +36,7 @@ export const CartDrawer: React.FC = () => {
     setIsCheckoutOpen,
     firebaseUser,
     setIsAuthModalOpen,
+    formatPrice,
   } = useApp();
 
   const [couponInput, setCouponInput] = useState('');
@@ -162,8 +163,8 @@ export const CartDrawer: React.FC = () => {
                           <h4 className="text-sm font-bold text-white truncate">{item.product.name}</h4>
                           <p className="text-xs text-cyan-300 font-semibold">{item.selectedPlan.label}</p>
                           <p className="text-[11px] text-emerald-400 mt-0.5">
-                            <span className="font-bold">${item.selectedPlan.price.toFixed(2)}</span>{' '}
-                            <span className="text-zinc-500 line-through">${item.selectedPlan.originalPrice.toFixed(2)}</span>
+                            <span className="font-bold">{formatPrice(item.selectedPlan.price)}</span>{' '}
+                            <span className="text-zinc-500 line-through">{formatPrice(item.selectedPlan.originalPrice)}</span>
                           </p>
                         </div>
                         <button
@@ -205,7 +206,7 @@ export const CartDrawer: React.FC = () => {
                           </button>
                         </div>
                         <span className="font-bold text-white">
-                          ${(item.selectedPlan.price * item.quantity).toFixed(2)}
+                          {formatPrice(item.selectedPlan.price * item.quantity)}
                         </span>
                       </div>
                     </motion.div>
@@ -265,18 +266,18 @@ export const CartDrawer: React.FC = () => {
                   <div className="space-y-1.5 text-xs text-zinc-300">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span>${cartSubtotal.toFixed(2)}</span>
+                      <span>{formatPrice(cartSubtotal)}</span>
                     </div>
                     {appliedCoupon && (
                       <div className="flex justify-between text-emerald-400 font-medium">
                         <span>Discount ({appliedCoupon.discountPercent}%)</span>
-                        <span>-${cartDiscount.toFixed(2)}</span>
+                        <span>-{formatPrice(cartDiscount)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm font-black text-white pt-2 border-t border-white/[0.06]">
                       <span>Total Amount</span>
                       <span className="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                        ${cartTotal.toFixed(2)}
+                        {formatPrice(cartTotal)}
                       </span>
                     </div>
                   </div>
@@ -291,7 +292,7 @@ export const CartDrawer: React.FC = () => {
                     {firebaseUser ? (
                       <>
                         <ArrowRight className="h-4 w-4" />
-                        <span>Proceed to Checkout (${cartTotal.toFixed(2)})</span>
+                        <span>Proceed to Checkout ({formatPrice(cartTotal)})</span>
                       </>
                     ) : (
                       <>

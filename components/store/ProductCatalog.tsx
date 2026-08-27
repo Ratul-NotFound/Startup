@@ -44,6 +44,7 @@ export const ProductCatalog: React.FC = () => {
     addToCart,
     activeSearchQuery,
     setActiveSearchQuery,
+    formatPrice,
   } = useApp();
 
   const [sortBy, setSortBy] = useState<'popular' | 'price_low' | 'discount'>('popular');
@@ -351,10 +352,10 @@ export const ProductCatalog: React.FC = () => {
                               className="flex items-baseline gap-2"
                             >
                               <span className="text-lg sm:text-xl font-black text-white drop-shadow-sm">
-                                ${currentPlan.price.toFixed(2)}
+                                {formatPrice(currentPlan.price)}
                               </span>
                               <span className="text-xs text-zinc-500 line-through">
-                                ${currentPlan.originalPrice.toFixed(2)}
+                                {formatPrice(currentPlan.originalPrice)}
                               </span>
                             </motion.div>
                           </AnimatePresence>

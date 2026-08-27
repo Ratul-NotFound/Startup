@@ -17,7 +17,7 @@ interface CalculatorItem {
 }
 
 export const SavingsCalculator: React.FC = () => {
-  const { products, addToCart } = useApp();
+  const { products, addToCart, formatPrice } = useApp();
 
   const [items, setItems] = useState<CalculatorItem[]>([
     { id: 'chatgpt-plus', name: 'ChatGPT Plus', officialMonthly: 20.00, keyoonMonthly: 5.83, selected: true, category: 'AI Tools' },
@@ -82,7 +82,7 @@ export const SavingsCalculator: React.FC = () => {
                 Annual Cash Saved ({savingsPercent}%)
               </span>
               <span className="text-xl sm:text-2xl font-black text-emerald-400 font-mono drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-                ${annualSavings.toFixed(2)} <span className="text-xs text-zinc-400 font-sans">/ yr</span>
+                {formatPrice(annualSavings)} <span className="text-xs text-zinc-400 font-sans">/ yr</span>
               </span>
             </div>
             <button
@@ -126,11 +126,11 @@ export const SavingsCalculator: React.FC = () => {
               <div className="text-xs space-y-1 pt-3 border-t border-white/[0.04] mt-2">
                 <div className="flex justify-between items-center text-[11px] text-zinc-500">
                   <span>Official:</span>
-                  <span className="line-through">${item.officialMonthly.toFixed(2)}/mo</span>
+                  <span className="line-through">{formatPrice(item.officialMonthly)}/mo</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-zinc-400 font-medium">Keyoon:</span>
-                  <span className="text-cyan-400 font-bold font-mono">${item.keyoonMonthly.toFixed(2)}/mo</span>
+                  <span className="text-cyan-400 font-bold font-mono">{formatPrice(item.keyoonMonthly)}/mo</span>
                 </div>
               </div>
             </div>

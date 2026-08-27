@@ -54,6 +54,7 @@ export default function AdminPortalPage() {
     heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
     quickMessages, adminCreateQuickMessage, adminUpdateQuickMessage, adminDeleteQuickMessage, adminResetQuickMessages,
     adminActivityLogs, brandSettings, updateBrandSettings,
+    currencySettings, updateCurrencySettings,
   } = useApp();
 
   // Navigation & UI state
@@ -520,6 +521,8 @@ export default function AdminPortalPage() {
               adminDeletePaymentMethod={adminDeletePaymentMethod}
               setPreviewScreenshotUrl={setPreviewScreenshotUrl}
               showFeedback={showFeedback}
+              currencySettings={currencySettings}
+              updateCurrencySettings={updateCurrencySettings}
             />
           )}
 

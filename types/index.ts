@@ -295,3 +295,11 @@ export interface BrandSettings {
   faviconUrl?: string;
   updatedAt?: string;
 }
+
+export interface CurrencySettings {
+  bdtEnabled: boolean;         // Master toggle — if false, all users see USD
+  bdtCountries: string[];      // ISO-3166 country codes that get BDT, e.g. ["BD"]
+  bdtRate: number;             // 1 USD = X BDT, e.g. 125
+  updatedAt?: string;
+  updatedBy?: string;
+}

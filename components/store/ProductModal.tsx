@@ -23,6 +23,7 @@ export const ProductModal: React.FC = () => {
     likeReview,
     setIsWriteReviewOpen,
     setTargetReviewProduct,
+    formatPrice,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<ModalTab>('overview');
@@ -358,9 +359,9 @@ export const ProductModal: React.FC = () => {
                           </div>
 
                           <div className="flex items-baseline gap-1.5 mt-1">
-                            <span className="text-sm font-black text-white">${tier.price.toFixed(2)}</span>
+                            <span className="text-sm font-black text-white">{formatPrice(tier.price)}</span>
                             {tier.originalPrice && (
-                              <span className="text-[10px] text-zinc-500 line-through">${tier.originalPrice.toFixed(2)}</span>
+                              <span className="text-[10px] text-zinc-500 line-through">{formatPrice(tier.originalPrice)}</span>
                             )}
                           </div>
 
@@ -656,9 +657,9 @@ export const ProductModal: React.FC = () => {
             <div>
               <div className="text-[10px] uppercase font-bold text-zinc-500">Plan: {currentPlan.label}</div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-white">${currentPlan.price.toFixed(2)}</span>
+                <span className="text-2xl font-black text-white">{formatPrice(currentPlan.price)}</span>
                 {currentPlan.originalPrice && (
-                  <span className="text-xs text-zinc-500 line-through">${currentPlan.originalPrice.toFixed(2)}</span>
+                  <span className="text-xs text-zinc-500 line-through">{formatPrice(currentPlan.originalPrice)}</span>
                 )}
                 {currentPlan.discountPercentage > 0 && (
                   <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">

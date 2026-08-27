@@ -4,8 +4,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
-  AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog, BrandSettings,
+  AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog, BrandSettings, CurrencySettings,
 } from '@/types';
+import { detectVisitorCountry } from '@/lib/geo-currency';
 import {
   MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
   INITIAL_FINANCIAL_METRICS, MOCK_REVIEWS, MOCK_PAYMENT_METHODS, MOCK_HERO_SLIDES,
@@ -190,6 +191,14 @@ interface AppContextType {
   logAdminActivity: (action: string, category: AdminActivityLog['category'], details: string, targetId?: string) => Promise<void>;
   brandSettings: BrandSettings;
   updateBrandSettings: (settings: Partial<BrandSettings>) => Promise<void>;
+
+  // Currency Detection (admin-controlled, auto-applied per IP)
+  currencySettings: CurrencySettings;
+  updateCurrencySettings: (settings: Partial<CurrencySettings>) => Promise<void>;
+  detectedCurrency: 'BDT' | 'USD';
+  bdtRate: number;
+  formatPrice: (amountUSD: number) => string;
+
   refreshAllData: () => Promise<void>;
   isSyncing: boolean;
 
@@ -286,6 +295,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     faviconUrl: '/images/Fabicon.png',
     navbarLogoUrl: '/images/One_Row_logo.png',
   });
+
+  // Currency detection state — fully automatic, no user controls
+  const DEFAULT_CURRENCY_SETTINGS: CurrencySettings = {
+    bdtEnabled: true,
+    bdtCountries: ['BD'],
+    bdtRate: 125,
+  };
+  const [currencySettings, setCurrencySettings] = useState<CurrencySettings>(DEFAULT_CURRENCY_SETTINGS);
+  const [detectedCurrency, setDetectedCurrency] = useState<'BDT' | 'USD'>('USD');
+
   const [isSyncing, setIsSyncing] = useState(false);
 
   const updateBrandSettings = async (updates: Partial<BrandSettings>) => {
@@ -299,6 +318,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('[AppContext] Error updating brand settings in Firestore:', err);
     }
   };
+
+  // Admin-callable function to update currency detection settings in Firestore
+  const updateCurrencySettings = async (updates: Partial<CurrencySettings>) => {
+    const nextSettings: CurrencySettings = {
+      ...currencySettings,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+      updatedBy: firebaseUser?.email || 'admin',
+    };
+    setCurrencySettings(nextSettings);
+    try {
+      await setDoc(doc(db, 'settings', 'currency'), nextSettings, { merge: true });
+      await logAdminActivity('CURRENCY_SETTINGS_UPDATED', 'system', `BDT: ${nextSettings.bdtEnabled}, Rate: ${nextSettings.bdtRate}, Countries: ${nextSettings.bdtCountries.join(', ')}`);
+    } catch (err) {
+      console.warn('[AppContext] Error updating currency settings in Firestore:', err);
+    }
+  };
+
+  // Derived: the BDT exchange rate to use everywhere
+  const bdtRate = currencySettings.bdtRate || 125;
+
+  // formatPrice: takes a USD amount and returns the correctly formatted string
+  // based on the admin-configured settings and the visitor's detected country.
+  const formatPrice = useCallback((amountUSD: number): string => {
+    if (detectedCurrency === 'BDT') {
+      const inBdt = Math.round(amountUSD * bdtRate);
+      return `৳${inBdt.toLocaleString('en-BD')}`;
+    }
+    return `$${amountUSD.toFixed(2)}`;
+  }, [detectedCurrency, bdtRate]);
 
   // Dynamically update browser tab favicon icon whenever brandSettings updates
   useEffect(() => {
@@ -648,6 +697,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // 9. Real-time Currency Settings listener (admin-controlled)
+    const unsubCurrencySettings = onSnapshot(doc(db, 'settings', 'currency'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as CurrencySettings;
+        setCurrencySettings({
+          bdtEnabled: data.bdtEnabled ?? true,
+          bdtCountries: Array.isArray(data.bdtCountries) && data.bdtCountries.length > 0
+            ? data.bdtCountries.map((c: string) => c.toUpperCase().trim())
+            : ['BD'],
+          bdtRate: typeof data.bdtRate === 'number' && data.bdtRate > 0 ? data.bdtRate : 125,
+          updatedAt: data.updatedAt,
+          updatedBy: data.updatedBy,
+        });
+      }
+      // If doc doesn't exist yet, keep the default state
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[AppContext] Currency settings listener error:', err);
+      }
+    });
+
     return () => {
       unsubProducts();
       unsubCoupons();
@@ -657,8 +727,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubHeroSlides();
       unsubQuickMessages();
       unsubBrandSettings();
+      unsubCurrencySettings();
     };
   }, [seedFirestoreIfEmpty]);
+
+  // ─── IP-based currency detection on mount (runs once per session) ────
+  useEffect(() => {
+    let cancelled = false;
+    detectVisitorCountry().then((country) => {
+      if (cancelled) return;
+      // We derive the currency from the latest currencySettings
+      // but we must use a functional update to read the latest state
+      setCurrencySettings((prev) => {
+        if (!prev.bdtEnabled) {
+          setDetectedCurrency('USD');
+          return prev;
+        }
+        const isBDT = country ? prev.bdtCountries.includes(country.toUpperCase()) : false;
+        setDetectedCurrency(isBDT ? 'BDT' : 'USD');
+        return prev;
+      });
+    });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Intentionally runs once on mount
+
+  // Re-evaluate currency whenever currencySettings changes (e.g. admin toggles BDT)
+  useEffect(() => {
+    if (!currencySettings.bdtEnabled) {
+      setDetectedCurrency('USD');
+      return;
+    }
+    // Re-read cached country to re-apply settings without another API call
+    try {
+      const cached = sessionStorage.getItem('subnexus_detected_country');
+      if (cached) {
+        const isBDT = currencySettings.bdtCountries.includes(cached.toUpperCase());
+        setDetectedCurrency(isBDT ? 'BDT' : 'USD');
+      }
+    } catch {
+      // sessionStorage not available
+    }
+  }, [currencySettings]);
 
   // ─── Real-time Admin Data Listeners ─────────────────────────────────
   const setupAdminRealtimeListeners = useCallback(() => {
@@ -2279,6 +2389,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerRenewalCronSimulation, fastForwardSimulationDays,
     adminActivityLogs, logAdminActivity,
     brandSettings, updateBrandSettings,
+    currencySettings, updateCurrencySettings, detectedCurrency, bdtRate, formatPrice,
     refreshAllData, isSyncing,
     tickets, createSupportTicket, replyToTicket,
     reviews, addReview, likeReview, deleteReview,
@@ -2292,6 +2403,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
     allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs, brandSettings,
     financialMetrics, emailNotifications, isSyncing,
+    currencySettings, detectedCurrency, bdtRate,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
     activeSearchQuery, activeCategoryFilter,
     cartSubtotal, cartDiscount, cartTotal,
@@ -2309,6 +2421,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     adminReplyToTicket, adminCloseTicket,
     sendTestEmail, triggerRenewalCronSimulation, fastForwardSimulationDays, refreshAllData,
+    updateCurrencySettings, formatPrice,
     createSupportTicket, replyToTicket,
     addReview, likeReview, deleteReview,
     adminCreateReview, adminUpdateReview, adminResetReviews,
