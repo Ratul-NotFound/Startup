@@ -229,11 +229,19 @@ export const CartDrawer: React.FC = () => {
                       <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-xs">
                         <div className="flex items-center gap-2 text-emerald-400 font-semibold">
                           <Tag className="h-3.5 w-3.5" />
-                          <span>{appliedCoupon.code} applied ({appliedCoupon.discountPercent}% off)</span>
+                          <span>
+                            {appliedCoupon.code} applied ({appliedCoupon.discountPercent}% off
+                            {appliedCoupon.applicableCategory && appliedCoupon.applicableCategory !== 'all'
+                              ? ` for ${appliedCoupon.applicableCategory.toUpperCase()}`
+                              : appliedCoupon.applicableProductIds && appliedCoupon.applicableProductIds.length > 0
+                              ? ' for select products'
+                              : ''}
+                            )
+                          </span>
                         </div>
                         <button
                           onClick={removeCoupon}
-                          className="text-zinc-400 hover:text-rose-400 text-[11px] font-bold underline"
+                          className="text-zinc-400 hover:text-rose-400 text-[11px] font-bold underline cursor-pointer"
                         >
                           Remove
                         </button>

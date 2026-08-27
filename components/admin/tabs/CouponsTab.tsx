@@ -200,6 +200,44 @@ export function CouponsTab({
               />
             </div>
 
+            <div>
+              <label className="text-slate-300 font-bold block mb-1">Applicable Category</label>
+              <select
+                value={newCoupon.applicableCategory || 'all'}
+                onChange={e => setNewCoupon(p => ({ ...p, applicableCategory: e.target.value as any }))}
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="all">All Categories</option>
+                <option value="ai">AI & Productivity (ai)</option>
+                <option value="streaming">Movies & Music (streaming)</option>
+                <option value="dev">Developer Tools (dev)</option>
+                <option value="productivity">Design & Creative (productivity)</option>
+                <option value="vpn_security">VPN & Security (vpn_security)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-slate-300 font-bold block mb-1">Expiry Date</label>
+              <input
+                type="date"
+                value={newCoupon.expiryDate || ''}
+                onChange={e => setNewCoupon(p => ({ ...p, expiryDate: e.target.value || undefined }))}
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-slate-300 font-bold block mb-1">Max Redemptions Limit</label>
+              <input
+                type="number"
+                min="1"
+                value={newCoupon.maxUses || ''}
+                onChange={e => setNewCoupon(p => ({ ...p, maxUses: Number(e.target.value) || undefined }))}
+                placeholder="Optional e.g. 100"
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
+              />
+            </div>
+
             <div className="col-span-1 sm:col-span-3">
               <label className="text-slate-300 font-bold block mb-1">Description / Terms</label>
               <input
@@ -370,6 +408,28 @@ export function CouponsTab({
                     {c.offerTag && (
                       <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-cyan-300 font-bold text-[10px] uppercase border border-white/10">
                         {c.offerTag}
+                      </span>
+                    )}
+
+                    {c.applicableCategory && c.applicableCategory !== 'all' && (
+                      <span className="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 font-bold text-[10px] uppercase border border-indigo-500/30">
+                        Category: {c.applicableCategory}
+                      </span>
+                    )}
+
+                    {c.expiryDate && (
+                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
+                        new Date(c.expiryDate).getTime() < Date.now()
+                          ? 'bg-rose-950 text-rose-300 border-rose-500/30'
+                          : 'bg-zinc-800 text-slate-300 border-white/10'
+                      }`}>
+                        {new Date(c.expiryDate).getTime() < Date.now() ? 'Expired' : `Expires: ${c.expiryDate}`}
+                      </span>
+                    )}
+
+                    {typeof c.maxUses === 'number' && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-bold text-[10px] border border-amber-500/30 font-mono">
+                        Used: {c.usedCount || 0} / {c.maxUses}
                       </span>
                     )}
 

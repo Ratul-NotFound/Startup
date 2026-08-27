@@ -1171,9 +1171,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try { localStorage.setItem('keyoon_cart', JSON.stringify(cart)); } catch { }
   }, [cart]);
 
-  // ─── Computed cart values ──────────────────────────────────────────
+  // Helper: check if a cart item is eligible for a given coupon
+  const isItemEligibleForCoupon = useCallback((item: CartItem, coupon: Coupon): boolean => {
+    // Check specific product ID restriction
+    if (coupon.applicableProductIds && coupon.applicableProductIds.length > 0) {
+      if (!coupon.applicableProductIds.includes(item.product.id)) return false;
+    }
+    // Check category restriction
+    if (coupon.applicableCategory && coupon.applicableCategory !== 'all') {
+      if (item.product.category !== coupon.applicableCategory) return false;
+    }
+    return true;
+  }, []);
+
+  // Subtotal of only items in cart eligible for the applied coupon
+  const eligibleSubtotal = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    return cart.reduce((acc, item) => {
+      if (isItemEligibleForCoupon(item, appliedCoupon)) {
+        return acc + (item.selectedPlan.price * item.quantity);
+      }
+      return acc;
+    }, 0);
+  }, [cart, appliedCoupon, isItemEligibleForCoupon]);
+
   const cartSubtotal = cart.reduce((acc, i) => acc + i.selectedPlan.price * i.quantity, 0);
-  const cartDiscount = appliedCoupon ? (cartSubtotal * appliedCoupon.discountPercent) / 100 : 0;
+  const cartDiscount = appliedCoupon ? (eligibleSubtotal * appliedCoupon.discountPercent) / 100 : 0;
   const cartTotal = Math.max(0, cartSubtotal - cartDiscount);
 
   // ─── Cart actions ──────────────────────────────────────────────────
@@ -1212,10 +1235,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const applyCoupon = (code: string) => {
     const found = coupons.find(c => c.code.toUpperCase() === code.trim().toUpperCase());
     if (!found) return { success: false, message: 'Invalid promo code.' };
-    if (found.minOrderAmount && cartSubtotal < found.minOrderAmount)
-      return { success: false, message: `Minimum order $${found.minOrderAmount} required.` };
+
+    // 1. Expiry Check
+    if (found.expiryDate) {
+      const expTime = new Date(found.expiryDate).getTime();
+      // Set to end of expiry day
+      if (!isNaN(expTime) && (expTime + 86400000) < Date.now()) {
+        return { success: false, message: 'This promo code has expired.' };
+      }
+    }
+
+    // 2. Maximum Redemptions Check
+    if (typeof found.maxUses === 'number' && (found.usedCount || 0) >= found.maxUses) {
+      return { success: false, message: 'This promo code has reached its maximum redemption limit.' };
+    }
+
+    // 3. Minimum Order Amount Check
+    if (found.minOrderAmount && cartSubtotal < found.minOrderAmount) {
+      return { success: false, message: `Minimum order amount of $${found.minOrderAmount} is required for this code.` };
+    }
+
+    // 4. Product / Category Eligibility Check
+    const hasEligibleItems = cart.some(item => isItemEligibleForCoupon(item, found));
+    if (!hasEligibleItems) {
+      if (found.applicableProductIds && found.applicableProductIds.length > 0) {
+        return { success: false, message: 'This promo code is only valid for specific products not currently in your cart.' };
+      }
+      if (found.applicableCategory && found.applicableCategory !== 'all') {
+        return { success: false, message: `This promo code is only valid for ${found.applicableCategory.toUpperCase()} category items.` };
+      }
+    }
+
     setAppliedCoupon(found);
-    return { success: true, message: `${found.discountPercent}% discount applied!` };
+    return { success: true, message: `${found.discountPercent}% discount applied to eligible items!` };
   };
 
   const removeCoupon = () => setAppliedCoupon(null);
@@ -1256,6 +1308,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })),
       subtotal: cartSubtotal,
       discount: cartDiscount,
+      couponCode: appliedCoupon?.code,
+      couponDiscount: cartDiscount,
       total: cartTotal,
       totalBdt: paymentProof?.totalBdt || (cartTotal * 125),
       paymentMethod,
@@ -1315,6 +1369,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Write order to Firestore
     try {
       await setDoc(doc(db, 'orders', orderId), newOrder);
+      if (appliedCoupon?.code) {
+        const couponRef = doc(db, 'coupons', appliedCoupon.code);
+        await updateDoc(couponRef, {
+          usedCount: (appliedCoupon.usedCount || 0) + 1,
+        }).catch(() => {});
+      }
     } catch (err) {
       console.error('[Firestore] Order creation error:', err);
     }

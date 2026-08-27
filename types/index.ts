@@ -64,11 +64,15 @@ export interface Coupon {
   discountPercent: number;
   description: string;
   minOrderAmount?: number;
+  applicableProductIds?: string[]; // Empty/undefined = all products
+  applicableCategory?: SubscriptionCategory | 'all'; // Restricted to specific category
+  expiryDate?: string; // ISO date format (YYYY-MM-DD)
+  maxUses?: number; // Maximum total usage limit
+  usedCount?: number; // Times redeemed so far
   isSpecialOffer?: boolean;
   offerTag?: string;
   offerTitle?: string;
   offerImage?: string;
-  expiryDate?: string;
   type?: 'discount' | 'giveaway' | 'special_deal' | 'bundle_offer';
   isRecurringDiscount?: boolean;
 }
