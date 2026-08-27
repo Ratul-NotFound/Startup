@@ -37,6 +37,8 @@ export const CheckoutModal: React.FC = () => {
     methodName: string;
   } | null>(null);
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Set default method when methods change
@@ -129,8 +131,6 @@ export const CheckoutModal: React.FC = () => {
     };
     reader.readAsDataURL(file);
   };
-
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
