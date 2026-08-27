@@ -19,7 +19,7 @@ import {
 } from 'firebase/auth';
 import {
   doc, setDoc, getDoc, collection, getDocs, addDoc, updateDoc,
-  deleteDoc, query, where, orderBy, onSnapshot, writeBatch,
+  deleteDoc, query, where, orderBy, onSnapshot, writeBatch, arrayUnion,
 } from 'firebase/firestore';
 
 // ─── Superadmin email ───────────────────────────────────────────────
@@ -134,6 +134,8 @@ interface AppContextType {
   appliedCoupon: Coupon | null;
   applyCoupon: (code: string) => { success: boolean; message: string };
   removeCoupon: () => void;
+  isCouponAlreadyUsed: (code: string) => boolean;
+  isSpecialOfferClaimed: (productId: string) => boolean;
   cartSubtotal: number;
   cartDiscount: number;
   cartTotal: number;
@@ -1579,16 +1581,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper: check if a cart item is eligible for a given coupon
   const isItemEligibleForCoupon = useCallback((item: CartItem, coupon: Coupon): boolean => {
-    // Check specific product ID restriction
+    // 1. Check direct linkedProductId
+    if (coupon.linkedProductId && coupon.linkedProductId !== item.product.id) {
+      return false;
+    }
+    // 2. Check specific product ID restriction
     if (coupon.applicableProductIds && coupon.applicableProductIds.length > 0) {
       if (!coupon.applicableProductIds.includes(item.product.id)) return false;
     }
-    // Check category restriction
+    // 3. Check category restriction
     if (coupon.applicableCategory && coupon.applicableCategory !== 'all') {
       if (item.product.category !== coupon.applicableCategory) return false;
     }
     return true;
   }, []);
+
+  // Check if current user has already redeemed a promo / coupon code (1 use per user)
+  const isCouponAlreadyUsed = useCallback((code: string): boolean => {
+    if (!code) return false;
+    const cleanCode = code.trim().toUpperCase();
+    const currentUserId = user.id || firebaseUser?.uid;
+    const currentUserEmail = (firebaseUser?.email || user.email || '').toLowerCase().trim();
+
+    // 1. Check local storage
+    try {
+      const stored = JSON.parse(localStorage.getItem('keyoon_used_coupons') || '[]');
+      if (Array.isArray(stored) && stored.includes(cleanCode)) return true;
+    } catch {}
+
+    // 2. Check user's orders state
+    const orderMatch = orders.some(o =>
+      o.couponCode?.toUpperCase() === cleanCode &&
+      o.paymentStatus !== 'failed'
+    );
+    if (orderMatch) return true;
+
+    // 3. Check allOrders state (matches UID or Email)
+    const allOrderMatch = allOrders.some(o =>
+      o.couponCode?.toUpperCase() === cleanCode &&
+      o.paymentStatus !== 'failed' &&
+      (
+        (currentUserId && o.userId === currentUserId) ||
+        (currentUserEmail && (o.userEmail?.toLowerCase().trim() === currentUserEmail || o.claimEmail?.toLowerCase().trim() === currentUserEmail))
+      )
+    );
+    if (allOrderMatch) return true;
+
+    // 4. Check coupon's usedByUsers list
+    const foundCoupon = coupons.find(c => c.code.toUpperCase() === cleanCode);
+    if (foundCoupon?.usedByUsers && foundCoupon.usedByUsers.length > 0) {
+      if (currentUserId && foundCoupon.usedByUsers.includes(currentUserId)) return true;
+      if (currentUserEmail && foundCoupon.usedByUsers.includes(currentUserEmail)) return true;
+    }
+
+    return false;
+  }, [user.id, user.email, firebaseUser?.uid, firebaseUser?.email, orders, allOrders, coupons]);
+
+  // Check if current user has already claimed a special offer / product (1 claim per user)
+  const isSpecialOfferClaimed = useCallback((productId: string): boolean => {
+    if (!productId) return false;
+    const currentUserId = user.id || firebaseUser?.uid;
+    const currentUserEmail = (firebaseUser?.email || user.email || '').toLowerCase().trim();
+
+    // 1. Check local storage
+    try {
+      const stored = JSON.parse(localStorage.getItem('keyoon_claimed_specials') || '[]');
+      if (Array.isArray(stored) && stored.includes(productId)) return true;
+    } catch {}
+
+    // 2. Check user's orders state
+    const orderMatch = orders.some(o =>
+      o.paymentStatus !== 'failed' &&
+      o.items.some(item => item.productId === productId)
+    );
+    if (orderMatch) return true;
+
+    // 3. Check allOrders state
+    const allOrderMatch = allOrders.some(o =>
+      o.paymentStatus !== 'failed' &&
+      (
+        (currentUserId && o.userId === currentUserId) ||
+        (currentUserEmail && (o.userEmail?.toLowerCase().trim() === currentUserEmail || o.claimEmail?.toLowerCase().trim() === currentUserEmail))
+      ) &&
+      o.items.some(item => item.productId === productId)
+    );
+    if (allOrderMatch) return true;
+
+    return false;
+  }, [user.id, user.email, firebaseUser?.uid, firebaseUser?.email, orders, allOrders]);
 
   // Subtotal of only items in cart eligible for the applied coupon
   const eligibleSubtotal = useMemo(() => {
@@ -1649,8 +1729,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [cart, appliedCoupon, isItemEligibleForCoupon]);
 
   const applyCoupon = (code: string) => {
-    const found = coupons.find(c => c.code.toUpperCase() === code.trim().toUpperCase());
+    const cleanCode = code.trim().toUpperCase();
+    const found = coupons.find(c => c.code.toUpperCase() === cleanCode);
     if (!found) return { success: false, message: 'Invalid promo code.' };
+
+    // 0. Check One-Time Redemption Rule per User
+    if (isCouponAlreadyUsed(cleanCode)) {
+      return { success: false, message: 'You have already redeemed this promo code. Promo codes can only be used once per customer.' };
+    }
 
     // 1. Expiry Check
     if (found.expiryDate) {
@@ -1671,9 +1757,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, message: `Minimum order amount of $${found.minOrderAmount} is required for this code.` };
     }
 
-    // 4. Product / Category Eligibility Check
+    // 4. Product / Category / Linked Product Eligibility Check
     const hasEligibleItems = cart.some(item => isItemEligibleForCoupon(item, found));
     if (!hasEligibleItems) {
+      if (found.linkedProductId) {
+        const targetProd = products.find(p => p.id === found.linkedProductId);
+        return {
+          success: false,
+          message: `This promo code is exclusively synced with "${targetProd?.name || 'the linked special product'}". Please add it to your cart.`,
+        };
+      }
       if (found.applicableProductIds && found.applicableProductIds.length > 0) {
         return { success: false, message: 'This promo code is only valid for specific products not currently in your cart.' };
       }
@@ -1705,6 +1798,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const isFreeOrder = cartTotal <= 0 || paymentMethod === 'free_claim';
+
+    // 1-Time Special Offer Claim Enforcement
+    for (const item of cart) {
+      const isSpecial = item.product.productType === 'special' || item.product.isFreeProduct || !!item.product.specialConfig;
+      if (isSpecial && isSpecialOfferClaimed(item.product.id)) {
+        throw new Error(`You have already claimed the special offer for "${item.product.name}". Special offers and promotional claims are strictly limited to 1 claim per customer.`);
+      }
+    }
+
+    // 1-Time Promo Code Use Enforcement
+    if (appliedCoupon) {
+      const cleanCode = appliedCoupon.code.trim().toUpperCase();
+      if (isCouponAlreadyUsed(cleanCode)) {
+        throw new Error(`Promo code "${cleanCode}" has already been redeemed by your account. Promo codes are limited to 1 use per customer.`);
+      }
+    }
 
     // Only validate duplicate transaction ID for paid orders that provide a TrxID
     if (!isFreeOrder && paymentProof?.transactionId) {
@@ -1836,12 +1945,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (isFreeOrder) {
         await logAdminActivity('FREE_ORDER_CLAIMED', 'orders', `Free subscription claimed for ${newOrder.items.map(i => i.productName).join(', ')}`, orderId);
       }
+
+      // Record used promo code in Firestore & LocalStorage
       if (appliedCoupon?.code) {
+        const cleanCode = appliedCoupon.code.trim().toUpperCase();
+        try {
+          const stored = JSON.parse(localStorage.getItem('keyoon_used_coupons') || '[]');
+          if (!stored.includes(cleanCode)) {
+            stored.push(cleanCode);
+            localStorage.setItem('keyoon_used_coupons', JSON.stringify(stored));
+          }
+        } catch {}
+
         const couponRef = doc(db, 'coupons', appliedCoupon.code);
+        const userIdentifier = currentUid || accountEmail || targetClaimEmail;
         await updateDoc(couponRef, {
           usedCount: (appliedCoupon.usedCount || 0) + 1,
+          usedByUsers: arrayUnion(userIdentifier),
         }).catch(() => {});
       }
+
+      // Record claimed special products in LocalStorage
+      try {
+        const claimedSpecials = JSON.parse(localStorage.getItem('keyoon_claimed_specials') || '[]');
+        for (const item of cart) {
+          const isSpecial = item.product.productType === 'special' || item.product.isFreeProduct || !!item.product.specialConfig;
+          if (isSpecial && !claimedSpecials.includes(item.product.id)) {
+            claimedSpecials.push(item.product.id);
+          }
+        }
+        localStorage.setItem('keyoon_claimed_specials', JSON.stringify(claimedSpecials));
+      } catch {}
 
       // Decrement product stock in Firestore
       for (const item of cart) {
@@ -2969,7 +3103,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const contextValue = useMemo(() => ({
     products, selectedProduct, setSelectedProduct,
     cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart,
-    appliedCoupon, applyCoupon, removeCoupon, cartSubtotal, cartDiscount, cartTotal,
+    appliedCoupon, applyCoupon, removeCoupon, isCouponAlreadyUsed, isSpecialOfferClaimed, cartSubtotal, cartDiscount, cartTotal,
     isCartOpen, setIsCartOpen, isCheckoutOpen, setIsCheckoutOpen,
     processCheckout, orders, latestOrder, setLatestOrder,
     subscriptions, toggleAutoRenew, extendSubscription, activeVaultSub, setActiveVaultSub,

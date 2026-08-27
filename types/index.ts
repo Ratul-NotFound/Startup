@@ -132,6 +132,7 @@ export interface Coupon {
   isHidden?: boolean; // Hide deal/coupon from Storefront Deals Hub
   orderIndex?: number; // Display sequence order on Storefront Deals Hub
   linkedProductId?: string; // Bidirectional link to a special product
+  usedByUsers?: string[];   // User IDs / emails who have already redeemed this promo code (1 use per user)
 }
 
 export interface SpecialOffersSettings {

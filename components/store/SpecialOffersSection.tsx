@@ -14,6 +14,8 @@ export function SpecialOffersSection() {
     completedTasksMap,
     markTaskCompleted,
     isTaskCompleted,
+    isCouponAlreadyUsed,
+    isSpecialOfferClaimed,
     reviews,
     user,
     setIsWriteReviewOpen,
@@ -132,6 +134,7 @@ export function SpecialOffersSection() {
           {displayOffers.map((offer) => {
             const isGiveaway = offer.type === 'giveaway' || offer.discountPercent >= 100 || offer.offerTag?.toLowerCase().includes('giveaway');
             const isCopied = copiedCode === offer.code;
+            const isClaimedAlready = isCouponAlreadyUsed(offer.code) || (offer.linkedProductId ? isSpecialOfferClaimed(offer.linkedProductId) : false);
 
             const tasks = offer.requiredTasks || [];
             const offerCompletedTasks = completedTasksMap[offer.code] || {};
@@ -140,38 +143,27 @@ export function SpecialOffersSection() {
             return (
               <div
                 key={offer.code}
-                className={`w-[280px] sm:w-[310px] shrink-0 snap-start relative rounded-2xl overflow-hidden flex flex-col justify-between transition-all duration-300 border shadow-lg hover:-translate-y-1 ${
-                  isGiveaway
-                    ? 'bg-gradient-to-br from-amber-950/40 via-zinc-900 to-amber-950/20 border-amber-500/40 hover:border-amber-400 shadow-amber-500/10'
-                    : offer.discountPercent >= 40
-                    ? 'bg-gradient-to-br from-blue-950/40 via-zinc-900 to-cyan-950/30 border-cyan-500/40 hover:border-cyan-400 shadow-cyan-500/10'
-                    : 'bg-zinc-900/90 border-white/[0.08] hover:border-white/20'
-                }`}
+                className="w-[280px] sm:w-[320px] shrink-0 rounded-2xl bg-zinc-900/90 border border-white/[0.08] hover:border-amber-500/30 transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-xl group"
               >
-                {/* Optional Compact Custom Picture Banner */}
+                {/* Custom Promo Hero Image Banner (if provided) */}
                 {offer.offerImage && (
-                  <div className="relative h-28 w-full overflow-hidden">
+                  <div className="w-full h-28 relative overflow-hidden bg-zinc-950">
                     <img
                       src={offer.offerImage}
                       alt={offer.offerTitle || offer.code}
-                      className="w-full h-full object-cover object-center transition-transform duration-500 hover:scale-105"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/30 to-transparent" />
-
-                    {/* Top Overlay Badge */}
-                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 z-10">
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-md backdrop-blur-md ${
-                        isGiveaway
-                          ? 'bg-amber-950/80 text-amber-300 border-amber-500/50'
-                          : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/50'
-                      }`}>
-                        {offer.offerTag || (isGiveaway ? '🎁 FREE GIVEAWAY' : `⚡ ${offer.discountPercent}% OFF`)}
-                      </span>
-
-                      <span className="text-[9px] font-mono text-white px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md flex items-center gap-1">
-                        <Clock className="h-2.5 w-2.5 text-cyan-400" /> Limited
-                      </span>
-                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-transparent to-black/40" />
+                    <span className={`absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-md ${
+                      isClaimedAlready
+                        ? 'bg-zinc-800 text-zinc-300 border-white/20'
+                        : isGiveaway
+                        ? 'bg-amber-500 text-zinc-950 border-amber-400 font-extrabold'
+                        : 'bg-cyan-500 text-zinc-950 border-cyan-400 font-extrabold'
+                    }`}>
+                      {isClaimedAlready ? '✓ 1-TIME CLAIMED' : offer.offerTag || (isGiveaway ? '🎁 FREE GIVEAWAY' : `⚡ ${offer.discountPercent}% OFF`)}
+                    </span>
                   </div>
                 )}
 
@@ -180,11 +172,13 @@ export function SpecialOffersSection() {
                   {!offer.offerImage && (
                     <div className="flex items-center justify-between gap-2">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-sm ${
-                        isGiveaway
+                        isClaimedAlready
+                          ? 'bg-zinc-800 text-zinc-300 border-white/20'
+                          : isGiveaway
                           ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                           : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
                       }`}>
-                        {offer.offerTag || (isGiveaway ? '🎁 FREE GIVEAWAY' : `⚡ ${offer.discountPercent}% OFF`)}
+                        {isClaimedAlready ? '✓ 1-TIME CLAIMED' : offer.offerTag || (isGiveaway ? '🎁 FREE GIVEAWAY' : `⚡ ${offer.discountPercent}% OFF`)}
                       </span>
 
                       <span className="text-[9px] font-mono text-slate-400 flex items-center gap-1">
@@ -280,7 +274,7 @@ export function SpecialOffersSection() {
                       onClick={() => handleOpenLinkedProduct(offer.linkedProductId)}
                       className="w-full py-1.5 px-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
                     >
-                      <span>View Special Product Deal</span>
+                      <span>View Synced Product Deal</span>
                       <ArrowRight className="h-3 w-3" />
                     </button>
                   )}
@@ -296,17 +290,21 @@ export function SpecialOffersSection() {
                       </div>
 
                       <button
-                        onClick={() => isUnlocked && handleCopyCode(offer.code)}
-                        disabled={!isUnlocked}
-                        className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 ${
-                          !isUnlocked
+                        onClick={() => isUnlocked && !isClaimedAlready && handleCopyCode(offer.code)}
+                        disabled={!isUnlocked || isClaimedAlready}
+                        className={`px-3 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-all shrink-0 ${
+                          isClaimedAlready
+                            ? 'bg-zinc-800 text-zinc-400 cursor-not-allowed border border-white/10 opacity-70'
+                            : !isUnlocked
                             ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/10'
                             : isCopied
                             ? 'bg-emerald-600 text-white shadow-md'
-                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'
+                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md cursor-pointer'
                         }`}
                       >
-                        {!isUnlocked ? (
+                        {isClaimedAlready ? (
+                          <span>✓ CLAIMED</span>
+                        ) : !isUnlocked ? (
                           <span>🔒 Locked</span>
                         ) : isCopied ? (
                           <>

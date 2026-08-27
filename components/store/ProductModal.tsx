@@ -31,6 +31,8 @@ export const ProductModal: React.FC = () => {
     markTaskCompleted,
     isTaskCompleted,
     isEntityFullyUnlocked,
+    isSpecialOfferClaimed,
+    isCouponAlreadyUsed,
     user,
   } = useApp();
 
@@ -908,6 +910,7 @@ export const ProductModal: React.FC = () => {
           {/* Persistent Footer CTA Row */}
           {(() => {
             const isFreeReward = isSpecialProduct && (selectedProduct.specialConfig?.isFreeProduct || selectedProduct.isFreeProduct || currentPlan.price === 0);
+            const isClaimedAlready = isSpecialProduct && isSpecialOfferClaimed(selectedProduct.id);
             const tasks = specialTasks;
             const completedCount = tasks.filter(t => {
               if (t.type === 'write_review' || t.id.includes('rev')) {
@@ -960,7 +963,16 @@ export const ProductModal: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {isFreeReward ? (
+                  {isClaimedAlready ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide bg-zinc-800 text-zinc-400 border border-white/10 cursor-not-allowed opacity-80"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                      <span>✓ Already Claimed (1 Per User)</span>
+                    </button>
+                  ) : isFreeReward ? (
                     <motion.button
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}

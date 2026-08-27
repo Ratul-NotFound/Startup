@@ -14,6 +14,7 @@ export const ProductCatalog: React.FC = () => {
     categoryConfigs,
     setSelectedProduct,
     addToCart,
+    isSpecialOfferClaimed,
     activeSearchQuery,
     setActiveSearchQuery,
     formatPrice,
@@ -383,10 +384,18 @@ export const ProductCatalog: React.FC = () => {
                             <span className="text-[10px] sm:text-[11px] font-bold text-rose-400 bg-rose-950/80 border border-rose-500/30 px-2 py-0.5 rounded-lg shadow-md">
                               OUT OF STOCK
                             </span>
-                          ) : product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct ? (
-                            <span className="text-[10px] sm:text-[11px] font-bold text-amber-300 bg-amber-950/80 border border-amber-500/40 px-2 py-0.5 rounded-lg shadow-md flex items-center gap-1">
+                          ) : (product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct) ? (
+                            <span className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-md flex items-center gap-1 border ${
+                              isSpecialOfferClaimed(product.id)
+                                ? 'bg-zinc-800 text-emerald-300 border-emerald-500/30'
+                                : 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                            }`}>
                               <Sparkles className="h-3 w-3 text-amber-400" />
-                              {product.isFreeProduct || product.specialConfig?.isFreeProduct ? '100% FREE REWARD' : 'SPECIAL DEAL'}
+                              {isSpecialOfferClaimed(product.id)
+                                ? '✓ 1-TIME CLAIMED'
+                                : product.isFreeProduct || product.specialConfig?.isFreeProduct
+                                ? '100% FREE REWARD'
+                                : 'SPECIAL DEAL'}
                             </span>
                           ) : (
                             <span className="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-md">
@@ -398,6 +407,7 @@ export const ProductCatalog: React.FC = () => {
                         {(() => {
                           const isSpecial = product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct;
                           const isFree = isSpecial && (product.isFreeProduct || product.specialConfig?.isFreeProduct || currentPlan.price === 0);
+                          const isClaimed = isSpecial && isSpecialOfferClaimed(product.id);
 
                           return (
                             <div className="grid grid-cols-2 gap-2" style={{ transform: 'translateZ(15px)' }}>
@@ -411,11 +421,11 @@ export const ProductCatalog: React.FC = () => {
                               </motion.button>
 
                               <motion.button
-                                whileHover={isOutOfStock ? {} : { scale: 1.03, z: 20 }}
-                                whileTap={isOutOfStock ? {} : { scale: 0.96 }}
-                                disabled={isOutOfStock}
+                                whileHover={(isOutOfStock || isClaimed) ? {} : { scale: 1.03, z: 20 }}
+                                whileTap={(isOutOfStock || isClaimed) ? {} : { scale: 0.96 }}
+                                disabled={isOutOfStock || isClaimed}
                                 onClick={() => {
-                                  if (isOutOfStock) return;
+                                  if (isOutOfStock || isClaimed) return;
                                   if (isSpecial) {
                                     // Open modal directly so user sees and fulfills special tasks
                                     setSelectedProduct(product);
@@ -426,6 +436,8 @@ export const ProductCatalog: React.FC = () => {
                                 className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                   isOutOfStock
                                     ? 'bg-zinc-800/90 text-zinc-500 cursor-not-allowed border border-white/5 opacity-70'
+                                    : isClaimed
+                                    ? 'bg-zinc-800 text-zinc-400 cursor-not-allowed border border-white/10 opacity-70'
                                     : isFree
                                     ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-zinc-950 font-black shadow-lg shadow-emerald-500/20'
                                     : isSpecial
@@ -441,6 +453,8 @@ export const ProductCatalog: React.FC = () => {
                                 <span>
                                   {isOutOfStock
                                     ? 'SOLD OUT'
+                                    : isClaimed
+                                    ? 'CLAIMED'
                                     : isFree
                                     ? 'CLAIM FREE'
                                     : isSpecial
