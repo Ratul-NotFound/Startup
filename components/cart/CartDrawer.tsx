@@ -166,6 +166,11 @@ export const CartDrawer: React.FC = () => {
                             <span className="font-bold">{formatPrice(item.selectedPlan.price)}</span>{' '}
                             <span className="text-zinc-500 line-through">{formatPrice(item.selectedPlan.originalPrice)}</span>
                           </p>
+                          {(item.product.stockCount ?? 0) <= 0 && (
+                            <span className="inline-block mt-1 text-[10px] font-bold text-rose-400 bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">
+                              ⚠️ Out of Stock - Please remove
+                            </span>
+                          )}
                         </div>
                         <button
                           onClick={() => removeFromCart(item.product.id, item.selectedPlan.duration)}
@@ -283,24 +288,36 @@ export const CartDrawer: React.FC = () => {
                   </div>
 
                   {/* Checkout Button */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleProceedToCheckout}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-extrabold text-sm shadow-[0_0_20px_rgba(37,99,235,0.4)] transition-all flex items-center justify-center gap-2"
-                  >
-                    {firebaseUser ? (
-                      <>
-                        <ArrowRight className="h-4 w-4" />
-                        <span>Proceed to Checkout ({formatPrice(cartTotal)})</span>
-                      </>
-                    ) : (
-                      <>
-                        <LogIn className="h-4 w-4" />
-                        <span>Sign In to Checkout</span>
-                      </>
-                    )}
-                  </motion.button>
+                  {(() => {
+                    const hasOutOfStock = cart.some(i => (i.product.stockCount ?? 0) <= 0);
+                    return (
+                      <motion.button
+                        whileHover={hasOutOfStock ? {} : { scale: 1.02 }}
+                        whileTap={hasOutOfStock ? {} : { scale: 0.98 }}
+                        disabled={hasOutOfStock}
+                        onClick={handleProceedToCheckout}
+                        className={`w-full py-3.5 rounded-2xl font-extrabold text-sm transition-all flex items-center justify-center gap-2 ${
+                          hasOutOfStock
+                            ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/10 opacity-70'
+                            : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]'
+                        }`}
+                      >
+                        {hasOutOfStock ? (
+                          <span>Remove Out-of-Stock Items to Checkout</span>
+                        ) : firebaseUser ? (
+                          <>
+                            <ArrowRight className="h-4 w-4" />
+                            <span>Proceed to Checkout ({formatPrice(cartTotal)})</span>
+                          </>
+                        ) : (
+                          <>
+                            <LogIn className="h-4 w-4" />
+                            <span>Sign In to Checkout</span>
+                          </>
+                        )}
+                      </motion.button>
+                    );
+                  })()}
 
                   <div className="flex items-center justify-center gap-2 text-[11px] text-zinc-400">
                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />

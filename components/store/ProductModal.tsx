@@ -226,10 +226,17 @@ export const ProductModal: React.FC = () => {
                       </span>
                     </button>
 
-                    <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      In Stock ({selectedProduct.stockCount})
-                    </span>
+                    {(selectedProduct.stockCount ?? 0) <= 0 ? (
+                      <span className="text-[11px] text-rose-400 font-medium flex items-center gap-1 bg-rose-950/60 px-2 py-0.5 rounded-full border border-rose-500/30">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+                        Out of Stock (0)
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        In Stock ({selectedProduct.stockCount})
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -671,12 +678,19 @@ export const ProductModal: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={handleAddToCart}
-                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-zinc-950 font-bold text-xs sm:text-sm tracking-wide transition-all shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-zinc-100"
+                whileHover={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 1.03 }}
+                whileTap={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 0.97 }}
+                disabled={(selectedProduct.stockCount ?? 0) <= 0}
+                onClick={() => (selectedProduct.stockCount ?? 0) > 0 && handleAddToCart()}
+                className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${
+                  (selectedProduct.stockCount ?? 0) <= 0
+                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/10 opacity-70'
+                    : 'bg-white text-zinc-950 shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-zinc-100'
+                }`}
               >
-                {added ? (
+                {(selectedProduct.stockCount ?? 0) <= 0 ? (
+                  <span>Out of Stock</span>
+                ) : added ? (
                   <>
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                     <span>Added to Cart!</span>

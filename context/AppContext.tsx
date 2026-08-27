@@ -1178,11 +1178,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Cart actions ──────────────────────────────────────────────────
   const addToCart = (product: Product, selectedPlan: PlanPricing, customEmail?: string) => {
+    if ((product.stockCount ?? 0) <= 0) {
+      return; // Do not allow adding out-of-stock products
+    }
     setCart(prev => {
       const idx = prev.findIndex(i => i.product.id === product.id && i.selectedPlan.duration === selectedPlan.duration);
       if (idx > -1) {
         const updated = [...prev];
-        updated[idx].quantity += 1;
+        const currentQty = updated[idx].quantity;
+        // Cap quantity at product.stockCount
+        if (currentQty < product.stockCount) {
+          updated[idx].quantity += 1;
+        }
         return updated;
       }
       return [...prev, { product, selectedPlan, quantity: 1, customEmail }];

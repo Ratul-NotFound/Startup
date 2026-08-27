@@ -254,6 +254,7 @@ export const ProductCatalog: React.FC = () => {
               {group.products.map((product, productIdx) => {
                 const currentPlanIndex = selectedPlanMap[product.id] || 0;
                 const currentPlan = product.pricingTiers[currentPlanIndex] || product.pricingTiers[0];
+                const isOutOfStock = (product.stockCount ?? 0) <= 0;
 
                 return (
                   <Interactive3DCard
@@ -267,7 +268,6 @@ export const ProductCatalog: React.FC = () => {
                       style={{ transformStyle: 'preserve-3d' }}
                       className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900/70 hover:bg-zinc-900/90 border border-white/[0.06] hover:border-cyan-500/40 backdrop-blur-xl overflow-hidden transition-all duration-300 hover:shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between h-full"
                     >
-                      
                       <div>
                         {/* Responsive Animated Image Carousel with Multiple Relevant Images & Dynamic Transitions */}
                         <div className="relative h-36 sm:h-44 w-full overflow-hidden bg-zinc-950">
@@ -360,9 +360,15 @@ export const ProductCatalog: React.FC = () => {
                             </motion.div>
                           </AnimatePresence>
 
-                          <span className="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-md">
-                            Save {currentPlan.discountPercentage}%
-                          </span>
+                          {isOutOfStock ? (
+                            <span className="text-[10px] sm:text-[11px] font-bold text-rose-400 bg-rose-950/80 border border-rose-500/30 px-2 py-0.5 rounded-lg shadow-md">
+                              OUT OF STOCK
+                            </span>
+                          ) : (
+                            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-md">
+                              Save {currentPlan.discountPercentage}%
+                            </span>
+                          )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-2" style={{ transform: 'translateZ(15px)' }}>
@@ -375,13 +381,18 @@ export const ProductCatalog: React.FC = () => {
                             View Details
                           </motion.button>
                           <motion.button
-                            whileHover={{ scale: 1.03, z: 20 }}
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => addToCart(product, currentPlan)}
-                            className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center justify-center gap-1.5"
+                            whileHover={isOutOfStock ? {} : { scale: 1.03, z: 20 }}
+                            whileTap={isOutOfStock ? {} : { scale: 0.96 }}
+                            disabled={isOutOfStock}
+                            onClick={() => !isOutOfStock && addToCart(product, currentPlan)}
+                            className={`w-full py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                              isOutOfStock
+                                ? 'bg-zinc-800/90 text-zinc-500 cursor-not-allowed border border-white/5 opacity-70'
+                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]'
+                            }`}
                           >
                             <ShoppingBag className="h-3.5 w-3.5" />
-                            <span>BUY NOW</span>
+                            <span>{isOutOfStock ? 'SOLD OUT' : 'BUY NOW'}</span>
                           </motion.button>
                         </div>
                       </div>
