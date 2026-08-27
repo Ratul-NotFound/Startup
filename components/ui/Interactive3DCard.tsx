@@ -40,7 +40,7 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
 
   // Zero-rerender cursor tracking using direct CSS variables on DOM node
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
+    if (!cardRef.current || !isHovered) return;
     const rect = cardRef.current.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
@@ -56,7 +56,7 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
 
     cardRef.current.style.setProperty('--mouse-x', `${(normX * 100).toFixed(1)}%`);
     cardRef.current.style.setProperty('--mouse-y', `${(normY * 100).toFixed(1)}%`);
-  }, [x, y]);
+  }, [cardRef, isHovered, x, y]);
 
   const handleMouseEnter = () => {
     setIsHovered(true);

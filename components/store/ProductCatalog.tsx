@@ -282,10 +282,9 @@ export const ProductCatalog: React.FC = () => {
                     maxTilt={16}
                     className="w-[280px] sm:w-[320px] shrink-0 snap-start"
                   >
-                    <motion.div
-                      layoutId={`product-card-container-${product.id}`}
+                    <div
                       style={{ transformStyle: 'preserve-3d' }}
-                      className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900/70 hover:bg-zinc-900/90 border border-white/[0.06] hover:border-cyan-500/40 backdrop-blur-xl overflow-hidden transition-all duration-300 hover:shadow-[0_25px_60px_rgba(0,0,0,0.9)] flex flex-col justify-between h-full"
+                      className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900 border border-white/[0.08] hover:border-cyan-500/40 overflow-hidden transition-all duration-200 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between h-full"
                     >
                       <div>
                         {/* Responsive Animated Image Carousel with Multiple Relevant Images & Dynamic Transitions */}
@@ -416,7 +415,7 @@ export const ProductCatalog: React.FC = () => {
                         </div>
                       </div>
 
-                    </motion.div>
+                    </div>
                   </Interactive3DCard>
                 );
               })}

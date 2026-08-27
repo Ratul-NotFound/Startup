@@ -57,40 +57,31 @@ export const ProductCardImageCarousel: React.FC<ProductCardImageCarouselProps> =
   useEffect(() => {
     if (imageList.length <= 1 || !isInView) return;
 
-    const baseInterval = 3500;
-    const offset = (index % 4) * 400;
+    const baseInterval = 5000;
+    const offset = (index % 4) * 500;
     const intervalTime = baseInterval + offset;
 
     const timer = setInterval(() => {
       setCurrentImageIdx((prev) => (prev + 1) % imageList.length);
-    }, isHovered ? 1800 : intervalTime);
+    }, isHovered ? 2000 : intervalTime);
 
     return () => clearInterval(timer);
   }, [imageList.length, index, isHovered, isInView]);
-
-  // Select dynamic transition effect based on current slide index
-  const currentEffect = TRANSITION_STYLES[currentImageIdx % TRANSITION_STYLES.length];
 
   return (
     <div
       ref={containerRef}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ perspective: 800 }}
       className="relative h-36 sm:h-44 w-full overflow-hidden bg-zinc-950 select-none group/img"
     >
-      <AnimatePresence initial={false} mode="popLayout">
+      <AnimatePresence initial={false}>
         <motion.div
           key={`${productName}-${currentImageIdx}`}
-          initial={currentEffect.initial}
-          animate={currentEffect.animate}
-          exit={currentEffect.exit}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{
-            transformStyle: 'preserve-3d',
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden',
-          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
           className="absolute inset-0 h-full w-full"
         >
           <img
@@ -99,7 +90,7 @@ export const ProductCardImageCarousel: React.FC<ProductCardImageCarouselProps> =
             loading="lazy"
             decoding="async"
             referrerPolicy="no-referrer"
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
             onError={(e) => {
               (e.target as HTMLImageElement).src =
                 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80';
