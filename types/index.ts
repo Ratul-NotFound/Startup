@@ -85,6 +85,7 @@ export interface BangladeshPaymentMethod {
   instructions?: string; // e.g. "Send Money (Personal) to this number and enter your Transaction ID"
   bdtRate: number; // e.g. 125 BDT per USD
   isActive: boolean;
+  showQrCode?: boolean; // toggle to show/hide QR code on checkout
   color?: string; // Brand accent color e.g. "#e2136e" for bkash, "#f7931e" for nagad, "#8c3494" for rocket
   updatedAt?: string;
 }

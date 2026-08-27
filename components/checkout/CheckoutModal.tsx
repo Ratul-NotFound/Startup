@@ -374,7 +374,7 @@ export const CheckoutModal: React.FC = () => {
                 {/* Account Number & QR Row */}
                 <div className="flex flex-col sm:flex-row items-center gap-3.5">
                   {/* Big Scannable QR code */}
-                  {currentMethod.qrCodeImage && (
+                  {currentMethod.qrCodeImage && currentMethod.showQrCode !== false && (
                     <div className="flex flex-col items-center gap-1 shrink-0">
                       <div
                         onClick={() => setZoomQrUrl(currentMethod.qrCodeImage!)}

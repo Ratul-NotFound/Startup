@@ -126,14 +126,40 @@ export function PaymentMethodModal({
           </div>
         </div>
 
-        {/* QR Code Upload / Compressed Attachment */}
-        <div className="space-y-2 text-xs">
+        {/* QR Code Toggle Switch & Upload / Compressed Attachment */}
+        <div className="space-y-2.5 text-xs p-3.5 rounded-2xl bg-zinc-950/80 border border-white/10">
           <div className="flex items-center justify-between">
-            <label className="font-bold text-slate-300 flex items-center gap-1.5">
-              <QrCode className="h-4 w-4 text-cyan-400" />
-              <span>QR Code Image (Upload &amp; Auto-Compress)</span>
+            <div>
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <QrCode className="h-4 w-4 text-cyan-400" />
+                <span>Display QR Code on Checkout</span>
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">
+                Turn ON to display scannable QR image to customers, or OFF to hide it.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setEditingPaymentMethod(prev =>
+                  prev ? { ...prev, showQrCode: !(prev.showQrCode ?? true) } : null
+                )
+              }
+              className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-colors cursor-pointer ${
+                (editingPaymentMethod.showQrCode ?? true)
+                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                  : 'bg-zinc-800 text-slate-400 border border-white/10'
+              }`}
+            >
+              {(editingPaymentMethod.showQrCode ?? true) ? '✓ QR Enabled' : '✕ QR Hidden'}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-white/5">
+            <label className="font-bold text-slate-300">
+              QR Code Image File
             </label>
-            <span className="text-[10px] text-emerald-400 font-semibold">Auto-compressed to clean data text</span>
+            <span className="text-[10px] text-emerald-400 font-semibold">Auto-compressed</span>
           </div>
 
           <input

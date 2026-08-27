@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Globe, ToggleLeft, ToggleRight, Save, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Globe, ToggleLeft, ToggleRight, Save, RefreshCw, QrCode } from 'lucide-react';
 import { BangladeshPaymentMethod, CurrencySettings } from '@/types';
 
 interface PaymentsTabProps {
@@ -234,13 +234,22 @@ export function PaymentsTab({
                     <div className="h-3 w-3 rounded-full" style={{ backgroundColor: pm.color || '#06b6d4' }} />
                     <h3 className="font-bold text-sm text-white">{pm.name}</h3>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    pm.isActive
-                      ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
-                      : 'bg-zinc-800 text-slate-500'
-                  }`}>
-                    {pm.isActive ? 'Active' : 'Disabled'}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      (pm.showQrCode ?? true)
+                        ? 'bg-cyan-950/80 text-cyan-400 border border-cyan-500/30'
+                        : 'bg-zinc-800 text-slate-500'
+                    }`}>
+                      {(pm.showQrCode ?? true) ? 'QR On' : 'QR Off'}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      pm.isActive
+                        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
+                        : 'bg-zinc-800 text-slate-500'
+                    }`}>
+                      {pm.isActive ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-zinc-950 border border-white/5 space-y-2 text-xs">
@@ -259,7 +268,11 @@ export function PaymentsTab({
                 </div>
 
                 {pm.qrCodeImage && (
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-zinc-950/80 border border-white/5">
+                  <div className={`flex items-center gap-3 p-3 rounded-2xl border transition-opacity ${
+                    (pm.showQrCode ?? true)
+                      ? 'bg-zinc-950/80 border-white/5 opacity-100'
+                      : 'bg-zinc-950/40 border-white/5 opacity-50'
+                  }`}>
                     <div
                       onClick={() => setPreviewScreenshotUrl(pm.qrCodeImage!)}
                       className="h-20 w-20 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform"
@@ -268,7 +281,14 @@ export function PaymentsTab({
                       <img src={pm.qrCodeImage} alt="QR Code" className="h-full w-full object-contain" />
                     </div>
                     <div className="text-[11px] text-slate-400 leading-relaxed space-y-1">
-                      <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">Scannable QR Code</div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+                          Scannable QR Code
+                        </span>
+                        <span className="text-[9px] font-semibold text-slate-500">
+                          {(pm.showQrCode ?? true) ? 'Visible on checkout' : 'Hidden from checkout'}
+                        </span>
+                      </div>
                       <div className="line-clamp-2">{pm.instructions}</div>
                     </div>
                   </div>
@@ -276,15 +296,29 @@ export function PaymentsTab({
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
-                <button
-                  onClick={async () => {
-                    await adminUpdatePaymentMethod(pm.id, { isActive: !pm.isActive });
-                    showFeedback('success', `Payment method ${pm.isActive ? 'disabled' : 'activated'}.`);
-                  }}
-                  className="text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  {pm.isActive ? 'Turn Off' : 'Turn On'}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={async () => {
+                      await adminUpdatePaymentMethod(pm.id, { isActive: !pm.isActive });
+                      showFeedback('success', `Payment method ${pm.isActive ? 'disabled' : 'activated'}.`);
+                    }}
+                    className="text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {pm.isActive ? 'Turn Off' : 'Turn On'}
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      const nextQrState = !(pm.showQrCode ?? true);
+                      await adminUpdatePaymentMethod(pm.id, { showQrCode: nextQrState });
+                      showFeedback('success', `QR Code ${nextQrState ? 'enabled' : 'hidden'} for ${pm.name}.`);
+                    }}
+                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <QrCode className="h-3 w-3" />
+                    <span>{(pm.showQrCode ?? true) ? 'Hide QR' : 'Show QR'}</span>
+                  </button>
+                </div>
 
                 <div className="flex items-center gap-1.5">
                   <button
