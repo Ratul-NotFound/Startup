@@ -59,6 +59,13 @@ export interface CartItem {
   customEmail?: string;
 }
 
+export interface GiveawayTask {
+  id: string;
+  label: string;      // e.g. "Join Telegram Channel", "Follow Facebook Page"
+  url: string;        // e.g. "https://t.me/keyoon_deals", "https://facebook.com/keyoon"
+  isRequired?: boolean;
+}
+
 export interface Coupon {
   code: string;
   discountPercent: number;
@@ -75,6 +82,7 @@ export interface Coupon {
   offerImage?: string;
   type?: 'discount' | 'giveaway' | 'special_deal' | 'bundle_offer';
   isRecurringDiscount?: boolean;
+  requiredTasks?: GiveawayTask[]; // Social tasks required to unlock code
 }
 
 export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'crypto_usdt' | 'card_stripe' | 'custom';

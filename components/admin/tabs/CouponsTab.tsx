@@ -349,6 +349,87 @@ export function CouponsTab({
                 </div>
               )}
             </div>
+
+            {/* Dynamic Social Tasks Builder */}
+            <div className="col-span-1 sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                    <Sparkles className="h-4 w-4 text-amber-400" />
+                    <span>Required Social Tasks (User Must Complete to Unlock Code)</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                    Add required links like Telegram channel, Facebook page, or YouTube channel.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newTask = {
+                      id: `task_${Date.now()}`,
+                      label: 'Join Telegram Channel',
+                      url: 'https://t.me/keyoon_deals',
+                      isRequired: true,
+                    };
+                    setNewCoupon(p => ({
+                      ...p,
+                      requiredTasks: [...(p.requiredTasks || []), newTask],
+                    }));
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Task
+                </button>
+              </div>
+
+              {(newCoupon.requiredTasks || []).length === 0 ? (
+                <p className="text-[11px] text-slate-500 italic">No required tasks added. Users can copy the code directly without task verification.</p>
+              ) : (
+                <div className="space-y-2">
+                  {(newCoupon.requiredTasks || []).map((t, idx) => (
+                    <div key={t.id || idx} className="grid grid-cols-1 sm:grid-cols-5 gap-2 p-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs items-center">
+                      <input
+                        value={t.label}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setNewCoupon(p => ({
+                            ...p,
+                            requiredTasks: (p.requiredTasks || []).map((item, i) => i === idx ? { ...item, label: val } : item),
+                          }));
+                        }}
+                        placeholder="Task Label (e.g. Join Telegram)"
+                        className="sm:col-span-2 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-white/10 text-white font-medium"
+                      />
+                      <input
+                        value={t.url}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setNewCoupon(p => ({
+                            ...p,
+                            requiredTasks: (p.requiredTasks || []).map((item, i) => i === idx ? { ...item, url: val } : item),
+                          }));
+                        }}
+                        placeholder="Task Link URL (https://...)"
+                        className="sm:col-span-2 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-white/10 text-cyan-300 font-mono text-[11px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewCoupon(p => ({
+                            ...p,
+                            requiredTasks: (p.requiredTasks || []).filter((_, i) => i !== idx),
+                          }));
+                        }}
+                        className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-400 transition-colors justify-self-end cursor-pointer"
+                        title="Remove Task"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
@@ -430,6 +511,12 @@ export function CouponsTab({
                     {typeof c.maxUses === 'number' && (
                       <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-bold text-[10px] border border-amber-500/30 font-mono">
                         Used: {c.usedCount || 0} / {c.maxUses}
+                      </span>
+                    )}
+
+                    {c.requiredTasks && c.requiredTasks.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-bold text-[10px] uppercase border border-amber-500/30">
+                        ⚡ Tasks ({c.requiredTasks.length})
                       </span>
                     )}
 

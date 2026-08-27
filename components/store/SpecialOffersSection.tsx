@@ -9,6 +9,9 @@ export function SpecialOffersSection() {
   const { coupons } = useApp();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
+  // Map to track completed tasks per coupon code: { [couponCode]: { [taskId]: boolean } }
+  const [completedTasksMap, setCompletedTasksMap] = useState<Record<string, Record<string, boolean>>>({});
+
   // Filter coupons marked as special offers or fallback to all coupons
   const activeOffers = coupons.filter(c => c.isSpecialOffer);
   const displayOffers = activeOffers.length > 0 ? activeOffers : coupons;
@@ -17,6 +20,19 @@ export function SpecialOffersSection() {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2500);
+  };
+
+  const handleCompleteTask = (code: string, taskId: string, url: string) => {
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    setCompletedTasksMap((prev) => ({
+      ...prev,
+      [code]: {
+        ...(prev[code] || {}),
+        [taskId]: true,
+      },
+    }));
   };
 
   if (!displayOffers || displayOffers.length === 0) return null;
@@ -38,7 +54,7 @@ export function SpecialOffersSection() {
               Exclusive Deals &amp; Claimable Coupon Hub
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl">
-              Copy promo codes instantly, unlock free giveaways, and save up to 80% on official digital subscriptions.
+              Copy promo codes instantly, complete quick social tasks for giveaways, and save up to 80% on official digital subscriptions.
             </p>
           </div>
 
@@ -56,6 +72,10 @@ export function SpecialOffersSection() {
           {displayOffers.map((offer) => {
             const isGiveaway = offer.type === 'giveaway' || offer.discountPercent >= 100 || offer.offerTag?.toLowerCase().includes('giveaway');
             const isCopied = copiedCode === offer.code;
+
+            const tasks = offer.requiredTasks || [];
+            const offerCompletedTasks = completedTasksMap[offer.code] || {};
+            const isUnlocked = tasks.every((t) => !t.isRequired || offerCompletedTasks[t.id]);
 
             return (
               <div
@@ -137,25 +157,72 @@ export function SpecialOffersSection() {
                     </p>
                   </div>
 
+                  {/* Dynamic Required Tasks Checklist (if any) */}
+                  {tasks.length > 0 && (
+                    <div className="p-3.5 rounded-2xl bg-zinc-950/80 border border-white/10 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                          <span>Required Tasks ({Object.keys(offerCompletedTasks).length}/{tasks.length})</span>
+                        </span>
+                        {isUnlocked && (
+                          <span className="text-[10px] text-emerald-400 font-bold">✓ Unlocked!</span>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5">
+                        {tasks.map((task) => {
+                          const isDone = Boolean(offerCompletedTasks[task.id]);
+                          return (
+                            <div
+                              key={task.id}
+                              className="flex items-center justify-between p-2 rounded-xl bg-zinc-900 border border-white/5 text-xs"
+                            >
+                              <span className={`text-[11px] font-medium truncate ${isDone ? 'text-emerald-400 line-through' : 'text-slate-300'}`}>
+                                {task.label}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleCompleteTask(offer.code, task.id, task.url)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all shrink-0 cursor-pointer ${
+                                  isDone
+                                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40'
+                                }`}
+                              >
+                                {isDone ? '✓ Completed' : 'Visit & Complete ↗'}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Coupon Code Copy & Claim Action Box */}
                   <div className="pt-3 border-t border-white/[0.08] space-y-2">
                     <div className="flex items-center justify-between p-2.5 rounded-2xl bg-zinc-950 border border-white/10">
                       <div className="flex items-center gap-2">
                         <Tag className="h-4 w-4 text-cyan-400 shrink-0" />
                         <span className="font-mono font-black text-white text-sm tracking-wider select-all">
-                          {offer.code}
+                          {isUnlocked ? offer.code : '••••••••'}
                         </span>
                       </div>
 
                       <button
-                        onClick={() => handleCopyCode(offer.code)}
+                        onClick={() => isUnlocked && handleCopyCode(offer.code)}
+                        disabled={!isUnlocked}
                         className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                          isCopied
+                          !isUnlocked
+                            ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/10'
+                            : isCopied
                             ? 'bg-emerald-600 text-white shadow-md'
                             : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'
                         }`}
                       >
-                        {isCopied ? (
+                        {!isUnlocked ? (
+                          <span>🔒 Complete Tasks</span>
+                        ) : isCopied ? (
                           <>
                             <Check className="h-3.5 w-3.5" />
                             <span>COPIED!</span>

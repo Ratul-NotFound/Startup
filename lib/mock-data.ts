@@ -76,6 +76,10 @@ export const MOCK_COUPONS: Coupon[] = [
     offerTitle: 'Community Monthly Premium Giveaway Code',
     offerImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
     type: 'giveaway',
+    requiredTasks: [
+      { id: 'task_tg', label: 'Join Official Telegram Channel', url: 'https://t.me/keyoon_deals', isRequired: true },
+      { id: 'task_fb', label: 'Follow Keyoon Facebook Page', url: 'https://facebook.com/keyoon', isRequired: true },
+    ],
   },
 ];
 
