@@ -53,8 +53,8 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/#catalog', label: 'Catalog' },
+    { href: '/#exclusive-deals', label: '🔥 Exclusive Deals' },
     { href: '/dashboard', label: 'Customer Vault' },
-    { href: '/#pricing', label: 'Pricing' },
     { href: '/#reviews', label: 'Reviews' },
   ];
 
