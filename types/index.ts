@@ -6,7 +6,7 @@ export type SubscriptionCategory =
   | 'productivity'
   | 'vpn_security';
 
-export type PlanDuration = '1_month' | '3_months' | '6_months' | '12_months' | 'lifetime';
+export type PlanDuration = '1_month' | '3_months' | '6_months' | '12_months' | 'lifetime' | (string & {});
 
 export type DeliveryType = 'instant_bot' | 'custom_email' | 'slot_invite';
 

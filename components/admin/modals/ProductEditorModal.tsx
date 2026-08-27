@@ -865,28 +865,148 @@ export function ProductEditorModal({
               <div className="space-y-3">
                 {editingProduct.pricingTiers.map((tier, tIdx) => (
                   <div key={tIdx} className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3 relative group">
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-slate-400 font-semibold block">Duration Identifier</label>
+                    <div className="flex items-center justify-between border-b border-white/[0.06] pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="h-5 w-5 rounded-full bg-zinc-900 border border-white/10 text-cyan-400 font-mono text-[11px] flex items-center justify-center font-bold">
+                          #{tIdx + 1}
+                        </span>
+                        <span className="font-bold text-white text-xs">
+                          {tier.label || 'Unnamed Duration Plan'}
+                        </span>
+                        {tier.isPopular && (
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[9px] font-black uppercase">
+                            Popular Choice
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={!!tier.isPopular}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              const tiers = editingProduct.pricingTiers.map((t, idx) => ({
+                                ...t,
+                                isPopular: idx === tIdx ? checked : t.isPopular
+                              }));
+                              setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
+                            }}
+                            className="h-3.5 w-3.5 rounded bg-zinc-900 border-white/20 text-cyan-500"
+                          />
+                          <span>Highlight as Popular</span>
+                        </label>
+
+                        {editingProduct.pricingTiers.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const tiers = editingProduct.pricingTiers.filter((_, idx) => idx !== tIdx);
+                              setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
+                            }}
+                            className="p-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors cursor-pointer"
+                            title="Delete this tier"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                      {/* Duration Preset Dropdown */}
+                      <div className="sm:col-span-3 space-y-1">
+                        <label className="text-slate-400 font-semibold block text-[11px]">
+                          Duration Preset
+                        </label>
                         <select
-                          value={tier.duration}
+                          value={
+                            ['1_day', '3_days', '7_days', '14_days', '1_month', '2_months', '3_months', '6_months', '12_months', '24_months', 'lifetime'].includes(tier.duration)
+                              ? tier.duration
+                              : 'custom'
+                          }
                           onChange={e => {
+                            const val = e.target.value;
                             const tiers = [...editingProduct.pricingTiers];
-                            tiers[tIdx] = { ...tiers[tIdx], duration: e.target.value as any };
+                            if (val === 'custom') {
+                              tiers[tIdx] = {
+                                ...tiers[tIdx],
+                                duration: tiers[tIdx].duration || 'custom_plan',
+                              };
+                            } else {
+                              const labelMap: Record<string, string> = {
+                                '1_day': '1 Day',
+                                '3_days': '3 Days',
+                                '7_days': '7 Days',
+                                '14_days': '14 Days',
+                                '1_month': '1 Month',
+                                '2_months': '2 Months',
+                                '3_months': '3 Months',
+                                '6_months': '6 Months',
+                                '12_months': '12 Months (1 Year)',
+                                '24_months': '2 Years',
+                                'lifetime': 'Lifetime Access',
+                              };
+                              tiers[tIdx] = {
+                                ...tiers[tIdx],
+                                duration: val,
+                                label: labelMap[val] || tiers[tIdx].label || val,
+                              };
+                            }
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono cursor-pointer"
+                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono text-xs cursor-pointer"
                         >
-                          <option value="1_month">1 Month</option>
-                          <option value="3_months">3 Months</option>
-                          <option value="6_months">6 Months</option>
-                          <option value="12_months">12 Months (1 Year)</option>
-                          <option value="lifetime">Lifetime Access</option>
+                          <optgroup label="Standard Presets">
+                            <option value="1_month">1 Month</option>
+                            <option value="3_months">3 Months</option>
+                            <option value="6_months">6 Months</option>
+                            <option value="12_months">12 Months (1 Year)</option>
+                            <option value="lifetime">Lifetime Access</option>
+                          </optgroup>
+                          <optgroup label="Short-term / Trial Presets">
+                            <option value="1_day">1 Day (24 Hours)</option>
+                            <option value="3_days">3 Days Trial</option>
+                            <option value="7_days">7 Days (1 Week)</option>
+                            <option value="14_days">14 Days (2 Weeks)</option>
+                          </optgroup>
+                          <optgroup label="Extended Presets">
+                            <option value="2_months">2 Months</option>
+                            <option value="24_months">2 Years (24 Months)</option>
+                          </optgroup>
+                          <optgroup label="Custom Entry">
+                            <option value="custom">✍️ Custom Value Entry...</option>
+                          </optgroup>
                         </select>
                       </div>
 
-                      <div className="space-y-1">
-                        <label className="text-slate-400 font-semibold block">Display Label</label>
+                      {/* Custom Identifier / Key (Side-by-Side Entry) */}
+                      <div className="sm:col-span-3 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-slate-400 font-semibold block text-[11px]">
+                            Custom Identifier (Key)
+                          </label>
+                          <span className="text-[10px] text-cyan-400 font-mono font-bold">Editable</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={tier.duration}
+                          onChange={e => {
+                            const val = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+                            const tiers = [...editingProduct.pricingTiers];
+                            tiers[tIdx] = { ...tiers[tIdx], duration: val };
+                            setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
+                          }}
+                          placeholder="e.g. 7_days, 15_days, 2_years"
+                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-cyan-500/30 focus:border-cyan-400 text-cyan-300 font-mono text-xs font-bold"
+                          title="Custom Duration Identifier (e.g. 1_month, 7_days, lifetime)"
+                        />
+                      </div>
+
+                      {/* Display Label */}
+                      <div className="sm:col-span-2 space-y-1">
+                        <label className="text-slate-400 font-semibold block text-[11px]">Display Label</label>
                         <input
                           type="text"
                           value={tier.label}
@@ -895,16 +1015,17 @@ export function ProductEditorModal({
                             tiers[tIdx] = { ...tiers[tIdx], label: e.target.value };
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
-                          placeholder="e.g. 1 Month"
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold"
+                          placeholder="e.g. 1 Month, 7 Days"
+                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs"
                         />
                       </div>
 
-                      <div className="space-y-1">
+                      {/* Sale Price (BDT) with live USD Badge */}
+                      <div className="sm:col-span-2 space-y-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-slate-400 font-semibold block">Sale Price (৳ BDT)</label>
+                          <label className="text-slate-400 font-semibold block text-[11px]">Sale Price (৳ BDT)</label>
                           <span className="text-[10px] text-cyan-400 font-mono font-bold">
-                            ≈ ${(tier.price / (bdtRate || 125)).toFixed(2)} USD
+                            ≈ ${(tier.price / (bdtRate || 125)).toFixed(2)}
                           </span>
                         </div>
                         <input
@@ -919,48 +1040,33 @@ export function ProductEditorModal({
                             tiers[tIdx] = { ...tiers[tIdx], price: p, discountPercentage: disc };
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
-                          placeholder="e.g. 50 or 999"
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-mono font-bold"
+                          placeholder="999"
+                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-mono font-bold text-xs"
                         />
                       </div>
 
-                      <div className="space-y-1">
+                      {/* Original Price (BDT) */}
+                      <div className="sm:col-span-2 space-y-1">
                         <div className="flex items-center justify-between">
-                          <label className="text-slate-400 font-semibold block">Original (৳ BDT)</label>
-                          {tier.originalPrice ? (
-                            <span className="text-[10px] text-slate-500 font-mono">
-                              ≈ ${(tier.originalPrice / (bdtRate || 125)).toFixed(2)} USD
-                            </span>
-                          ) : null}
+                          <label className="text-slate-400 font-semibold block text-[11px]">Original (৳)</label>
+                          <span className="text-[10px] text-emerald-400 font-bold">
+                            -{tier.discountPercentage}%
+                          </span>
                         </div>
                         <input
                           type="number"
                           step="1"
                           value={tier.originalPrice || ''}
                           onChange={e => {
-                            const orig = Number(e.target.value);
+                            const op = Number(e.target.value);
                             const tiers = [...editingProduct.pricingTiers];
                             const p = tiers[tIdx].price;
-                            const disc = orig > p ? Math.round(((orig - p) / orig) * 100) : 0;
-                            tiers[tIdx] = { ...tiers[tIdx], originalPrice: orig, discountPercentage: disc };
+                            const disc = op > p ? Math.round(((op - p) / op) * 100) : 0;
+                            tiers[tIdx] = { ...tiers[tIdx], originalPrice: op, discountPercentage: disc };
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
-                          placeholder="e.g. 100 or 2000"
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-slate-400 font-mono line-through"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-slate-400 font-semibold block">Discount %</label>
-                        <input
-                          type="number"
-                          value={tier.discountPercentage}
-                          onChange={e => {
-                            const tiers = [...editingProduct.pricingTiers];
-                            tiers[tIdx] = { ...tiers[tIdx], discountPercentage: Number(e.target.value) };
-                            setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
-                          }}
-                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-cyan-300 font-mono font-bold"
+                          placeholder="1999"
+                          className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-slate-400 font-mono text-xs"
                         />
                       </div>
                     </div>
