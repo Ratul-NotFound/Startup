@@ -5,6 +5,7 @@ import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
   AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog, BrandSettings, CurrencySettings,
+  CategoryConfig, SubscriptionCategory,
 } from '@/types';
 import { detectVisitorCountry } from '@/lib/geo-currency';
 import {
@@ -23,6 +24,45 @@ import {
 
 // ─── Superadmin email ───────────────────────────────────────────────
 export const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
+
+// ─── Default Category Configuration ────────────────────────────────
+export const DEFAULT_CATEGORY_CONFIGS: CategoryConfig[] = [
+  {
+    id: 'ai',
+    label: 'AI & Productivity',
+    description: 'Top AI models, coding assistants & intelligent tools',
+    isHidden: false,
+    orderIndex: 0,
+  },
+  {
+    id: 'streaming',
+    label: 'Movies & Music Streaming',
+    description: '4K Ultra HD video, movies, music & ad-free entertainment',
+    isHidden: false,
+    orderIndex: 1,
+  },
+  {
+    id: 'dev',
+    label: 'Developer Tools',
+    description: 'AI code editors, coding workspaces & fast requests',
+    isHidden: false,
+    orderIndex: 2,
+  },
+  {
+    id: 'productivity',
+    label: 'Design & Creative Apps',
+    description: 'Full creative suites for graphic design, photo & video editing',
+    isHidden: false,
+    orderIndex: 3,
+  },
+  {
+    id: 'vpn_security',
+    label: 'VPN & Online Security',
+    description: 'Encrypted privacy tunnels, threat protection & fast proxies',
+    isHidden: false,
+    orderIndex: 4,
+  },
+];
 
 export const DEFAULT_QUICK_MESSAGES: QuickMessage[] = [
   {
@@ -141,10 +181,18 @@ interface AppContextType {
   adminAddAdmin: (email: string, name?: string) => Promise<{ success: boolean; message: string }>;
   adminRemoveAdmin: (email: string) => Promise<{ success: boolean; message: string }>;
 
-  // Admin: Product CRUD
+  // Admin: Product CRUD & Customization
   adminCreateProduct: (product: Omit<Product, 'id'>) => Promise<string>;
   adminUpdateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   adminDeleteProduct: (id: string) => Promise<void>;
+  adminToggleProductVisibility: (productId: string) => Promise<void>;
+  adminReorderProduct: (productId: string, newOrderIndex: number) => Promise<void>;
+
+  // Admin: Category Configuration & Sequencing
+  categoryConfigs: CategoryConfig[];
+  adminUpdateCategoryConfigs: (configs: CategoryConfig[]) => Promise<void>;
+  adminToggleCategoryVisibility: (catId: SubscriptionCategory) => Promise<void>;
+  adminReorderCategories: (newOrder: CategoryConfig[]) => Promise<void>;
 
   // Admin: Order management & Approval
   allOrders: Order[];
@@ -334,6 +382,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       console.warn('[AppContext] Error updating currency settings in Firestore:', err);
     }
+  };
+
+  // Category Configuration state (admin-controlled sequence & visibility)
+  const [categoryConfigs, setCategoryConfigs] = useState<CategoryConfig[]>(DEFAULT_CATEGORY_CONFIGS);
+
+  const adminUpdateCategoryConfigs = async (configs: CategoryConfig[]) => {
+    setCategoryConfigs(configs);
+    try {
+      await setDoc(doc(db, 'settings', 'categories'), { categories: configs, updatedAt: new Date().toISOString() }, { merge: true });
+      await logAdminActivity('CATEGORY_SETTINGS_UPDATED', 'catalog', 'Updated category sequence & visibility in storefront');
+    } catch (err) {
+      console.warn('[AppContext] Error saving category settings to Firestore:', err);
+    }
+  };
+
+  const adminToggleCategoryVisibility = async (catId: SubscriptionCategory) => {
+    const updated = categoryConfigs.map(c => c.id === catId ? { ...c, isHidden: !c.isHidden } : c);
+    await adminUpdateCategoryConfigs(updated);
+  };
+
+  const adminReorderCategories = async (newOrder: CategoryConfig[]) => {
+    const updated = newOrder.map((c, idx) => ({ ...c, orderIndex: idx }));
+    await adminUpdateCategoryConfigs(updated);
+  };
+
+  const adminToggleProductVisibility = async (productId: string) => {
+    const prod = products.find(p => p.id === productId);
+    if (!prod) return;
+    const newHidden = !prod.isHidden;
+    await adminUpdateProduct(productId, { isHidden: newHidden });
+    await logAdminActivity(newHidden ? 'PRODUCT_HIDDEN' : 'PRODUCT_VISIBLE', 'catalog', `${newHidden ? 'Hidden' : 'Shown'} product: ${prod.name}`, productId);
+  };
+
+  const adminReorderProduct = async (productId: string, newOrderIndex: number) => {
+    await adminUpdateProduct(productId, { orderIndex: newOrderIndex });
   };
 
   // Derived: the BDT exchange rate to use everywhere
@@ -726,6 +809,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // 10. Real-time Category Configuration listener (admin-controlled sequence & visibility)
+    const unsubCategorySettings = onSnapshot(doc(db, 'settings', 'categories'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (Array.isArray(data?.categories) && data.categories.length > 0) {
+          const loaded: CategoryConfig[] = data.categories;
+          const merged = DEFAULT_CATEGORY_CONFIGS.map(def => {
+            const found = loaded.find(l => l.id === def.id);
+            return found ? { ...def, ...found } : def;
+          });
+          merged.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+          setCategoryConfigs(merged);
+        } else {
+          setCategoryConfigs(DEFAULT_CATEGORY_CONFIGS);
+        }
+      } else {
+        setCategoryConfigs(DEFAULT_CATEGORY_CONFIGS);
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[AppContext] Category settings listener error:', err);
+      }
+      setCategoryConfigs(DEFAULT_CATEGORY_CONFIGS);
+    });
+
     return () => {
       unsubProducts();
       unsubCoupons();
@@ -736,6 +844,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubQuickMessages();
       unsubBrandSettings();
       unsubCurrencySettings();
+      unsubCategorySettings();
     };
   }, [seedFirestoreIfEmpty]);
 
@@ -2516,6 +2625,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminAddAdmin,
     adminRemoveAdmin,
     adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
+    adminToggleProductVisibility, adminReorderProduct,
+    categoryConfigs, adminUpdateCategoryConfigs, adminToggleCategoryVisibility, adminReorderCategories,
     allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     allUsers, adminUpdateUserRole,
     allSubscriptions, adminCreateSubscription, adminUpdateSubscription, adminDeleteSubscription, adminPurgeMockSubscriptions, adminPurgeAllSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
@@ -2540,7 +2651,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
-    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs, brandSettings,
+    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs, brandSettings, categoryConfigs,
     financialMetrics, emailNotifications, isSyncing,
     currencySettings, detectedCurrency, bdtRate,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
@@ -2554,6 +2665,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUser, toggleUserRole, setIsAuthModalOpen,
     adminAddAdmin, adminRemoveAdmin,
     adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
+    adminToggleProductVisibility, adminReorderProduct,
+    adminUpdateCategoryConfigs, adminToggleCategoryVisibility, adminReorderCategories,
     adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     adminUpdateUserRole, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
     adminCreateCoupon, adminDeleteCoupon,

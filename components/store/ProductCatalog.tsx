@@ -40,6 +40,7 @@ const CATEGORY_METADATA: { id: SubscriptionCategory; label: string; description:
 export const ProductCatalog: React.FC = () => {
   const {
     products,
+    categoryConfigs,
     setSelectedProduct,
     addToCart,
     activeSearchQuery,
@@ -60,8 +61,10 @@ export const ProductCatalog: React.FC = () => {
       el.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
   }, []);
+
   const processedProducts = useMemo(() => {
-    let list = [...products];
+    // 1. Filter out hidden products from storefront
+    let list = products.filter(p => !p.isHidden);
 
     if (activeSearchQuery.trim()) {
       const q = activeSearchQuery.toLowerCase();
@@ -86,11 +89,19 @@ export const ProductCatalog: React.FC = () => {
     return list;
   }, [products, activeSearchQuery, sortBy]);
 
-  // Group products by category
+  // Group products by active categories in custom sequence
   const categoryGroups = useMemo(() => {
-    return CATEGORY_METADATA
+    const activeCategories = (categoryConfigs && categoryConfigs.length > 0)
+      ? [...categoryConfigs].filter(c => !c.isHidden).sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+      : [];
+
+    return activeCategories
       .map((meta) => {
         const catProducts = processedProducts.filter((p) => p.category === meta.id);
+        // If viewing in default popular mode, respect in-category admin product sequence
+        if (sortBy === 'popular') {
+          catProducts.sort((a, b) => (a.orderIndex ?? 999) - (b.orderIndex ?? 999));
+        }
         return {
           id: meta.id,
           meta,
@@ -98,7 +109,7 @@ export const ProductCatalog: React.FC = () => {
         };
       })
       .filter((group) => group.products.length > 0);
-  }, [processedProducts]);
+  }, [processedProducts, categoryConfigs, sortBy]);
 
   const handleSelectPlanIndex = useCallback((productId: string, planIndex: number) => {
     setSelectedPlanMap((prev) => ({ ...prev, [productId]: planIndex }));

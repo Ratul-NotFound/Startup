@@ -563,10 +563,36 @@ export function ProductEditorModal({
                 </div>
               </div>
 
-              {/* Storefront Feature Toggles */}
+              {/* Storefront Feature & Visibility Toggles */}
               <div className="p-4 rounded-2xl bg-zinc-950 border border-white/[0.08] space-y-3">
-                <span className="font-bold text-slate-200">Promotional Placement Flags</span>
+                <span className="font-bold text-slate-200">Catalog Visibility & Placement</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer hover:bg-zinc-850 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={!!editingProduct.isHidden}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, isHidden: e.target.checked } : null)}
+                      className="h-4 w-4 rounded bg-zinc-950 text-rose-500 focus:ring-0 cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-bold text-rose-300 block">Hide Product from Storefront</span>
+                      <span className="text-[10px] text-slate-400">Temporarily unpublish from customer catalog</span>
+                    </div>
+                  </label>
+
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-white/5">
+                    <div className="flex-1 space-y-0.5">
+                      <label className="font-bold text-white block text-xs">Display Sequence Order</label>
+                      <span className="text-[10px] text-slate-400 block">Position in category row (1 = first)</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={editingProduct.orderIndex ?? 0}
+                      onChange={e => setEditingProduct(prev => prev ? { ...prev, orderIndex: Number(e.target.value) } : null)}
+                      className="w-16 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-white/10 text-cyan-300 font-mono font-bold text-center text-xs"
+                    />
+                  </div>
+
                   <label className="flex items-center gap-3 p-3 rounded-xl bg-zinc-900 border border-white/5 cursor-pointer hover:bg-zinc-850 transition-colors">
                     <input
                       type="checkbox"

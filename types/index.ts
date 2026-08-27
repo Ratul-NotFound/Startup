@@ -21,6 +21,14 @@ export interface PlanPricing {
   isPopular?: boolean;
 }
 
+export interface CategoryConfig {
+  id: SubscriptionCategory;
+  label: string;
+  description: string;
+  isHidden?: boolean;
+  orderIndex: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -49,6 +57,8 @@ export interface Product {
   stockCount: number;
   isFeatured?: boolean;
   isTrending?: boolean;
+  isHidden?: boolean;
+  orderIndex?: number;
   instructions: string[];
 }
 
