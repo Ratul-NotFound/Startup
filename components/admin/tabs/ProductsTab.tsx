@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Search, Plus, Edit2, Trash2, X, Eye, EyeOff, ArrowUp, ArrowDown,
   Layers, CheckCircle2, Sliders, ChevronDown, ChevronUp, Sparkles, Check,
+  RefreshCw, ArrowRightLeft,
 } from 'lucide-react';
 import { Product, SubscriptionCategory, CategoryConfig } from '@/types';
 import { useApp } from '@/context/AppContext';
@@ -53,6 +54,7 @@ export function ProductsTab({
     adminToggleCategoryVisibility,
     adminReorderCategories,
     adminToggleProductVisibility,
+    adminToggleProductType,
     adminReorderProduct,
     formatPrice,
   } = useApp();
@@ -501,26 +503,50 @@ export function ProductsTab({
                         </div>
                       </td>
 
-                      {/* Product Type & Tasks Column */}
+                      {/* Product Type & Tasks Column with 1-Click Shift Option */}
                       <td className="p-4">
-                        {p.productType === 'special' ? (
-                          <div className="space-y-1">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold text-[11px]">
-                              <Sparkles className="h-3 w-3 text-amber-400" />
-                              ⚡ Special ({p.specialConfig?.tasks?.length || 0} Tasks)
-                            </span>
-                            {p.specialConfig?.campaignBadge && (
-                              <p className="text-[10px] text-slate-400 font-mono truncate max-w-[130px]">
-                                {p.specialConfig.campaignBadge}
-                              </p>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            General
-                          </span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {p.productType === 'special' ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold text-[11px]">
+                                  <Sparkles className="h-3 w-3 text-amber-400" />
+                                  ⚡ Special ({p.specialConfig?.tasks?.length || 0} Tasks)
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => adminToggleProductType(p.id)}
+                                  className="px-2 py-0.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white border border-white/10 text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                                  title="Shift this special product back to a General Product"
+                                >
+                                  <ArrowRightLeft className="h-2.5 w-2.5" />
+                                  <span>Shift to General</span>
+                                </button>
+                              </div>
+                              {p.specialConfig?.campaignBadge && (
+                                <p className="text-[10px] text-slate-400 font-mono truncate max-w-[130px]">
+                                  {p.specialConfig.campaignBadge}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                                General
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => adminToggleProductType(p.id)}
+                                className="px-2 py-0.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-[10px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                                title="Shift this product to Special Campaign Deal (Tasks Mission)"
+                              >
+                                <Sparkles className="h-2.5 w-2.5 text-amber-400" />
+                                <span>Shift to Special</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Category Badge */}
@@ -573,7 +599,19 @@ export function ProductsTab({
 
                       {/* Actions */}
                       <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => adminToggleProductType(p.id)}
+                            className={`p-2 rounded-lg transition-colors cursor-pointer border ${
+                              p.productType === 'special'
+                                ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                : 'bg-zinc-800 hover:bg-zinc-700 text-slate-400 hover:text-white border-white/5'
+                            }`}
+                            title={p.productType === 'special' ? 'Shift to General Product' : 'Shift to Special Campaign'}
+                          >
+                            <ArrowRightLeft className="h-3.5 w-3.5" />
+                          </button>
                           <button
                             onClick={() => setEditingProduct(p)}
                             className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-blue-400 transition-colors cursor-pointer"

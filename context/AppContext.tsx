@@ -194,6 +194,7 @@ interface AppContextType {
   adminUpdateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   adminDeleteProduct: (id: string) => Promise<void>;
   adminToggleProductVisibility: (productId: string) => Promise<void>;
+  adminToggleProductType: (productId: string) => Promise<void>;
   adminReorderProduct: (productId: string, newOrderIndex: number) => Promise<void>;
 
   // Admin: Category Configuration & Sequencing
@@ -471,6 +472,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newHidden = !prod.isHidden;
     await adminUpdateProduct(productId, { isHidden: newHidden });
     await logAdminActivity(newHidden ? 'PRODUCT_HIDDEN' : 'PRODUCT_VISIBLE', 'catalog', `${newHidden ? 'Hidden' : 'Shown'} product: ${prod.name}`, productId);
+  };
+
+  const adminToggleProductType = async (productId: string) => {
+    const prod = products.find(p => p.id === productId);
+    if (!prod) return;
+    const nextType: 'general' | 'special' = prod.productType === 'special' ? 'general' : 'special';
+    let updates: Partial<Product> = { productType: nextType };
+
+    if (nextType === 'special' && (!prod.specialConfig || !prod.specialConfig.tasks || prod.specialConfig.tasks.length === 0)) {
+      updates.specialConfig = {
+        campaignTitle: `${prod.name} Special Campaign Deal`,
+        campaignBadge: '⚡ Flash Mission Deal',
+        campaignDescription: 'Complete quick community tasks below to unlock exclusive discounted pricing!',
+        unlockedCouponCode: '',
+        discountPercent: prod.pricingTiers[0]?.discountPercentage || 20,
+        isSpecialOfferSynced: true,
+        tasks: [
+          { id: `tg_${Date.now()}`, type: 'join_telegram', title: 'Join Keyoon Telegram Channel', url: 'https://t.me/keyoon', isRequired: true },
+          { id: `fb_${Date.now()}`, type: 'follow_facebook', title: 'Follow Keyoon on Facebook', url: 'https://facebook.com/keyoon', isRequired: true },
+          { id: `rev_${Date.now()}`, type: 'write_review', title: 'Write a Verified Product Review', url: '', isRequired: true },
+        ],
+      };
+    }
+
+    await adminUpdateProduct(productId, updates);
+    if (nextType === 'special') {
+      const mergedProduct = { ...prod, ...updates };
+      await syncSpecialProductToDeals(mergedProduct);
+    }
+    await logAdminActivity('PRODUCT_TYPE_CHANGED', 'catalog', `Shifted product "${prod.name}" type to ${nextType.toUpperCase()}`, productId);
   };
 
   const adminReorderProduct = async (productId: string, newOrderIndex: number) => {
@@ -2915,7 +2946,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminAddAdmin,
     adminRemoveAdmin,
     adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
-    adminToggleProductVisibility, adminReorderProduct,
+    adminToggleProductVisibility, adminToggleProductType, adminReorderProduct,
     categoryConfigs, adminUpdateCategoryConfigs, adminToggleCategoryVisibility, adminReorderCategories,
     allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     allUsers, adminUpdateUserRole,

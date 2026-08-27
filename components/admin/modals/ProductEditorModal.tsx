@@ -466,11 +466,11 @@ export function ProductEditorModal({
                     }}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                       isSpecial
-                        ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-md shadow-amber-600/30'
-                        : 'bg-zinc-800 hover:bg-zinc-700 text-slate-300'
+                        ? 'bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/30'
+                        : 'bg-amber-600 hover:bg-amber-500 text-white shadow-md shadow-amber-600/30'
                     }`}
                   >
-                    {isSpecial ? '⚡ Special Mode Enabled' : 'Enable Special Mode'}
+                    {isSpecial ? '🔄 Shift to General Product' : '✨ Shift to Special Product'}
                   </button>
                 </div>
               </div>
