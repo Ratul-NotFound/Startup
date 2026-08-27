@@ -139,7 +139,10 @@ export const CheckoutModal: React.FC = () => {
       setStep('auth_required');
       return;
     }
-    if (!senderNumber.trim() || !transactionId.trim()) return;
+    if (!senderNumber.trim() || !transactionId.trim()) {
+      setSubmitError('Please enter both your Sender Phone Number and Transaction ID (TrxID).');
+      return;
+    }
 
     setIsProcessing(true);
     setStep('processing');
@@ -438,6 +441,9 @@ export const CheckoutModal: React.FC = () => {
                   <input
                     type="text"
                     required
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
                     placeholder="e.g. 017XXXXXXXX"
                     value={senderNumber}
                     onChange={e => setSenderNumber(e.target.value)}
@@ -450,6 +456,9 @@ export const CheckoutModal: React.FC = () => {
                   <input
                     type="text"
                     required
+                    autoComplete="off"
+                    data-lpignore="true"
+                    data-form-type="other"
                     placeholder="e.g. 9L87X5ZP0A"
                     value={transactionId}
                     onChange={e => setTransactionId(e.target.value.toUpperCase())}

@@ -1300,11 +1300,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (paymentProof?.transactionId) {
       const cleanTrx = paymentProof.transactionId.trim().toUpperCase();
-      const isDuplicate = allOrders.some(
-        o => o.transactionId && o.transactionId.trim().toUpperCase() === cleanTrx && o.paymentStatus !== 'failed'
-      );
-      if (isDuplicate) {
+      
+      // Check local state first (user orders & admin allOrders)
+      const localDuplicate =
+        orders.some(o => o.transactionId && o.transactionId.trim().toUpperCase() === cleanTrx && o.paymentStatus !== 'failed') ||
+        allOrders.some(o => o.transactionId && o.transactionId.trim().toUpperCase() === cleanTrx && o.paymentStatus !== 'failed');
+
+      if (localDuplicate) {
         throw new Error(`Transaction ID "${cleanTrx}" has already been submitted for a previous order.`);
+      }
+
+      // Query Firestore database to ensure system-wide duplicate TrxID detection
+      try {
+        const trxQuery = query(collection(db, 'orders'), where('transactionId', '==', cleanTrx));
+        const trxSnap = await getDocs(trxQuery);
+        const hasExisting = trxSnap.docs.some(d => (d.data() as Order).paymentStatus !== 'failed');
+        if (hasExisting) {
+          throw new Error(`Transaction ID "${cleanTrx}" has already been submitted for a previous order.`);
+        }
+      } catch (err: any) {
+        if (err?.message?.includes('already been submitted')) {
+          throw err;
+        }
+        console.warn('[Firestore] Transaction ID verification check note:', err);
       }
     }
 
@@ -1379,7 +1397,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       newOrder.generatedSubscriptionIds = generatedSubIds;
 
-
       // Update user stats in Firestore for instant payment
       try {
         const userRef = doc(db, 'users', user.id);
@@ -1390,7 +1407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       } catch { }
     }
 
-    // Write order to Firestore
+    // Write order to Firestore & propagate error if saving fails
     try {
       await setDoc(doc(db, 'orders', orderId), newOrder);
       if (appliedCoupon?.code) {
@@ -1399,8 +1416,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           usedCount: (appliedCoupon.usedCount || 0) + 1,
         }).catch(() => {});
       }
-    } catch (err) {
+
+      // Decrement product stock in Firestore
+      for (const item of cart) {
+        try {
+          const prodRef = doc(db, 'products', item.product.id);
+          const pSnap = await getDoc(prodRef);
+          if (pSnap.exists()) {
+            const currentStock = pSnap.data().stockCount ?? 100;
+            const newStock = Math.max(0, currentStock - item.quantity);
+            await updateDoc(prodRef, { stockCount: newStock });
+          }
+        } catch { }
+      }
+    } catch (err: any) {
       console.error('[Firestore] Order creation error:', err);
+      throw new Error(`Failed to place order: ${err?.message || 'Database write failed. Please check your connection and try again.'}`);
     }
 
     // Optimistically update local orders list
