@@ -6,9 +6,20 @@ import { Tag, Sparkles, Copy, Check, ArrowRight, Clock, ChevronLeft, ChevronRigh
 import Link from 'next/link';
 
 export function SpecialOffersSection() {
-  const { coupons, specialOffersSettings } = useApp();
+  const {
+    coupons,
+    specialOffersSettings,
+    products,
+    setSelectedProduct,
+    completedTasksMap,
+    markTaskCompleted,
+    isTaskCompleted,
+    reviews,
+    user,
+    setIsWriteReviewOpen,
+    setTargetReviewProduct,
+  } = useApp();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [completedTasksMap, setCompletedTasksMap] = useState<Record<string, Record<string, boolean>>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // If admin has hidden the entire Special Offers & Deals section from storefront, do not render
@@ -28,17 +39,31 @@ export function SpecialOffersSection() {
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
-  const handleCompleteTask = (code: string, taskId: string, url: string) => {
+  const handleCompleteTask = (code: string, taskId: string, url: string, type?: string, linkedProdId?: string) => {
+    if (type === 'write_review' || taskId.includes('rev')) {
+      const targetProd = products.find(p => p.id === linkedProdId) || products[0];
+      if (targetProd) {
+        setTargetReviewProduct(targetProd);
+        setIsWriteReviewOpen(true);
+        return;
+      }
+    }
+
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
-    setCompletedTasksMap((prev) => ({
-      ...prev,
-      [code]: {
-        ...(prev[code] || {}),
-        [taskId]: true,
-      },
-    }));
+    markTaskCompleted(code, taskId);
+    if (linkedProdId) {
+      markTaskCompleted(linkedProdId, taskId);
+    }
+  };
+
+  const handleOpenLinkedProduct = (prodId?: string) => {
+    if (!prodId) return;
+    const target = products.find(p => p.id === prodId);
+    if (target) {
+      setSelectedProduct(target);
+    }
   };
 
   const scroll = (direction: 'left' | 'right') => {
@@ -198,7 +223,13 @@ export function SpecialOffersSection() {
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1">
                           <Sparkles className="h-3 w-3 text-amber-400" />
-                          <span>Tasks ({Object.keys(offerCompletedTasks).length}/{tasks.length})</span>
+                          <span>Tasks ({tasks.filter(t => {
+                            if (t.type === 'write_review' || t.label.toLowerCase().includes('review')) {
+                              const hasReviewed = reviews.some(r => r.productId === offer.linkedProductId || (user?.email && r.userEmail === user.email));
+                              return hasReviewed || isTaskCompleted(offer.code, t.id);
+                            }
+                            return isTaskCompleted(offer.code, t.id);
+                          }).length}/{tasks.length})</span>
                         </span>
                         {isUnlocked && (
                           <span className="text-[9px] text-emerald-400 font-bold">✓ Unlocked</span>
@@ -207,7 +238,13 @@ export function SpecialOffersSection() {
 
                       <div className="space-y-1">
                         {tasks.map((task) => {
-                          const isDone = Boolean(offerCompletedTasks[task.id]);
+                          const isReview = task.type === 'write_review' || task.label.toLowerCase().includes('review');
+                          const hasUserReviewed = isReview && (
+                            reviews.some(r => r.productId === offer.linkedProductId || (user?.email && r.userEmail === user.email)) ||
+                            isTaskCompleted(offer.code, task.id)
+                          );
+                          const isDone = isReview ? hasUserReviewed : isTaskCompleted(offer.code, task.id);
+
                           return (
                             <div
                               key={task.id}
@@ -218,20 +255,34 @@ export function SpecialOffersSection() {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => handleCompleteTask(offer.code, task.id, task.url)}
+                                onClick={() => handleCompleteTask(offer.code, task.id, task.url, task.type, offer.linkedProductId)}
                                 className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all shrink-0 cursor-pointer ${
                                   isDone
                                     ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/30'
+                                    : isReview
+                                    ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-sm'
                                     : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40'
                                 }`}
                               >
-                                {isDone ? '✓ Done' : 'Visit ↗'}
+                                {isDone ? '✓ Done' : isReview ? '⭐ Review' : 'Visit ↗'}
                               </button>
                             </div>
                           );
                         })}
                       </div>
                     </div>
+                  )}
+
+                  {/* If linked to a product, show View Special Product Button */}
+                  {offer.linkedProductId && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenLinkedProduct(offer.linkedProductId)}
+                      className="w-full py-1.5 px-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                    >
+                      <span>View Special Product Deal</span>
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
                   )}
 
                   {/* Coupon Code Copy & Claim Action Box */}

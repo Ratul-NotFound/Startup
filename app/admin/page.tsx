@@ -126,7 +126,7 @@ export default function AdminPortalPage() {
 
   // Products state
   const [editingProduct, setEditingProduct] = useState<(Product & { isNew?: boolean }) | null>(null);
-  const [productEditorTab, setProductEditorTab] = useState<'basic' | 'pricing' | 'delivery' | 'features' | 'specs' | 'docs'>('basic');
+  const [productEditorTab, setProductEditorTab] = useState<'basic' | 'pricing' | 'special' | 'delivery' | 'features' | 'specs' | 'docs'>('basic');
   const [isCompressingProductLogo, setIsCompressingProductLogo] = useState(false);
   const [isCompressingProductBanner, setIsCompressingProductBanner] = useState(false);
   const [productSearch, setProductSearch] = useState('');

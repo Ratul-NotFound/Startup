@@ -239,6 +239,12 @@ interface AppContextType {
   specialOffersSettings: SpecialOffersSettings;
   updateSpecialOffersSettings: (updates: Partial<SpecialOffersSettings>) => Promise<void>;
 
+  // Interactive Tasks & Special Product Missions
+  completedTasksMap: Record<string, Record<string, boolean>>;
+  markTaskCompleted: (entityId: string, taskId: string) => void;
+  isTaskCompleted: (entityId: string, taskId: string) => boolean;
+  isEntityFullyUnlocked: (entityId: string, tasks?: Array<{ id: string; isRequired?: boolean }>) => boolean;
+
   // Admin: Support tickets
   allTickets: SupportTicket[];
   adminReplyToTicket: (ticketId: string, message: string, imageUrl?: string) => Promise<void>;
@@ -529,6 +535,94 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       await logAdminActivity('DEALS_REORDERED', 'coupons', 'Reordered deals in Exclusive Deals & Offers carousel');
     } catch (err) {
       console.warn('[AppContext] Error saving coupon reordering to Firestore:', err);
+    }
+  };
+
+  // ─── Interactive Social & Review Task Verification System ───────────
+  const [completedTasksMap, setCompletedTasksMap] = useState<Record<string, Record<string, boolean>>>({});
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('keyoon_completed_tasks');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') setCompletedTasksMap(parsed);
+        }
+      } catch { }
+    }
+  }, []);
+
+  const markTaskCompleted = useCallback((entityId: string, taskId: string) => {
+    setCompletedTasksMap(prev => {
+      const updated = {
+        ...prev,
+        [entityId]: {
+          ...(prev[entityId] || {}),
+          [taskId]: true,
+        },
+      };
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('keyoon_completed_tasks', JSON.stringify(updated));
+        } catch { }
+      }
+      return updated;
+    });
+  }, []);
+
+  const isTaskCompleted = useCallback((entityId: string, taskId: string): boolean => {
+    return !!completedTasksMap[entityId]?.[taskId];
+  }, [completedTasksMap]);
+
+  const isEntityFullyUnlocked = useCallback((entityId: string, tasks?: Array<{ id: string; isRequired?: boolean }>): boolean => {
+    if (!tasks || tasks.length === 0) return true;
+    const entityMap = completedTasksMap[entityId] || {};
+    return tasks.every(t => t.isRequired === false || entityMap[t.id]);
+  }, [completedTasksMap]);
+
+  // Sync a special product to the storefront deals & coupons hub if configured
+  const syncSpecialProductToDeals = async (prod: Product) => {
+    if (prod.productType === 'special' && prod.specialConfig?.isSpecialOfferSynced) {
+      const dealCode = (prod.specialConfig.unlockedCouponCode || `DEAL_${prod.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`).toUpperCase();
+      const dealDocRef = doc(db, 'coupons', dealCode);
+      const requiredTasks = (prod.specialConfig.tasks || []).map(t => ({
+        id: t.id,
+        label: t.title,
+        url: t.url || '',
+        isRequired: t.isRequired ?? true,
+        type: t.type,
+      }));
+
+      const dealData: Partial<Coupon> = {
+        code: dealCode,
+        discountPercent: prod.specialConfig.discountPercent || prod.pricingTiers[0]?.discountPercentage || 20,
+        description: prod.specialConfig.campaignDescription || `Exclusive mission deal for ${prod.name}`,
+        isSpecialOffer: true,
+        offerTag: prod.specialConfig.campaignBadge || '⚡ Special Product Deal',
+        offerTitle: prod.specialConfig.campaignTitle || `${prod.name} Campaign Offer`,
+        offerImage: prod.logo,
+        type: 'special_deal',
+        requiredTasks,
+        applicableProductIds: [prod.id],
+        linkedProductId: prod.id,
+        isHidden: prod.isHidden ?? false,
+      };
+
+      try {
+        const existingSnap = await getDoc(dealDocRef);
+        if (!existingSnap.exists()) {
+          await setDoc(dealDocRef, {
+            ...dealData,
+            maxUses: 1000,
+            usedCount: 0,
+          });
+        } else {
+          await updateDoc(dealDocRef, dealData as Record<string, unknown>);
+        }
+      } catch (err) {
+        console.warn('[AppContext] Error syncing special product to deals:', err);
+      }
     }
   };
 
@@ -1835,6 +1929,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newProduct: Product = { ...product, id };
     try {
       await setDoc(doc(db, 'products', id), newProduct);
+      if (newProduct.productType === 'special') {
+        await syncSpecialProductToDeals(newProduct);
+      }
     } catch (err) {
       console.error('adminCreateProduct error:', err);
     }
@@ -1844,6 +1941,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminUpdateProduct = async (id: string, updates: Partial<Product>) => {
     try {
       await updateDoc(doc(db, 'products', id), updates as Record<string, unknown>);
+      const fullProd = products.find(p => p.id === id);
+      if (fullProd) {
+        const merged = { ...fullProd, ...updates } as Product;
+        if (merged.productType === 'special') {
+          await syncSpecialProductToDeals(merged);
+        }
+      }
     } catch (err) {
       console.error('adminUpdateProduct error:', err);
     }
@@ -2574,6 +2678,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Optimistic local update
     setReviews(prev => [newRev, ...prev]);
 
+    // Automatically verify any write_review tasks for this product in real time
+    if (reviewData.productId) {
+      const targetProd = products.find(p => p.id === reviewData.productId);
+      if (targetProd?.specialConfig?.tasks) {
+        targetProd.specialConfig.tasks.forEach(t => {
+          if (t.type === 'write_review') {
+            markTaskCompleted(targetProd.id, t.id);
+          }
+        });
+      }
+      // Also verify on coupons if tied to a coupon deal
+      coupons.forEach(c => {
+        if (c.linkedProductId === reviewData.productId && c.requiredTasks) {
+          c.requiredTasks.forEach(t => {
+            if (t.type === 'write_review' || t.label.toLowerCase().includes('review')) {
+              markTaskCompleted(c.code, t.id);
+            }
+          });
+        }
+      });
+    }
+
     try {
       await setDoc(doc(db, 'reviews', revId), newRev);
     } catch (err) {
@@ -2811,6 +2937,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminCreateReview, adminUpdateReview, adminResetReviews,
     isWriteReviewOpen, setIsWriteReviewOpen,
     targetReviewProduct, setTargetReviewProduct,
+    completedTasksMap, markTaskCompleted, isTaskCompleted, isEntityFullyUnlocked, syncSpecialProductToDeals,
     activeSearchQuery, setActiveSearchQuery, activeCategoryFilter, setActiveCategoryFilter,
   }), [
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
@@ -2820,6 +2947,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     financialMetrics, emailNotifications, isSyncing,
     currencySettings, detectedCurrency, bdtRate,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
+    completedTasksMap,
     activeSearchQuery, activeCategoryFilter,
     cartSubtotal, cartDiscount, cartTotal,
     // stable function refs (useCallback) don't need to be in deps

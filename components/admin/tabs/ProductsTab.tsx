@@ -58,6 +58,7 @@ export function ProductsTab({
   } = useApp();
 
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<SubscriptionCategory | 'all'>('all');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'general' | 'special'>('all');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [movingProductId, setMovingProductId] = useState<string | null>(null);
 
@@ -73,6 +74,12 @@ export function ProductsTab({
       list = list.filter(p => p.category === selectedCategoryFilter);
     }
 
+    if (selectedTypeFilter === 'general') {
+      list = list.filter(p => p.productType !== 'special');
+    } else if (selectedTypeFilter === 'special') {
+      list = list.filter(p => p.productType === 'special');
+    }
+
     if (productSearch.trim()) {
       const q = productSearch.toLowerCase();
       list = list.filter(p =>
@@ -85,7 +92,7 @@ export function ProductsTab({
     // Sort by orderIndex ascending
     list.sort((a, b) => (a.orderIndex ?? 999) - (b.orderIndex ?? 999));
     return list;
-  }, [products, selectedCategoryFilter, productSearch]);
+  }, [products, selectedCategoryFilter, selectedTypeFilter, productSearch]);
 
   // Handle move category Up / Down
   const handleMoveCategory = async (catId: SubscriptionCategory, direction: 'up' | 'down') => {
@@ -361,6 +368,48 @@ export function ProductsTab({
         })}
       </div>
 
+      {/* 3.5. Product Type Quick Filter Bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs font-bold text-slate-400">Filter By Type:</span>
+        <button
+          type="button"
+          onClick={() => setSelectedTypeFilter('all')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            selectedTypeFilter === 'all'
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'bg-zinc-900 text-slate-400 hover:text-white border border-white/5'
+          }`}
+        >
+          All Types ({products.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedTypeFilter('general')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            selectedTypeFilter === 'general'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'bg-zinc-900 text-emerald-400 hover:bg-emerald-950/40 border border-white/5'
+          }`}
+        >
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          General Products ({products.filter(p => p.productType !== 'special').length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedTypeFilter('special')}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            selectedTypeFilter === 'special'
+              ? 'bg-amber-600 text-white shadow-sm shadow-amber-600/30'
+              : 'bg-zinc-900 text-amber-300 hover:bg-amber-950/40 border border-amber-500/20'
+          }`}
+        >
+          <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+          Special Campaign Deals ({products.filter(p => p.productType === 'special').length})
+        </button>
+      </div>
+
       {/* 4. Products Table with In-Category Sequence & Instant Visibility Toggle */}
       <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden">
         <div className="overflow-x-auto">
@@ -369,6 +418,7 @@ export function ProductsTab({
               <tr>
                 <th className="p-4 w-20">Sequence</th>
                 <th className="p-4">Product</th>
+                <th className="p-4">Type &amp; Tasks</th>
                 <th className="p-4">Category</th>
                 <th className="p-4">Storefront Status</th>
                 <th className="p-4">Pricing Tiers (৳ BDT)</th>
@@ -449,6 +499,28 @@ export function ProductsTab({
                             <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{p.tagline}</p>
                           </div>
                         </div>
+                      </td>
+
+                      {/* Product Type & Tasks Column */}
+                      <td className="p-4">
+                        {p.productType === 'special' ? (
+                          <div className="space-y-1">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold text-[11px]">
+                              <Sparkles className="h-3 w-3 text-amber-400" />
+                              ⚡ Special ({p.specialConfig?.tasks?.length || 0} Tasks)
+                            </span>
+                            {p.specialConfig?.campaignBadge && (
+                              <p className="text-[10px] text-slate-400 font-mono truncate max-w-[130px]">
+                                {p.specialConfig.campaignBadge}
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold text-[10px]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                            General
+                          </span>
+                        )}
                       </td>
 
                       {/* Category Badge */}

@@ -24,6 +24,11 @@ export const ProductModal: React.FC = () => {
     setIsWriteReviewOpen,
     setTargetReviewProduct,
     formatPrice,
+    completedTasksMap,
+    markTaskCompleted,
+    isTaskCompleted,
+    isEntityFullyUnlocked,
+    user,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<ModalTab>('overview');
@@ -34,12 +39,15 @@ export const ProductModal: React.FC = () => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
+  const [copiedCoupon, setCopiedCoupon] = useState(false);
+
   useEffect(() => {
     if (selectedProduct) {
       const popIdx = selectedProduct.pricingTiers.findIndex(t => t.isPopular);
       setSelectedPlanIndex(popIdx !== -1 ? popIdx : 0);
       setCustomEmail('');
       setAdded(false);
+      setCopiedCoupon(false);
       setActiveImageIndex(0);
       setActiveTab('overview');
       setExpandedFaq(null);
@@ -317,6 +325,184 @@ export const ProductModal: React.FC = () => {
                 <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal">
                   {selectedProduct.tagline || selectedProduct.description}
                 </p>
+
+                {/* ═════════ SPECIAL PRODUCT TASKS & MISSION REWARDS DRAWER ═════════ */}
+                {selectedProduct.productType === 'special' && selectedProduct.specialConfig && (
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 via-zinc-900 to-zinc-950 border border-amber-500/30 shadow-lg shadow-amber-950/20 space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="h-3 w-3 text-amber-400 animate-pulse" />
+                          {selectedProduct.specialConfig.campaignBadge || '⚡ SPECIAL MISSION DEAL'}
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-300">
+                          {selectedProduct.specialConfig.campaignTitle || 'Complete Tasks to Unlock Reward'}
+                        </span>
+                      </div>
+
+                      {/* Tasks Completion Progress Badge */}
+                      {(() => {
+                        const tasks = selectedProduct.specialConfig.tasks || [];
+                        const completedCount = tasks.filter(t => {
+                          if (t.type === 'write_review') {
+                            const hasReviewed = reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email));
+                            return hasReviewed || isTaskCompleted(selectedProduct.id, t.id);
+                          }
+                          return isTaskCompleted(selectedProduct.id, t.id);
+                        }).length;
+                        const isUnlocked = tasks.length > 0 && completedCount === tasks.length;
+
+                        return (
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            isUnlocked
+                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              : 'bg-zinc-800 text-amber-300 border border-white/10'
+                          }`}>
+                            {isUnlocked ? '🎉 ALL TASKS COMPLETED' : `${completedCount} of ${tasks.length} Tasks Done`}
+                          </span>
+                        );
+                      })()}
+                    </div>
+
+                    {selectedProduct.specialConfig.campaignDescription && (
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        {selectedProduct.specialConfig.campaignDescription}
+                      </p>
+                    )}
+
+                    {/* Interactive Tasks Checklist */}
+                    <div className="space-y-2">
+                      {(selectedProduct.specialConfig.tasks || []).map((task, tIdx) => {
+                        // Check review task completion
+                        const isReviewType = task.type === 'write_review';
+                        const hasUserReviewed = isReviewType && (
+                          reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email)) ||
+                          isTaskCompleted(selectedProduct.id, task.id)
+                        );
+                        const isDone = isReviewType ? hasUserReviewed : isTaskCompleted(selectedProduct.id, task.id);
+
+                        return (
+                          <div
+                            key={task.id || tIdx}
+                            className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                              isDone
+                                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
+                                : 'bg-zinc-900/90 border-white/10 text-white hover:border-amber-500/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
+                                isDone
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  : 'bg-zinc-800 text-amber-300 border border-white/10'
+                              }`}>
+                                {isDone ? (
+                                  <Check className="h-4 w-4 text-emerald-400" />
+                                ) : (
+                                  <span>#{tIdx + 1}</span>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-xs font-bold truncate flex items-center gap-1.5">
+                                  <span>{task.title}</span>
+                                  {task.isRequired && (
+                                    <span className="text-[9px] text-amber-400 font-normal">(Required)</span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-slate-400 block truncate">
+                                  {task.type === 'join_telegram' && '📱 Join Official Telegram Channel'}
+                                  {task.type === 'follow_facebook' && '👍 Follow Official Facebook Page'}
+                                  {task.type === 'write_review' && '⭐ Write a verified review for this product'}
+                                  {task.type === 'youtube_sub' && '🎬 Subscribe to YouTube Channel'}
+                                  {task.type === 'discord_join' && '💬 Join Discord Community'}
+                                  {task.type === 'custom_action' && '🔗 Complete promotional mission'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0">
+                              {isDone ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                                  <Check className="h-3 w-3" /> Verified
+                                </span>
+                              ) : isReviewType ? (
+                                <button
+                                  type="button"
+                                  onClick={handleOpenWriteReview}
+                                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Star className="h-3 w-3 fill-zinc-950" />
+                                  Write Review
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (task.url) {
+                                      window.open(task.url, '_blank', 'noopener,noreferrer');
+                                    }
+                                    markTaskCompleted(selectedProduct.id, task.id);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <span>Complete</span>
+                                  <ExternalLink className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Unlocked Reward Banner */}
+                    {(() => {
+                      const tasks = selectedProduct.specialConfig.tasks || [];
+                      const completedCount = tasks.filter(t => {
+                        if (t.type === 'write_review') {
+                          const hasReviewed = reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email));
+                          return hasReviewed || isTaskCompleted(selectedProduct.id, t.id);
+                        }
+                        return isTaskCompleted(selectedProduct.id, t.id);
+                      }).length;
+                      const isUnlocked = tasks.length > 0 && completedCount === tasks.length;
+
+                      if (isUnlocked) {
+                        return (
+                          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between flex-wrap gap-2">
+                            <div>
+                              <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
+                                <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+                                Exclusive Reward Unlocked!
+                              </span>
+                              <p className="text-[11px] text-emerald-400/80">
+                                You have fulfilled all task requirements for this special product deal.
+                              </p>
+                            </div>
+
+                            {selectedProduct.specialConfig.unlockedCouponCode && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (selectedProduct.specialConfig?.unlockedCouponCode) {
+                                    navigator.clipboard.writeText(selectedProduct.specialConfig.unlockedCouponCode);
+                                    setCopiedCoupon(true);
+                                    setTimeout(() => setCopiedCoupon(false), 2500);
+                                  }
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                              >
+                                {copiedCoupon ? <Check className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
+                                <span>{copiedCoupon ? 'Copied Code!' : `Code: ${selectedProduct.specialConfig.unlockedCouponCode}`}</span>
+                              </button>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                )}
 
                 {/* Key Features Pill Matrix */}
                 <div className="space-y-2">

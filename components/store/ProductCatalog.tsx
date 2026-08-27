@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp, DEFAULT_CATEGORY_CONFIGS } from '@/context/AppContext';
-import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingBag, Search, TrendingUp, Percent, ArrowUpDown, X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { SubscriptionCategory } from '@/types';
 import { Interactive3DCard } from '@/components/ui/Interactive3DCard';
 import { ProductCardImageCarousel } from './ProductCardImageCarousel';
@@ -286,13 +286,28 @@ export const ProductCatalog: React.FC = () => {
                             style={{ transform: 'translateZ(44px)' }}
                             className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center justify-between z-10 drop-shadow-md"
                           >
-                            <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-zinc-300 border border-white/10 shadow-lg">
-                              {product.category}
-                            </span>
-                            <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-900/90 backdrop-blur-md text-cyan-400 border border-cyan-500/40 flex items-center gap-1 shadow-lg">
-                              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                              <span>Instant Delivery</span>
-                            </span>
+                            {product.productType === 'special' ? (
+                              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 flex items-center gap-1 shadow-lg shadow-amber-500/30">
+                                <Sparkles className="h-3 w-3 fill-zinc-950 animate-pulse" />
+                                <span>{product.specialConfig?.campaignBadge || '⚡ Special Deal'}</span>
+                              </span>
+                            ) : (
+                              <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-zinc-300 border border-white/10 shadow-lg">
+                                {product.category}
+                              </span>
+                            )}
+
+                            {product.productType === 'special' && product.specialConfig?.tasks?.length ? (
+                              <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-950/90 backdrop-blur-md text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-lg">
+                                <Sparkles className="h-2.5 w-2.5 text-amber-400" />
+                                <span>{product.specialConfig.tasks.length} Tasks</span>
+                              </span>
+                            ) : (
+                              <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-900/90 backdrop-blur-md text-cyan-400 border border-cyan-500/40 flex items-center gap-1 shadow-lg">
+                                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                                <span>Instant Delivery</span>
+                              </span>
+                            )}
                           </div>
 
                           {/* Product Title with 3D Pop */}

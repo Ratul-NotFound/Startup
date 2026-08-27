@@ -12,8 +12,8 @@ import {
 interface ProductEditorModalProps {
   editingProduct: (Product & { isNew?: boolean }) | null;
   setEditingProduct: React.Dispatch<React.SetStateAction<(Product & { isNew?: boolean }) | null>>;
-  productEditorTab: 'basic' | 'pricing' | 'delivery' | 'features' | 'specs' | 'docs';
-  setProductEditorTab: (tab: 'basic' | 'pricing' | 'delivery' | 'features' | 'specs' | 'docs') => void;
+  productEditorTab: 'basic' | 'pricing' | 'special' | 'delivery' | 'features' | 'specs' | 'docs';
+  setProductEditorTab: (tab: 'basic' | 'pricing' | 'special' | 'delivery' | 'features' | 'specs' | 'docs') => void;
   isCompressingProductLogo: boolean;
   setIsCompressingProductLogo: (val: boolean) => void;
   isCompressingProductBanner: boolean;
@@ -40,19 +40,34 @@ export function ProductEditorModal({
 
   if (!editingProduct) return null;
 
+  const isSpecial = editingProduct.productType === 'special';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
       <div className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-3xl bg-zinc-900 border border-white/15 my-4 shadow-[0_25px_80px_rgba(0,0,0,0.9)] overflow-hidden">
         {/* Modal Top Header */}
         <div className="shrink-0 flex items-center justify-between p-5 border-b border-white/[0.08] bg-zinc-950/80">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-              <Package className="h-5 w-5" />
+            <div className={`h-10 w-10 rounded-2xl border flex items-center justify-center ${
+              isSpecial 
+                ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' 
+                : 'bg-indigo-500/20 border-indigo-500/30 text-indigo-400'
+            }`}>
+              {isSpecial ? <Sparkles className="h-5 w-5" /> : <Package className="h-5 w-5" />}
             </div>
             <div>
-              <h3 className="text-base font-black text-white">
-                {editingProduct.isNew ? 'Create New Product' : `Edit Product: ${editingProduct.name}`}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-white">
+                  {editingProduct.isNew ? 'Create New Product' : `Edit Product: ${editingProduct.name}`}
+                </h3>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                  isSpecial
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                }`}>
+                  {isSpecial ? '⚡ Special Deal' : '🟢 General'}
+                </span>
+              </div>
               <p className="text-[11px] text-slate-400">Every single line and element syncs dynamically to storefront popups.</p>
             </div>
           </div>
@@ -67,27 +82,40 @@ export function ProductEditorModal({
         {/* Section Navigation Tabs */}
         <div className="shrink-0 flex items-center gap-1.5 p-2 px-4 sm:px-6 bg-zinc-950 border-b border-white/[0.06] overflow-x-auto scrollbar-none">
           {[
-            { id: 'basic', label: '1. General & Visuals', icon: <ImageIcon className="h-3.5 w-3.5" /> },
-            { id: 'pricing', label: '2. Pricing Durations', icon: <DollarSign className="h-3.5 w-3.5" /> },
-            { id: 'delivery', label: '3. Delivery & Stock', icon: <Zap className="h-3.5 w-3.5" /> },
-            { id: 'features', label: '4. Features Matrix', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
-            { id: 'specs', label: '5. Technical Specs', icon: <Shield className="h-3.5 w-3.5" /> },
-            { id: 'docs', label: '6. Docs & Guide', icon: <BookOpen className="h-3.5 w-3.5" /> },
-          ].map(sec => (
-            <button
-              key={sec.id}
-              type="button"
-              onClick={() => setProductEditorTab(sec.id as any)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                productEditorTab === sec.id
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-zinc-900'
-              }`}
-            >
-              {sec.icon}
-              <span>{sec.label}</span>
-            </button>
-          ))}
+            { id: 'basic', label: '1. General & Type', icon: <ImageIcon className="h-3.5 w-3.5" /> },
+            { 
+              id: 'special', 
+              label: isSpecial ? '⚡ 2. Special Tasks & Deals' : '⚡ 2. Special Tasks', 
+              icon: <Sparkles className={`h-3.5 w-3.5 ${isSpecial ? 'text-amber-400 animate-pulse' : ''}`} />,
+              isSpecialTab: true,
+            },
+            { id: 'pricing', label: '3. Pricing Durations', icon: <DollarSign className="h-3.5 w-3.5" /> },
+            { id: 'delivery', label: '4. Delivery & Stock', icon: <Zap className="h-3.5 w-3.5" /> },
+            { id: 'features', label: '5. Features Matrix', icon: <CheckCircle2 className="h-3.5 w-3.5" /> },
+            { id: 'specs', label: '6. Technical Specs', icon: <Shield className="h-3.5 w-3.5" /> },
+            { id: 'docs', label: '7. Docs & Guide', icon: <BookOpen className="h-3.5 w-3.5" /> },
+          ].map(sec => {
+            const isActive = productEditorTab === sec.id;
+            return (
+              <button
+                key={sec.id}
+                type="button"
+                onClick={() => setProductEditorTab(sec.id as any)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  isActive
+                    ? sec.isSpecialTab && isSpecial
+                      ? 'bg-gradient-to-r from-amber-600 to-amber-500 text-white shadow-md shadow-amber-500/30'
+                      : 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                    : sec.isSpecialTab && isSpecial
+                      ? 'text-amber-300 bg-amber-950/40 border border-amber-500/30 hover:bg-amber-900/50'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-zinc-900'
+                }`}
+              >
+                {sec.icon}
+                <span>{sec.label}</span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Hidden File Inputs */}
@@ -100,9 +128,9 @@ export function ProductEditorModal({
             if (!file) return;
             setIsCompressingProductLogo(true);
             try {
-              const compressed = await compressImageToDataUrl(file, 400, 400, 0.85);
+              const compressed = await compressImageToDataUrl(file, 256, 256, 0.85);
               setEditingProduct(prev => prev ? { ...prev, logo: compressed } : null);
-              showFeedback('success', 'Product logo compressed and attached.');
+              showFeedback('success', 'Logo image compressed and uploaded.');
             } catch {
               showFeedback('error', 'Failed to compress logo.');
             } finally {
@@ -144,6 +172,89 @@ export function ProductEditorModal({
           {/* SECTION 1: GENERAL & BRAND VISUALS */}
           {productEditorTab === 'basic' && (
             <div className="space-y-4">
+              {/* PRODUCT TYPE SELECTOR */}
+              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Package className="h-3.5 w-3.5 text-indigo-400" />
+                      Product Classification & Mode
+                    </h4>
+                    <p className="text-[11px] text-slate-400">Select whether this is a regular product or an interactive mission/campaign product.</p>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                    isSpecial
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  }`}>
+                    {isSpecial ? '⚡ Special Campaign' : '🟢 General Product'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct(prev => prev ? { ...prev, productType: 'general' } : null)}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      !isSpecial
+                        ? 'bg-emerald-950/40 border-emerald-500/50 shadow-lg shadow-emerald-900/20 ring-1 ring-emerald-500/30'
+                        : 'bg-zinc-900/60 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-white flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                        General Product
+                      </span>
+                      {!isSpecial && <CheckCircle2 className="h-4 w-4 text-emerald-400" />}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Standard subscription. Customers purchase directly at listed pricing without prerequisite task requirements.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingProduct(prev => {
+                        if (!prev) return null;
+                        const currentConfig = prev.specialConfig || {
+                          campaignTitle: `${prev.name} Special Campaign Deal`,
+                          campaignBadge: '⚡ Flash Mission Deal',
+                          campaignDescription: 'Complete quick community tasks below to unlock exclusive discounted pricing!',
+                          unlockedCouponCode: '',
+                          discountPercent: 20,
+                          isSpecialOfferSynced: true,
+                          tasks: [
+                            { id: 't_tg', type: 'join_telegram', title: 'Join Keyoon Telegram Channel', url: 'https://t.me/keyoon', isRequired: true },
+                            { id: 't_fb', type: 'follow_facebook', title: 'Follow Keyoon on Facebook', url: 'https://facebook.com/keyoon', isRequired: true },
+                            { id: 't_rev', type: 'write_review', title: 'Write a Verified Product Review', url: '', isRequired: true },
+                          ],
+                        };
+                        return { ...prev, productType: 'special', specialConfig: currentConfig };
+                      });
+                      setProductEditorTab('special');
+                    }}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
+                      isSpecial
+                        ? 'bg-amber-950/40 border-amber-500/50 shadow-lg shadow-amber-900/20 ring-1 ring-amber-500/30'
+                        : 'bg-zinc-900/60 border-white/5 hover:border-white/20'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+                        Special Product (Campaign Deal)
+                      </span>
+                      {isSpecial && <CheckCircle2 className="h-4 w-4 text-amber-400" />}
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-relaxed">
+                      Requires user to perform tasks (Telegram, Facebook, Write Review) to unlock exclusive offers & syncs to Deals hub.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-300">Product Name</label>
@@ -219,94 +330,85 @@ export function ProductEditorModal({
                     rows={3}
                     value={editingProduct.description}
                     onChange={e => setEditingProduct(prev => prev ? { ...prev, description: e.target.value } : null)}
-                    placeholder="Provide detailed description of what the user receives..."
+                    placeholder="Provide full details about this subscription..."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white resize-none leading-relaxed"
                   />
                 </div>
               </div>
 
-              {/* Logo Asset Box */}
-              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/[0.08] space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                    <ImageIcon className="h-4 w-4 text-cyan-400" />
-                    Product Logo Icon
-                  </span>
-                  <span className="text-[10px] text-emerald-400 font-semibold">Auto-compressed for instant loading</span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center gap-4">
-                  <div className="h-16 w-16 rounded-2xl bg-zinc-900 border border-white/20 overflow-hidden shrink-0 shadow-md p-0.5">
-                    <img
-                      src={editingProduct.logo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&auto=format&fit=crop&q=80'}
-                      alt="Logo preview"
-                      className="h-full w-full object-cover rounded-xl"
-                    />
-                  </div>
-
-                  <div className="flex-1 w-full space-y-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => productLogoInputRef.current?.click()}
-                        disabled={isCompressingProductLogo}
-                        className="px-4 py-2 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
-                      >
-                        {isCompressingProductLogo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                        <span>Upload Logo from Device</span>
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      value={editingProduct.logo}
-                      onChange={e => setEditingProduct(prev => prev ? { ...prev, logo: e.target.value } : null)}
-                      placeholder="Or paste direct logo URL..."
-                      className="w-full px-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono text-[11px]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Gallery & Cover Banners */}
-              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/[0.08] space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-amber-400" />
-                    Cover Banner &amp; Gallery Images
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => productBannerInputRef.current?.click()}
-                    disabled={isCompressingProductBanner}
-                    className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-white font-bold text-[11px] flex items-center gap-1.5 cursor-pointer"
-                  >
-                    {isCompressingProductBanner ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                    <span>Upload Banner Image</span>
-                  </button>
-                </div>
-
-                {editingProduct.images && editingProduct.images.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {editingProduct.images.map((imgUrl, imgIdx) => (
-                      <div key={imgIdx} className="relative group rounded-xl overflow-hidden border border-white/10 h-16 bg-zinc-900">
-                        <img src={imgUrl} alt="" className="h-full w-full object-cover" />
+              {/* Visual Media Row */}
+              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
+                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Product Visuals &amp; Media</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div className="space-y-2">
+                    <label className="text-slate-300 font-semibold block">Brand Logo</label>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                        {editingProduct.logo ? (
+                          <img src={editingProduct.logo} alt="Logo" className="h-full w-full object-contain p-1.5" />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-slate-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1">
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={() => productLogoInputRef.current?.click()}
+                          disabled={isCompressingProductLogo}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          {isCompressingProductLogo ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                          {isCompressingProductLogo ? 'Compressing...' : 'Upload Logo'}
+                        </button>
+                        <input
+                          type="text"
+                          value={editingProduct.logo}
+                          onChange={e => setEditingProduct(prev => prev ? { ...prev, logo: e.target.value } : null)}
+                          placeholder="Or paste image URL"
+                          className="w-full px-2.5 py-1 rounded-lg bg-zinc-900 border border-white/10 text-white text-[11px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-slate-300 font-semibold block">Banner Image</label>
+                    <div className="flex items-center gap-3">
+                      <div className="h-12 w-20 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                        {editingProduct.images?.[0] ? (
+                          <img src={editingProduct.images[0]} alt="Banner" className="h-full w-full object-cover" />
+                        ) : (
+                          <ImageIcon className="h-5 w-5 text-slate-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <button
+                          type="button"
+                          onClick={() => productBannerInputRef.current?.click()}
+                          disabled={isCompressingProductBanner}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          {isCompressingProductBanner ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                          {isCompressingProductBanner ? 'Compressing...' : 'Upload Banner'}
+                        </button>
+                        <input
+                          type="text"
+                          value={editingProduct.images?.[0] || ''}
+                          onChange={e => {
+                            const val = e.target.value;
                             setEditingProduct(prev => {
                               if (!prev) return null;
-                              return { ...prev, images: (prev.images || []).filter((_, idx) => idx !== imgIdx) };
+                              const rest = (prev.images || []).slice(1);
+                              return { ...prev, images: val ? [val, ...rest] : rest };
                             });
                           }}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                          title="Remove image"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                          placeholder="Or paste banner image URL"
+                          className="w-full px-2.5 py-1 rounded-lg bg-zinc-900 border border-white/10 text-white text-[11px]"
+                        />
                       </div>
-                    ))}
+                    </div>
                   </div>
-                )}
+                </div>
 
                 <div className="space-y-1">
                   <label className="text-[11px] text-slate-400 block font-semibold">Gallery Image / GIF URLs (1 per line)</label>
@@ -325,7 +427,408 @@ export function ProductEditorModal({
             </div>
           )}
 
-          {/* SECTION 2: PRICING DURATIONS BUILDER */}
+          {/* SECTION 2: SPECIAL DEAL & PREREQUISITE TASKS BUILDER */}
+          {productEditorTab === 'special' && (
+            <div className="space-y-5 text-xs">
+              {/* Special Mode Master Switch */}
+              <div className="p-4 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-9 w-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                      <Sparkles className="h-5 w-5 animate-pulse" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">Special Product Campaign &amp; Tasks Setup</h4>
+                      <p className="text-[11px] text-slate-400">Configure tasks (Telegram, Facebook, Review) required to unlock exclusive offers.</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingProduct(prev => {
+                        if (!prev) return null;
+                        const nextType = prev.productType === 'special' ? 'general' : 'special';
+                        const currentConfig = prev.specialConfig || {
+                          campaignTitle: `${prev.name} Special Campaign Deal`,
+                          campaignBadge: '⚡ Flash Mission Deal',
+                          campaignDescription: 'Complete quick community tasks below to unlock exclusive discounted pricing!',
+                          unlockedCouponCode: '',
+                          discountPercent: 20,
+                          isSpecialOfferSynced: true,
+                          tasks: [
+                            { id: 't_tg', type: 'join_telegram', title: 'Join Keyoon Telegram Channel', url: 'https://t.me/keyoon', isRequired: true },
+                            { id: 't_fb', type: 'follow_facebook', title: 'Follow Keyoon on Facebook', url: 'https://facebook.com/keyoon', isRequired: true },
+                            { id: 't_rev', type: 'write_review', title: 'Write a Verified Product Review', url: '', isRequired: true },
+                          ],
+                        };
+                        return { ...prev, productType: nextType, specialConfig: currentConfig };
+                      });
+                    }}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      isSpecial
+                        ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-md shadow-amber-600/30'
+                        : 'bg-zinc-800 hover:bg-zinc-700 text-slate-300'
+                    }`}
+                  >
+                    {isSpecial ? '⚡ Special Mode Enabled' : 'Enable Special Mode'}
+                  </button>
+                </div>
+              </div>
+
+              {isSpecial && (
+                <>
+                  {/* Campaign Configuration Fields */}
+                  <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                      <Zap className="h-3.5 w-3.5 text-amber-400" />
+                      1. Campaign &amp; Offer Details
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-300">Campaign Badge Title</label>
+                        <input
+                          type="text"
+                          value={editingProduct.specialConfig?.campaignBadge || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), campaignBadge: val }
+                              };
+                            });
+                          }}
+                          placeholder="e.g. ⚡ FLASH MISSION DEAL"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-amber-300 font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-300">Campaign Headline</label>
+                        <input
+                          type="text"
+                          value={editingProduct.specialConfig?.campaignTitle || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), campaignTitle: val }
+                              };
+                            });
+                          }}
+                          placeholder="e.g. Join Community to Unlock 25% Off"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-300">Unlockable Coupon Code (Optional)</label>
+                        <input
+                          type="text"
+                          value={editingProduct.specialConfig?.unlockedCouponCode || ''}
+                          onChange={e => {
+                            const val = e.target.value.toUpperCase();
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), unlockedCouponCode: val }
+                              };
+                            });
+                          }}
+                          placeholder="e.g. SPECIAL25 (auto-applied when tasks complete)"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-cyan-300 font-mono font-bold"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-300">Extra Reward Discount %</label>
+                        <input
+                          type="number"
+                          value={editingProduct.specialConfig?.discountPercent || 20}
+                          onChange={e => {
+                            const val = Number(e.target.value);
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), discountPercent: val }
+                              };
+                            });
+                          }}
+                          placeholder="20"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-bold"
+                        />
+                      </div>
+
+                      <div className="col-span-1 sm:col-span-2 space-y-1">
+                        <label className="font-bold text-slate-300">Campaign Instructions &amp; Description</label>
+                        <textarea
+                          rows={2}
+                          value={editingProduct.specialConfig?.campaignDescription || ''}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), campaignDescription: val }
+                              };
+                            });
+                          }}
+                          placeholder="Complete all required tasks below to unlock this exclusive special deal!"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white resize-none"
+                        />
+                      </div>
+
+                      {/* Sync to Deals Section Checkbox */}
+                      <div className="col-span-1 sm:col-span-2 pt-1">
+                        <label className="flex items-center gap-2.5 p-3 rounded-xl bg-zinc-900/80 border border-white/5 cursor-pointer hover:border-white/15 transition-all">
+                          <input
+                            type="checkbox"
+                            checked={editingProduct.specialConfig?.isSpecialOfferSynced ?? true}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setEditingProduct(prev => {
+                                if (!prev) return null;
+                                return {
+                                  ...prev,
+                                  specialConfig: { ...(prev.specialConfig || { tasks: [] }), isSpecialOfferSynced: checked }
+                                };
+                              });
+                            }}
+                            className="h-4 w-4 rounded bg-zinc-950 border-white/20 text-blue-600 focus:ring-blue-500"
+                          />
+                          <div>
+                            <span className="font-bold text-white text-xs block">
+                              🟢 Sync Offer with Storefront Deals &amp; Offers Section
+                            </span>
+                            <span className="text-[11px] text-slate-400 block">
+                              When enabled, this special product automatically creates and updates a matching card in the Storefront Exclusive Deals Carousel.
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tasks Builder */}
+                  <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                          2. Required Tasks ({editingProduct.specialConfig?.tasks?.length || 0})
+                        </h4>
+                        <p className="text-[11px] text-slate-400">Users must perform these tasks before the offer becomes unlocked.</p>
+                      </div>
+
+                      {/* Quick Presets */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTask = {
+                              id: `task_${Date.now()}`,
+                              type: 'join_telegram' as const,
+                              title: 'Join our Telegram Channel',
+                              url: 'https://t.me/keyoon',
+                              isRequired: true,
+                            };
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              const tasks = [...(prev.specialConfig?.tasks || []), newTask];
+                              return { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } };
+                            });
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-[11px] font-bold border border-blue-500/30 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" /> Telegram
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTask = {
+                              id: `task_${Date.now()}`,
+                              type: 'follow_facebook' as const,
+                              title: 'Follow Keyoon on Facebook',
+                              url: 'https://facebook.com/keyoon',
+                              isRequired: true,
+                            };
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              const tasks = [...(prev.specialConfig?.tasks || []), newTask];
+                              return { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } };
+                            });
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-[11px] font-bold border border-indigo-500/30 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" /> Facebook
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTask = {
+                              id: `task_${Date.now()}`,
+                              type: 'write_review' as const,
+                              title: 'Write a Verified Product Review',
+                              url: '',
+                              isRequired: true,
+                            };
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              const tasks = [...(prev.specialConfig?.tasks || []), newTask];
+                              return { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } };
+                            });
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 text-[11px] font-bold border border-amber-500/30 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" /> Write Review
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTask = {
+                              id: `task_${Date.now()}`,
+                              type: 'custom_action' as const,
+                              title: 'Visit Promotional Link',
+                              url: 'https://',
+                              isRequired: true,
+                            };
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              const tasks = [...(prev.specialConfig?.tasks || []), newTask];
+                              return { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } };
+                            });
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 text-[11px] font-bold border border-white/10 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" /> Custom Action
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tasks List */}
+                    <div className="space-y-3">
+                      {(editingProduct.specialConfig?.tasks || []).length === 0 ? (
+                        <div className="text-center py-6 border border-dashed border-white/10 rounded-xl text-slate-500 text-xs">
+                          No tasks configured. Click one of the buttons above to add Telegram, Facebook, or Write Review tasks.
+                        </div>
+                      ) : (
+                        editingProduct.specialConfig?.tasks?.map((task, tIdx) => (
+                          <div key={task.id || tIdx} className="p-3.5 rounded-xl bg-zinc-900 border border-white/10 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="h-5 w-5 rounded-full bg-zinc-800 text-white font-mono text-[10px] flex items-center justify-center font-bold">
+                                  #{tIdx + 1}
+                                </span>
+                                <select
+                                  value={task.type}
+                                  onChange={e => {
+                                    const nextType = e.target.value as any;
+                                    const tasks = [...(editingProduct.specialConfig?.tasks || [])];
+                                    tasks[tIdx] = { ...tasks[tIdx], type: nextType };
+                                    setEditingProduct(prev => prev ? { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } } : null);
+                                  }}
+                                  className="px-2.5 py-1 rounded-lg bg-zinc-950 border border-white/10 text-amber-300 text-xs font-bold cursor-pointer"
+                                >
+                                  <option value="join_telegram">📱 Join Telegram</option>
+                                  <option value="follow_facebook">👍 Follow on Facebook</option>
+                                  <option value="write_review">⭐ Write Product Review</option>
+                                  <option value="youtube_sub">🎬 Subscribe on YouTube</option>
+                                  <option value="discord_join">💬 Join Discord Server</option>
+                                  <option value="custom_action">🔗 Custom Action URL</option>
+                                </select>
+                              </div>
+
+                              <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={task.isRequired ?? true}
+                                    onChange={e => {
+                                      const checked = e.target.checked;
+                                      const tasks = [...(editingProduct.specialConfig?.tasks || [])];
+                                      tasks[tIdx] = { ...tasks[tIdx], isRequired: checked };
+                                      setEditingProduct(prev => prev ? { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } } : null);
+                                    }}
+                                    className="h-3.5 w-3.5 rounded bg-zinc-950 border-white/20 text-amber-600 focus:ring-amber-500"
+                                  />
+                                  <span>Required</span>
+                                </label>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const tasks = (editingProduct.specialConfig?.tasks || []).filter((_, idx) => idx !== tIdx);
+                                    setEditingProduct(prev => prev ? { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } } : null);
+                                  }}
+                                  className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">Task Title / Label</label>
+                                <input
+                                  type="text"
+                                  value={task.title}
+                                  onChange={e => {
+                                    const val = e.target.value;
+                                    const tasks = [...(editingProduct.specialConfig?.tasks || [])];
+                                    tasks[tIdx] = { ...tasks[tIdx], title: val };
+                                    setEditingProduct(prev => prev ? { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } } : null);
+                                  }}
+                                  placeholder="e.g. Join Keyoon Official Channel"
+                                  className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-white/10 text-white text-xs font-medium"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {task.type === 'write_review' ? 'Review Verification Mode' : 'Action Link URL'}
+                                </label>
+                                {task.type === 'write_review' ? (
+                                  <div className="px-3 py-1.5 rounded-lg bg-zinc-950 border border-amber-500/20 text-amber-300 text-xs font-mono">
+                                    ⭐ Auto-verified when customer submits review
+                                  </div>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    value={task.url || ''}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      const tasks = [...(editingProduct.specialConfig?.tasks || [])];
+                                      tasks[tIdx] = { ...tasks[tIdx], url: val };
+                                      setEditingProduct(prev => prev ? { ...prev, specialConfig: { ...(prev.specialConfig || {}), tasks } } : null);
+                                    }}
+                                    placeholder="https://t.me/... or https://facebook.com/..."
+                                    className="w-full px-3 py-1.5 rounded-lg bg-zinc-950 border border-white/10 text-cyan-300 text-xs font-mono"
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* SECTION 3: PRICING DURATIONS BUILDER */}
           {productEditorTab === 'pricing' && (
             <div className="space-y-4 text-xs">
               <div className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950 border border-white/[0.08]">

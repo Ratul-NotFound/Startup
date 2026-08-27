@@ -29,6 +29,35 @@ export interface CategoryConfig {
   orderIndex: number;
 }
 
+export type ProductType = 'general' | 'special';
+
+export type SpecialProductTaskType = 
+  | 'join_telegram' 
+  | 'follow_facebook' 
+  | 'write_review' 
+  | 'youtube_sub' 
+  | 'discord_join' 
+  | 'custom_action';
+
+export interface SpecialProductTask {
+  id: string;
+  type: SpecialProductTaskType;
+  title: string;          // e.g. "Join our Telegram Channel", "Follow on Facebook", "Write a Review"
+  description?: string;
+  url?: string;            // e.g. "https://t.me/keyoon", "https://facebook.com/keyoon"
+  isRequired?: boolean;
+}
+
+export interface SpecialProductConfig {
+  campaignTitle?: string;          // e.g. "Community Flash Reward Deal"
+  campaignBadge?: string;          // e.g. "⚡ Exclusive Mission Deal"
+  campaignDescription?: string;    // e.g. "Complete all tasks to unlock 25% OFF this product"
+  unlockedCouponCode?: string;     // e.g. "SPECIAL25" (unlocked upon completing tasks)
+  discountPercent?: number;        // e.g. 25
+  isSpecialOfferSynced?: boolean;  // Automatically sync and display in Special Offers & Deals hub
+  tasks: SpecialProductTask[];
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -60,6 +89,8 @@ export interface Product {
   isHidden?: boolean;
   orderIndex?: number;
   instructions: string[];
+  productType?: ProductType; // 'general' | 'special'
+  specialConfig?: SpecialProductConfig;
 }
 
 export interface CartItem {
@@ -74,6 +105,7 @@ export interface GiveawayTask {
   label: string;      // e.g. "Join Telegram Channel", "Follow Facebook Page"
   url: string;        // e.g. "https://t.me/keyoon_deals", "https://facebook.com/keyoon"
   isRequired?: boolean;
+  type?: SpecialProductTaskType;
 }
 
 export interface Coupon {
@@ -95,6 +127,7 @@ export interface Coupon {
   requiredTasks?: GiveawayTask[]; // Social tasks required to unlock code
   isHidden?: boolean; // Hide deal/coupon from Storefront Deals Hub
   orderIndex?: number; // Display sequence order on Storefront Deals Hub
+  linkedProductId?: string; // Bidirectional link to a special product
 }
 
 export interface SpecialOffersSettings {
