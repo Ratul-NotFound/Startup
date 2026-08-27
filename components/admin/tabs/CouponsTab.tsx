@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Plus, Save, Trash2, Sparkles, Star, Gift, Tag, CheckCircle2, Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Plus, Save, Trash2, Sparkles, Star, Gift, Tag, CheckCircle2, Upload, Image as ImageIcon, X, Edit2, Check } from 'lucide-react';
 import { Coupon } from '@/types';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { useApp } from '@/context/AppContext';
 
 interface CouponsTabProps {
   coupons: Coupon[];
@@ -27,8 +28,24 @@ export function CouponsTab({
   adminDeleteCoupon,
   showFeedback,
 }: CouponsTabProps) {
+  const { products } = useApp();
+  const [editingCouponCode, setEditingCouponCode] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<'all' | 'special' | 'giveaway'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Derived scope mode: 'all' | 'category' | 'products'
+  const targetScope: 'all' | 'category' | 'products' =
+    (newCoupon.applicableProductIds && newCoupon.applicableProductIds.length > 0)
+      ? 'products'
+      : (newCoupon.applicableCategory && newCoupon.applicableCategory !== 'all')
+      ? 'category'
+      : 'all';
+
+  const handleEditCoupon = (coupon: Coupon) => {
+    setEditingCouponCode(coupon.code);
+    setNewCoupon({ ...coupon });
+    setShowCouponForm(true);
+  };
 
   const toggleSpecialOffer = async (code: string, currentVal?: boolean) => {
     try {
@@ -163,9 +180,17 @@ export function CouponsTab({
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Gift className="h-4 w-4 text-cyan-400" />
-              <span>Configure Promo Code / Special Offer / Giveaway</span>
+              <span>{editingCouponCode ? `Edit Promo Code: ${editingCouponCode}` : 'Configure Promo Code / Special Offer / Giveaway'}</span>
             </h3>
-            <button onClick={() => setShowCouponForm(false)} className="text-xs text-slate-400 hover:text-white">Cancel</button>
+            <button
+              onClick={() => {
+                setShowCouponForm(false);
+                setEditingCouponCode(null);
+              }}
+              className="text-xs text-slate-400 hover:text-white cursor-pointer"
+            >
+              Cancel
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
@@ -201,19 +226,122 @@ export function CouponsTab({
             </div>
 
             <div>
-              <label className="text-slate-300 font-bold block mb-1">Applicable Category</label>
-              <select
-                value={newCoupon.applicableCategory || 'all'}
-                onChange={e => setNewCoupon(p => ({ ...p, applicableCategory: e.target.value as any }))}
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="ai">AI & Productivity (ai)</option>
-                <option value="streaming">Movies & Music (streaming)</option>
-                <option value="dev">Developer Tools (dev)</option>
-                <option value="productivity">Design & Creative (productivity)</option>
-                <option value="vpn_security">VPN & Security (vpn_security)</option>
-              </select>
+              <label className="text-slate-300 font-bold block mb-1">Expiry Date</label>
+              <input
+                type="date"
+                value={newCoupon.expiryDate || ''}
+                onChange={e => setNewCoupon(p => ({ ...p, expiryDate: e.target.value || undefined }))}
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="text-slate-300 font-bold block mb-1">Max Redemptions Limit</label>
+              <input
+                type="number"
+                min="1"
+                value={newCoupon.maxUses || ''}
+                onChange={e => setNewCoupon(p => ({ ...p, maxUses: Number(e.target.value) || undefined }))}
+                placeholder="Optional e.g. 100"
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
+              />
+            </div>
+
+            {/* 3-Way Targeting Scope Selector */}
+            <div className="col-span-1 sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
+              <label className="text-slate-300 font-bold text-xs block">
+                Targeting Scope (Where can this promo code be applied?)
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setNewCoupon(p => ({ ...p, applicableCategory: 'all', applicableProductIds: [] }))}
+                  className={`py-2 px-3 rounded-xl font-bold border transition-all cursor-pointer ${
+                    targetScope === 'all'
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-md'
+                      : 'bg-zinc-900 text-slate-400 border-white/10 hover:text-white'
+                  }`}
+                >
+                  🌐 Storewide (All Products)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNewCoupon(p => ({ ...p, applicableCategory: p.applicableCategory === 'all' ? 'ai' : (p.applicableCategory || 'ai'), applicableProductIds: [] }))}
+                  className={`py-2 px-3 rounded-xl font-bold border transition-all cursor-pointer ${
+                    targetScope === 'category'
+                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
+                      : 'bg-zinc-900 text-slate-400 border-white/10 hover:text-white'
+                  }`}
+                >
+                  📁 Specific Category
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNewCoupon(p => ({ ...p, applicableCategory: 'all', applicableProductIds: p.applicableProductIds && p.applicableProductIds.length > 0 ? p.applicableProductIds : [products[0]?.id || ''] }))}
+                  className={`py-2 px-3 rounded-xl font-bold border transition-all cursor-pointer ${
+                    targetScope === 'products'
+                      ? 'bg-cyan-600 text-white border-cyan-500 shadow-md'
+                      : 'bg-zinc-900 text-slate-400 border-white/10 hover:text-white'
+                  }`}
+                >
+                  🎯 Specific Product(s)
+                </button>
+              </div>
+
+              {/* Category Dropdown Sub-Option */}
+              {targetScope === 'category' && (
+                <div className="pt-2">
+                  <label className="text-slate-400 font-semibold block mb-1">Select Target Category</label>
+                  <select
+                    value={newCoupon.applicableCategory || 'ai'}
+                    onChange={e => setNewCoupon(p => ({ ...p, applicableCategory: e.target.value as any, applicableProductIds: [] }))}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs"
+                  >
+                    <option value="ai">AI & Productivity (ai)</option>
+                    <option value="streaming">Movies & Music (streaming)</option>
+                    <option value="dev">Developer Tools (dev)</option>
+                    <option value="productivity">Design & Creative (productivity)</option>
+                    <option value="vpn_security">VPN & Security (vpn_security)</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Specific Products Checkboxes Sub-Option */}
+              {targetScope === 'products' && (
+                <div className="pt-2 space-y-2">
+                  <label className="text-slate-400 font-semibold block mb-1">
+                    Select Eligible Products ({ (newCoupon.applicableProductIds || []).length } selected)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto p-2.5 rounded-xl bg-zinc-900 border border-white/10">
+                    {products.map(prod => {
+                      const isChecked = (newCoupon.applicableProductIds || []).includes(prod.id);
+                      return (
+                        <label key={prod.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-zinc-800/80 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setNewCoupon(p => {
+                                const currentList = p.applicableProductIds || [];
+                                const newList = checked
+                                  ? [...currentList, prod.id]
+                                  : currentList.filter(id => id !== prod.id);
+                                return { ...p, applicableCategory: 'all', applicableProductIds: newList };
+                              });
+                            }}
+                            className="h-4 w-4 rounded accent-cyan-500 cursor-pointer"
+                          />
+                          <span className="text-xs text-white truncate font-medium">{prod.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
@@ -434,13 +562,20 @@ export function CouponsTab({
 
           <div className="flex gap-3 pt-2">
             <button
-              onClick={handleCreateCoupon}
+              onClick={async () => {
+                await handleCreateCoupon();
+                setEditingCouponCode(null);
+              }}
               className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md"
             >
-              <Save className="h-3.5 w-3.5" /> Save &amp; Publish Offer
+              <Save className="h-3.5 w-3.5" />
+              <span>{editingCouponCode ? 'Save & Update Offer' : 'Save & Publish Offer'}</span>
             </button>
             <button
-              onClick={() => setShowCouponForm(false)}
+              onClick={() => {
+                setShowCouponForm(false);
+                setEditingCouponCode(null);
+              }}
               className="px-5 py-2.5 rounded-xl bg-zinc-800 text-slate-300 text-xs font-bold cursor-pointer"
             >
               Cancel
@@ -492,6 +627,12 @@ export function CouponsTab({
                       </span>
                     )}
 
+                    {c.applicableProductIds && c.applicableProductIds.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 font-bold text-[10px] uppercase border border-cyan-500/30">
+                        Products ({c.applicableProductIds.length})
+                      </span>
+                    )}
+
                     {c.applicableCategory && c.applicableCategory !== 'all' && (
                       <span className="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 font-bold text-[10px] uppercase border border-indigo-500/30">
                         Category: {c.applicableCategory}
@@ -536,6 +677,16 @@ export function CouponsTab({
               <div className="flex items-center gap-2 self-end sm:self-auto">
                 <button
                   type="button"
+                  onClick={() => handleEditCoupon(c)}
+                  className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-white/10"
+                  title="Edit promo code settings"
+                >
+                  <Edit2 className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Edit</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => toggleSpecialOffer(c.code, c.isSpecialOffer)}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
                     c.isSpecialOffer
@@ -545,7 +696,7 @@ export function CouponsTab({
                   title="Toggle storefront landing page featured offer status"
                 >
                   <Star className={`h-3.5 w-3.5 ${c.isSpecialOffer ? 'fill-cyan-400 text-cyan-400' : ''}`} />
-                  <span>{c.isSpecialOffer ? 'Featured on Store' : 'Publish to Store'}</span>
+                  <span>{c.isSpecialOffer ? 'Featured' : 'Publish'}</span>
                 </button>
 
                 <button
