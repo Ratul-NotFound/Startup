@@ -8,6 +8,7 @@ import Link from 'next/link';
 export function SpecialOffersSection() {
   const { coupons, specialOffersSettings } = useApp();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [completedTasksMap, setCompletedTasksMap] = useState<Record<string, Record<string, boolean>>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // If admin has hidden the entire Special Offers & Deals section from storefront, do not render
@@ -15,11 +16,8 @@ export function SpecialOffersSection() {
     return null;
   }
 
-  // Map to track completed tasks per coupon code: { [couponCode]: { [taskId]: boolean } }
-  const [completedTasksMap, setCompletedTasksMap] = useState<Record<string, Record<string, boolean>>>({});
-
   // Filter out hidden coupons/deals and prioritize special offers
-  const visibleCoupons = coupons.filter(c => !c.isHidden);
+  const visibleCoupons = (coupons || []).filter(c => !c.isHidden);
   const activeOffers = visibleCoupons.filter(c => c.isSpecialOffer);
   const displayOffers = (activeOffers.length > 0 ? activeOffers : visibleCoupons)
     .sort((a, b) => (a.orderIndex ?? 999) - (b.orderIndex ?? 999));
