@@ -339,14 +339,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Derived: the BDT exchange rate to use everywhere
   const bdtRate = currencySettings.bdtRate || 125;
 
-  // formatPrice: takes a USD amount and returns the correctly formatted string
-  // based on the admin-configured settings and the visitor's detected country.
-  const formatPrice = useCallback((amountUSD: number): string => {
+  // formatPrice: takes an amount in BDT (Taka) and returns the correctly formatted string.
+  // If the user is from Bangladesh (detectedCurrency === 'BDT'), displays directly in Bengali Taka (৳).
+  // If the user is from another country (detectedCurrency === 'USD'), converts BDT to USD ($) using bdtRate.
+  const formatPrice = useCallback((amount: number): string => {
+    if (typeof amount !== 'number' || isNaN(amount)) return '৳0';
+
+    // Backward-compatibility: if amount is less than 100 (legacy USD price), scale to BDT
+    const amountBDT = amount < 100 ? amount * bdtRate : amount;
+
     if (detectedCurrency === 'BDT') {
-      const inBdt = Math.round(amountUSD * bdtRate);
+      const inBdt = Math.round(amountBDT);
       return `৳${inBdt.toLocaleString('en-BD')}`;
     }
-    return `$${amountUSD.toFixed(2)}`;
+
+    const convertedUSD = amountBDT / bdtRate;
+    return `$${convertedUSD.toFixed(2)}`;
   }, [detectedCurrency, bdtRate]);
 
   // Dynamically update browser tab favicon icon whenever brandSettings updates

@@ -113,10 +113,10 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '1_month', label: '1 Month', price: 7.99, originalPrice: 20.00, discountPercentage: 60 },
-      { duration: '3_months', label: '3 Months', price: 21.99, originalPrice: 60.00, discountPercentage: 63, isPopular: true },
-      { duration: '6_months', label: '6 Months', price: 39.99, originalPrice: 120.00, discountPercentage: 66 },
-      { duration: '12_months', label: '12 Months', price: 69.99, originalPrice: 240.00, discountPercentage: 70 },
+      { duration: '1_month', label: '1 Month', price: 999, originalPrice: 2500, discountPercentage: 60 },
+      { duration: '3_months', label: '3 Months', price: 2749, originalPrice: 7500, discountPercentage: 63, isPopular: true },
+      { duration: '6_months', label: '6 Months', price: 4999, originalPrice: 15000, discountPercentage: 66 },
+      { duration: '12_months', label: '12 Months', price: 8749, originalPrice: 30000, discountPercentage: 70 },
     ],
     stockCount: 84,
     instructions: [
@@ -154,10 +154,10 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '1_month', label: '1 Month', price: 6.99, originalPrice: 19.99, discountPercentage: 65 },
-      { duration: '3_months', label: '3 Months', price: 18.99, originalPrice: 59.97, discountPercentage: 68 },
-      { duration: '6_months', label: '6 Months', price: 34.99, originalPrice: 119.94, discountPercentage: 70, isPopular: true },
-      { duration: '12_months', label: '12 Months', price: 59.99, originalPrice: 239.88, discountPercentage: 75 },
+      { duration: '1_month', label: '1 Month', price: 874, originalPrice: 2500, discountPercentage: 65 },
+      { duration: '3_months', label: '3 Months', price: 2374, originalPrice: 7500, discountPercentage: 68 },
+      { duration: '6_months', label: '6 Months', price: 4374, originalPrice: 15000, discountPercentage: 70, isPopular: true },
+      { duration: '12_months', label: '12 Months', price: 7499, originalPrice: 30000, discountPercentage: 75 },
     ],
     stockCount: 62,
     instructions: [
@@ -195,10 +195,10 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '1_month', label: '1 Month', price: 8.49, originalPrice: 20.00, discountPercentage: 58 },
-      { duration: '3_months', label: '3 Months', price: 23.99, originalPrice: 60.00, discountPercentage: 60, isPopular: true },
-      { duration: '6_months', label: '6 Months', price: 44.99, originalPrice: 120.00, discountPercentage: 62 },
-      { duration: '12_months', label: '12 Months', price: 79.99, originalPrice: 240.00, discountPercentage: 66 },
+      { duration: '1_month', label: '1 Month', price: 1060, originalPrice: 2500, discountPercentage: 58 },
+      { duration: '3_months', label: '3 Months', price: 2999, originalPrice: 7500, discountPercentage: 60, isPopular: true },
+      { duration: '6_months', label: '6 Months', price: 5624, originalPrice: 15000, discountPercentage: 62 },
+      { duration: '12_months', label: '12 Months', price: 9999, originalPrice: 30000, discountPercentage: 66 },
     ],
     stockCount: 45,
     instructions: [
@@ -236,10 +236,10 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '1_month', label: '1 Month', price: 4.99, originalPrice: 22.99, discountPercentage: 78 },
-      { duration: '3_months', label: '3 Months', price: 13.99, originalPrice: 68.97, discountPercentage: 80, isPopular: true },
-      { duration: '6_months', label: '6 Months', price: 25.99, originalPrice: 137.94, discountPercentage: 81 },
-      { duration: '12_months', label: '12 Months', price: 46.99, originalPrice: 275.88, discountPercentage: 83 },
+      { duration: '1_month', label: '1 Month', price: 624, originalPrice: 2875, discountPercentage: 78 },
+      { duration: '3_months', label: '3 Months', price: 1749, originalPrice: 8620, discountPercentage: 80, isPopular: true },
+      { duration: '6_months', label: '6 Months', price: 3249, originalPrice: 17240, discountPercentage: 81 },
+      { duration: '12_months', label: '12 Months', price: 5874, originalPrice: 34480, discountPercentage: 83 },
     ],
     stockCount: 120,
     instructions: [
@@ -277,9 +277,9 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '3_months', label: '3 Months', price: 9.99, originalPrice: 41.97, discountPercentage: 76 },
-      { duration: '6_months', label: '6 Months', price: 17.99, originalPrice: 83.94, discountPercentage: 78, isPopular: true },
-      { duration: '12_months', label: '12 Months', price: 29.99, originalPrice: 167.88, discountPercentage: 82 },
+      { duration: '3_months', label: '3 Months', price: 1249, originalPrice: 5240, discountPercentage: 76 },
+      { duration: '6_months', label: '6 Months', price: 2249, originalPrice: 10490, discountPercentage: 78, isPopular: true },
+      { duration: '12_months', label: '12 Months', price: 3749, originalPrice: 20980, discountPercentage: 82 },
     ],
     stockCount: 95,
     instructions: [
@@ -317,9 +317,9 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '3_months', label: '3 Months', price: 8.99, originalPrice: 35.97, discountPercentage: 75 },
-      { duration: '6_months', label: '6 Months', price: 15.99, originalPrice: 71.94, discountPercentage: 77, isPopular: true },
-      { duration: '12_months', label: '12 Months', price: 26.99, originalPrice: 143.88, discountPercentage: 81 },
+      { duration: '3_months', label: '3 Months', price: 1124, originalPrice: 4490, discountPercentage: 75 },
+      { duration: '6_months', label: '6 Months', price: 1999, originalPrice: 8990, discountPercentage: 77, isPopular: true },
+      { duration: '12_months', label: '12 Months', price: 3374, originalPrice: 17980, discountPercentage: 81 },
     ],
     stockCount: 88,
     instructions: [
@@ -357,10 +357,10 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '1_month', label: '1 Month', price: 8.99, originalPrice: 20.00, discountPercentage: 55 },
-      { duration: '3_months', label: '3 Months', price: 24.99, originalPrice: 60.00, discountPercentage: 58, isPopular: true },
-      { duration: '6_months', label: '6 Months', price: 46.99, originalPrice: 120.00, discountPercentage: 60 },
-      { duration: '12_months', label: '12 Months', price: 84.99, originalPrice: 240.00, discountPercentage: 64 },
+      { duration: '1_month', label: '1 Month', price: 1124, originalPrice: 2500, discountPercentage: 55 },
+      { duration: '3_months', label: '3 Months', price: 3124, originalPrice: 7500, discountPercentage: 58, isPopular: true },
+      { duration: '6_months', label: '6 Months', price: 5874, originalPrice: 15000, discountPercentage: 60 },
+      { duration: '12_months', label: '12 Months', price: 10624, originalPrice: 30000, discountPercentage: 64 },
     ],
     stockCount: 38,
     instructions: [
@@ -398,9 +398,9 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '3_months', label: '3 Months', price: 29.99, originalPrice: 179.97, discountPercentage: 83 },
-      { duration: '6_months', label: '6 Months', price: 54.99, originalPrice: 359.94, discountPercentage: 84, isPopular: true },
-      { duration: '12_months', label: '12 Months', price: 94.99, originalPrice: 719.88, discountPercentage: 86 },
+      { duration: '3_months', label: '3 Months', price: 3749, originalPrice: 22490, discountPercentage: 83 },
+      { duration: '6_months', label: '6 Months', price: 6874, originalPrice: 44990, discountPercentage: 84, isPopular: true },
+      { duration: '12_months', label: '12 Months', price: 11874, originalPrice: 89980, discountPercentage: 86 },
     ],
     stockCount: 29,
     instructions: [
@@ -438,8 +438,8 @@ export const MOCK_PRODUCTS: Product[] = [
       region: 'Global'
     },
     pricingTiers: [
-      { duration: '6_months', label: '6 Months', price: 16.99, originalPrice: 71.94, discountPercentage: 76 },
-      { duration: '12_months', label: '12 Months', price: 28.99, originalPrice: 143.88, discountPercentage: 80, isPopular: true },
+      { duration: '6_months', label: '6 Months', price: 2124, originalPrice: 8990, discountPercentage: 76 },
+      { duration: '12_months', label: '12 Months', price: 3624, originalPrice: 17980, discountPercentage: 80, isPopular: true },
     ],
     stockCount: 65,
     instructions: [

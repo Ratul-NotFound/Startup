@@ -14,9 +14,9 @@ export const blankProduct = (): Omit<Product, 'id'> => ({
   features: ['Full access included', 'Fast reliable server pool', 'Replacement warranty'],
   specs: { screens: 1, quality: 'Premium HD/4K', warranty: 'Full Period Replacement', platforms: ['Web', 'iOS', 'Android'], region: 'Global' },
   pricingTiers: [
-    { duration: '1_month', label: '1 Month', price: 9.99, originalPrice: 20.00, discountPercentage: 50, isPopular: false },
-    { duration: '3_months', label: '3 Months', price: 24.99, originalPrice: 60.00, discountPercentage: 58, isPopular: true },
-    { duration: '12_months', label: '12 Months', price: 79.99, originalPrice: 240.00, discountPercentage: 66 },
+    { duration: '1_month', label: '1 Month', price: 999, originalPrice: 2000, discountPercentage: 50, isPopular: false },
+    { duration: '3_months', label: '3 Months', price: 2499, originalPrice: 6000, discountPercentage: 58, isPopular: true },
+    { duration: '12_months', label: '12 Months', price: 7999, originalPrice: 24000, discountPercentage: 66 },
   ],
   stockCount: 50, instructions: ['Log in with credentials provided in your vault.', 'Enjoy your premium subscription.'],
 });
@@ -71,7 +71,7 @@ export function ProductsTab({
             <tr>
               <th className="p-4">Product</th>
               <th className="p-4">Category</th>
-              <th className="p-4">Pricing Tiers</th>
+              <th className="p-4">Pricing Tiers (৳ BDT)</th>
               <th className="p-4">Stock</th>
               <th className="p-4">Rating</th>
               <th className="p-4 text-right">Actions</th>
@@ -100,7 +100,7 @@ export function ProductsTab({
                   </span>
                 </td>
                 <td className="p-4 text-slate-300 font-mono">
-                  {p.pricingTiers.map(t => `$${t.price}`).join(' · ')}
+                  {p.pricingTiers.map(t => `৳${t.price < 100 ? Math.round(t.price * 125) : t.price}`).join(' · ')}
                 </td>
                 <td className="p-4">
                   <span className={`font-bold ${p.stockCount < 20 ? 'text-amber-400' : 'text-emerald-400'}`}>{p.stockCount}</span>

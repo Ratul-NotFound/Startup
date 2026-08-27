@@ -326,10 +326,12 @@ export function ProductEditorModal({
           {/* SECTION 2: PRICING DURATIONS BUILDER */}
           {productEditorTab === 'pricing' && (
             <div className="space-y-4 text-xs">
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-zinc-950 border border-white/[0.08]">
+              <div className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950 border border-white/[0.08]">
                 <div>
-                  <h4 className="font-bold text-white text-sm">Subscription Pricing Tiers</h4>
-                  <p className="text-slate-400 text-[11px]">Customers can select between these durations on the storefront card &amp; modal.</p>
+                  <h4 className="font-bold text-white text-sm">Subscription Pricing Tiers (৳ BDT)</h4>
+                  <p className="text-slate-400 text-[11px] mt-0.5">
+                    Enter prices in <strong className="text-emerald-400">Bangladeshi Taka (৳ BDT)</strong>. For non-BD visitors, prices automatically convert to USD ($).
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -340,7 +342,7 @@ export function ProductEditorModal({
                         ...prev,
                         pricingTiers: [
                           ...prev.pricingTiers,
-                          { duration: '1_month', label: '1 Month', price: 9.99, originalPrice: 19.99, discountPercentage: 50, isPopular: false }
+                          { duration: '1_month', label: '1 Month', price: 999, originalPrice: 1999, discountPercentage: 50, isPopular: false }
                         ]
                       };
                     });
@@ -349,6 +351,10 @@ export function ProductEditorModal({
                 >
                   <Plus className="h-4 w-4" /> Add Pricing Tier
                 </button>
+              </div>
+
+              <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-[11px]">
+                ℹ️ <strong>BD Taka Pricing Enabled:</strong> Type prices in ৳ BDT (e.g. 999 BDT). Customers from Bangladesh will see direct Taka (৳999), while international visitors will see converted USD ($7.99).
               </div>
 
               <div className="space-y-3">
@@ -390,10 +396,10 @@ export function ProductEditorModal({
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-slate-400 font-semibold block">Sale Price ($ USD)</label>
+                        <label className="text-slate-400 font-semibold block">Sale Price (৳ BDT)</label>
                         <input
                           type="number"
-                          step="0.01"
+                          step="1"
                           value={tier.price}
                           onChange={e => {
                             const p = Number(e.target.value);
@@ -403,15 +409,16 @@ export function ProductEditorModal({
                             tiers[tIdx] = { ...tiers[tIdx], price: p, discountPercentage: disc };
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
+                          placeholder="e.g. 999"
                           className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-mono font-bold"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-slate-400 font-semibold block">Original Price ($ USD)</label>
+                        <label className="text-slate-400 font-semibold block">Original Price (৳ BDT)</label>
                         <input
                           type="number"
-                          step="0.01"
+                          step="1"
                           value={tier.originalPrice || ''}
                           onChange={e => {
                             const orig = Number(e.target.value);
@@ -421,7 +428,7 @@ export function ProductEditorModal({
                             tiers[tIdx] = { ...tiers[tIdx], originalPrice: orig, discountPercentage: disc };
                             setEditingProduct(prev => prev ? { ...prev, pricingTiers: tiers } : null);
                           }}
-                          placeholder="e.g. 20.00"
+                          placeholder="e.g. 2000"
                           className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-slate-400 font-mono line-through"
                         />
                       </div>

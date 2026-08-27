@@ -20,14 +20,14 @@ export const SavingsCalculator: React.FC = () => {
   const { products, addToCart, formatPrice } = useApp();
 
   const [items, setItems] = useState<CalculatorItem[]>([
-    { id: 'chatgpt-plus', name: 'ChatGPT Plus', officialMonthly: 20.00, keyoonMonthly: 5.83, selected: true, category: 'AI Tools' },
-    { id: 'netflix-4k-uhd', name: 'Netflix 4K UHD', officialMonthly: 22.99, keyoonMonthly: 3.91, selected: true, category: 'Streaming' },
-    { id: 'claude-pro', name: 'Claude 3.5 Pro', officialMonthly: 20.00, keyoonMonthly: 6.66, selected: true, category: 'AI Tools' },
-    { id: 'youtube-premium', name: 'YouTube Premium', officialMonthly: 13.99, keyoonMonthly: 2.49, selected: true, category: 'Streaming' },
-    { id: 'cursor-pro', name: 'Cursor Pro', officialMonthly: 20.00, keyoonMonthly: 6.25, selected: false, category: 'Developer' },
-    { id: 'gemini-advanced', name: 'Gemini Advanced 2.0', officialMonthly: 19.99, keyoonMonthly: 4.99, selected: false, category: 'AI Tools' },
-    { id: 'spotify-premium', name: 'Spotify Premium', officialMonthly: 11.99, keyoonMonthly: 2.29, selected: false, category: 'Music' },
-    { id: 'nordvpn-ultimate', name: 'NordVPN Ultimate', officialMonthly: 14.99, keyoonMonthly: 2.99, selected: false, category: 'Security' },
+    { id: 'chatgpt-plus', name: 'ChatGPT Plus', officialMonthly: 2500, keyoonMonthly: 729, selected: true, category: 'AI Tools' },
+    { id: 'netflix-4k-uhd', name: 'Netflix 4K UHD', officialMonthly: 2875, keyoonMonthly: 489, selected: true, category: 'Streaming' },
+    { id: 'claude-pro', name: 'Claude 3.5 Pro', officialMonthly: 2500, keyoonMonthly: 833, selected: true, category: 'AI Tools' },
+    { id: 'youtube-premium', name: 'YouTube Premium', officialMonthly: 1749, keyoonMonthly: 312, selected: true, category: 'Streaming' },
+    { id: 'cursor-pro', name: 'Cursor Pro', officialMonthly: 2500, keyoonMonthly: 781, selected: false, category: 'Developer' },
+    { id: 'gemini-advanced', name: 'Gemini Advanced 2.0', officialMonthly: 2499, keyoonMonthly: 624, selected: false, category: 'AI Tools' },
+    { id: 'spotify-premium', name: 'Spotify Premium', officialMonthly: 1499, keyoonMonthly: 281, selected: false, category: 'Music' },
+    { id: 'nordvpn-ultimate', name: 'NordVPN Ultimate', officialMonthly: 1874, keyoonMonthly: 374, selected: false, category: 'Security' },
   ]);
 
   const toggleItem = (id: string) => {
