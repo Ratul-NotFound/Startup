@@ -5,7 +5,7 @@ import {
   Product, CartItem, Coupon, CustomerProfile, UserSubscription,
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
   AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog, BrandSettings, CurrencySettings,
-  CategoryConfig, SubscriptionCategory,
+  CategoryConfig, SubscriptionCategory, SpecialOffersSettings,
 } from '@/types';
 import { detectVisitorCountry } from '@/lib/geo-currency';
 import {
@@ -24,6 +24,14 @@ import {
 
 // ─── Superadmin email ───────────────────────────────────────────────
 export const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
+
+// ─── Default Special Offers & Exclusive Deals Settings ─────────────
+export const DEFAULT_SPECIAL_OFFERS_SETTINGS: SpecialOffersSettings = {
+  isSectionHidden: false,
+  badgeTitle: 'Special Offers & Promo Hub',
+  sectionHeading: 'Exclusive Deals & Giveaways',
+  sectionSubtitle: 'Swipe or scroll to claim promo codes, giveaways, and exclusive subscription discounts.',
+};
 
 // ─── Default Category Configuration ────────────────────────────────
 export const DEFAULT_CATEGORY_CONFIGS: CategoryConfig[] = [
@@ -218,10 +226,18 @@ interface AppContextType {
   adminUpdateSubscriptionCredentials: (subId: string, credentials: Partial<UserSubscription['credentials']>) => Promise<void>;
   adminUpdateSubscriptionStatus: (subId: string, status: UserSubscription['status']) => Promise<void>;
 
-  // Admin: Coupon CRUD
+  // Admin: Coupon & Special Deals CRUD, Sequencing & Customization
   coupons: Coupon[];
   adminCreateCoupon: (coupon: Coupon) => Promise<void>;
+  adminUpdateCoupon: (code: string, updates: Partial<Coupon>) => Promise<void>;
   adminDeleteCoupon: (code: string) => Promise<void>;
+  adminToggleCouponVisibility: (code: string) => Promise<void>;
+  adminReorderCoupon: (code: string, newOrderIndex: number) => Promise<void>;
+  adminReorderCoupons: (newOrder: Coupon[]) => Promise<void>;
+
+  // Exclusive Deals & Special Offers Section Customizer
+  specialOffersSettings: SpecialOffersSettings;
+  updateSpecialOffersSettings: (updates: Partial<SpecialOffersSettings>) => Promise<void>;
 
   // Admin: Support tickets
   allTickets: SupportTicket[];
@@ -440,6 +456,81 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const adminReorderProduct = async (productId: string, newOrderIndex: number) => {
     await adminUpdateProduct(productId, { orderIndex: newOrderIndex });
+  };
+
+  // Special Offers & Exclusive Deals Section configuration state
+  const [specialOffersSettings, setSpecialOffersSettings] = useState<SpecialOffersSettings>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('keyoon_special_offers_settings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') return parsed;
+        }
+      } catch { }
+    }
+    return DEFAULT_SPECIAL_OFFERS_SETTINGS;
+  });
+
+  const updateSpecialOffersSettings = async (updates: Partial<SpecialOffersSettings>) => {
+    const nextSettings = {
+      ...specialOffersSettings,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    setSpecialOffersSettings(nextSettings);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('keyoon_special_offers_settings', JSON.stringify(nextSettings));
+      } catch { }
+    }
+
+    try {
+      await setDoc(doc(db, 'settings', 'special_offers'), nextSettings, { merge: true });
+      await logAdminActivity('SPECIAL_OFFERS_SETTINGS_UPDATED', 'coupons', `Deals Section visibility: ${nextSettings.isSectionHidden ? 'Hidden' : 'Visible'}`);
+    } catch (err) {
+      console.warn('[AppContext] Error updating special offers settings in Firestore:', err);
+    }
+  };
+
+  // Coupon / Special Deal update, sequencing & visibility methods
+  const adminUpdateCoupon = async (code: string, updates: Partial<Coupon>) => {
+    const upper = code.toUpperCase();
+    setCoupons(prev => prev.map(c => c.code === upper ? { ...c, ...updates } : c));
+    try {
+      await updateDoc(doc(db, 'coupons', upper), updates as Record<string, unknown>);
+    } catch (err) {
+      console.error('adminUpdateCoupon error:', err);
+    }
+  };
+
+  const adminToggleCouponVisibility = async (code: string) => {
+    const upper = code.toUpperCase();
+    const coup = coupons.find(c => c.code === upper);
+    if (!coup) return;
+    const newHidden = !coup.isHidden;
+    await adminUpdateCoupon(upper, { isHidden: newHidden });
+    await logAdminActivity(newHidden ? 'DEAL_HIDDEN' : 'DEAL_VISIBLE', 'coupons', `${newHidden ? 'Hidden' : 'Shown'} deal: ${upper}`);
+  };
+
+  const adminReorderCoupon = async (code: string, newOrderIndex: number) => {
+    await adminUpdateCoupon(code, { orderIndex: newOrderIndex });
+  };
+
+  const adminReorderCoupons = async (newOrder: Coupon[]) => {
+    const batch = writeBatch(db);
+    const updated = newOrder.map((c, idx) => ({ ...c, orderIndex: idx }));
+    setCoupons(updated);
+    try {
+      for (const item of updated) {
+        batch.update(doc(db, 'coupons', item.code), { orderIndex: item.orderIndex });
+      }
+      await batch.commit();
+      await logAdminActivity('DEALS_REORDERED', 'coupons', 'Reordered deals in Exclusive Deals & Offers carousel');
+    } catch (err) {
+      console.warn('[AppContext] Error saving coupon reordering to Firestore:', err);
+    }
   };
 
   // Derived: the BDT exchange rate to use everywhere
@@ -891,6 +982,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    // 11. Real-time Special Offers & Deals Section Settings listener
+    const unsubSpecialOffersSettings = onSnapshot(doc(db, 'settings', 'special_offers'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data() as SpecialOffersSettings;
+        setSpecialOffersSettings({
+          isSectionHidden: data.isSectionHidden ?? false,
+          badgeTitle: data.badgeTitle || DEFAULT_SPECIAL_OFFERS_SETTINGS.badgeTitle,
+          sectionHeading: data.sectionHeading || DEFAULT_SPECIAL_OFFERS_SETTINGS.sectionHeading,
+          sectionSubtitle: data.sectionSubtitle || DEFAULT_SPECIAL_OFFERS_SETTINGS.sectionSubtitle,
+          updatedAt: data.updatedAt,
+        });
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') {
+        console.warn('[AppContext] Special offers settings listener error:', err);
+      }
+    });
+
     return () => {
       unsubProducts();
       unsubCoupons();
@@ -902,6 +1011,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubBrandSettings();
       unsubCurrencySettings();
       unsubCategorySettings();
+      unsubSpecialOffersSettings();
     };
   }, [seedFirestoreIfEmpty]);
 
@@ -2687,7 +2797,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     allUsers, adminUpdateUserRole,
     allSubscriptions, adminCreateSubscription, adminUpdateSubscription, adminDeleteSubscription, adminPurgeMockSubscriptions, adminPurgeAllSubscriptions, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
-    coupons, adminCreateCoupon, adminDeleteCoupon,
+    coupons, adminCreateCoupon, adminUpdateCoupon, adminDeleteCoupon, adminToggleCouponVisibility, adminReorderCoupon, adminReorderCoupons,
+    specialOffersSettings, updateSpecialOffersSettings,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     heroSlides, adminCreateHeroSlide, adminUpdateHeroSlide, adminDeleteHeroSlide, adminResetHeroSlides,
     quickMessages, adminCreateQuickMessage, adminUpdateQuickMessage, adminDeleteQuickMessage, adminResetQuickMessages,
@@ -2708,7 +2819,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
-    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs, brandSettings, categoryConfigs,
+    allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs, brandSettings, categoryConfigs, specialOffersSettings,
     financialMetrics, emailNotifications, isSyncing,
     currencySettings, detectedCurrency, bdtRate,
     tickets, reviews, isWriteReviewOpen, targetReviewProduct,
@@ -2726,7 +2837,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminUpdateCategoryConfigs, adminToggleCategoryVisibility, adminReorderCategories,
     adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     adminUpdateUserRole, adminUpdateSubscriptionCredentials, adminUpdateSubscriptionStatus,
-    adminCreateCoupon, adminDeleteCoupon,
+    adminCreateCoupon, adminUpdateCoupon, adminDeleteCoupon, adminToggleCouponVisibility, adminReorderCoupon, adminReorderCoupons,
+    updateSpecialOffersSettings,
     adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     adminReplyToTicket, adminCloseTicket,
     sendTestEmail, triggerRenewalCronSimulation, fastForwardSimulationDays, refreshAllData,

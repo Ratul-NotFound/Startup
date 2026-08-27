@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { Plus, Save, Trash2, Sparkles, Star, Gift, Tag, CheckCircle2, Upload, Image as ImageIcon, X, Edit2, Check } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import {
+  Plus, Save, Trash2, Sparkles, Star, Gift, Tag, CheckCircle2, Upload,
+  Image as ImageIcon, X, Edit2, Check, Eye, EyeOff, ArrowUp, ArrowDown,
+  Sliders, Settings2, ChevronDown, ChevronUp, AlertCircle,
+} from 'lucide-react';
 import { Coupon } from '@/types';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useApp } from '@/context/AppContext';
 
 interface CouponsTabProps {
@@ -28,10 +30,26 @@ export function CouponsTab({
   adminDeleteCoupon,
   showFeedback,
 }: CouponsTabProps) {
-  const { products } = useApp();
+  const {
+    products,
+    specialOffersSettings,
+    updateSpecialOffersSettings,
+    adminToggleCouponVisibility,
+    adminReorderCoupons,
+    adminUpdateCoupon,
+  } = useApp();
+
   const [editingCouponCode, setEditingCouponCode] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'special' | 'giveaway'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'special' | 'giveaway' | 'hidden'>('all');
+  const [showSectionSettings, setShowSectionSettings] = useState(false);
+  const [movingCode, setMovingCode] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Section customizer local state
+  const [sectionBadge, setSectionBadge] = useState(specialOffersSettings?.badgeTitle || 'Special Offers & Promo Hub');
+  const [sectionHeading, setSectionHeading] = useState(specialOffersSettings?.sectionHeading || 'Exclusive Deals & Giveaways');
+  const [sectionSubtitle, setSectionSubtitle] = useState(specialOffersSettings?.sectionSubtitle || 'Swipe or scroll to claim promo codes, giveaways, and exclusive subscription discounts.');
+  const [isSavingSection, setIsSavingSection] = useState(false);
 
   // Derived scope mode: 'all' | 'category' | 'products'
   const targetScope: 'all' | 'category' | 'products' =
@@ -49,8 +67,8 @@ export function CouponsTab({
 
   const toggleSpecialOffer = async (code: string, currentVal?: boolean) => {
     try {
-      await updateDoc(doc(db, 'coupons', code), { isSpecialOffer: !currentVal });
-      showFeedback('success', `Coupon ${code} ${!currentVal ? 'published to' : 'removed from'} Storefront Landing Page Special Offers Hub.`);
+      await adminUpdateCoupon(code, { isSpecialOffer: !currentVal });
+      showFeedback('success', `Deal ${code} ${!currentVal ? 'featured on' : 'removed from'} Landing Page Deals Hub.`);
     } catch {
       showFeedback('error', 'Failed to update special offer status.');
     }
@@ -76,26 +94,223 @@ export function CouponsTab({
     reader.readAsDataURL(file);
   };
 
-  const filteredCoupons = coupons.filter(c => {
-    if (filterType === 'special') return c.isSpecialOffer;
-    if (filterType === 'giveaway') return c.type === 'giveaway' || c.discountPercent >= 100 || c.offerTag?.toLowerCase().includes('giveaway');
-    return true;
-  });
+  // Sort coupons strictly by orderIndex ascending
+  const sortedCoupons = useMemo(() => {
+    return [...coupons].sort((a, b) => (a.orderIndex ?? 999) - (b.orderIndex ?? 999));
+  }, [coupons]);
+
+  const filteredCoupons = useMemo(() => {
+    return sortedCoupons.filter(c => {
+      if (filterType === 'special') return c.isSpecialOffer && !c.isHidden;
+      if (filterType === 'giveaway') return (c.type === 'giveaway' || c.discountPercent >= 100 || c.offerTag?.toLowerCase().includes('giveaway')) && !c.isHidden;
+      if (filterType === 'hidden') return !!c.isHidden;
+      return true;
+    });
+  }, [sortedCoupons, filterType]);
+
+  // Handle move coupon Up / Down
+  const handleMoveCoupon = async (code: string, direction: 'up' | 'down') => {
+    setMovingCode(code);
+    try {
+      const list = [...sortedCoupons];
+      const currentIndex = list.findIndex(c => c.code === code);
+      if (currentIndex === -1) return;
+
+      const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (targetIndex < 0 || targetIndex >= list.length) return;
+
+      const temp = list[currentIndex];
+      list[currentIndex] = list[targetIndex];
+      list[targetIndex] = temp;
+
+      const reordered = list.map((c, idx) => ({ ...c, orderIndex: idx }));
+      await adminReorderCoupons(reordered);
+    } finally {
+      setMovingCode(null);
+    }
+  };
+
+  // Handle direct position selection
+  const handleSetPosition = async (code: string, newPos: number) => {
+    const list = [...sortedCoupons];
+    const currentIndex = list.findIndex(c => c.code === code);
+    if (currentIndex === -1 || currentIndex === newPos) return;
+
+    const [item] = list.splice(currentIndex, 1);
+    list.splice(newPos, 0, item);
+
+    const reordered = list.map((c, idx) => ({ ...c, orderIndex: idx }));
+    await adminReorderCoupons(reordered);
+    showFeedback('success', `Moved ${code} to sequence #${newPos + 1}`);
+  };
+
+  // Save section titles
+  const handleSaveSectionSettings = async () => {
+    setIsSavingSection(true);
+    try {
+      await updateSpecialOffersSettings({
+        badgeTitle: sectionBadge,
+        sectionHeading: sectionHeading,
+        sectionSubtitle: sectionSubtitle,
+      });
+      showFeedback('success', 'Exclusive Deals section titles updated on Storefront!');
+      setShowSectionSettings(false);
+    } catch {
+      showFeedback('error', 'Failed to save section settings.');
+    } finally {
+      setIsSavingSection(false);
+    }
+  };
+
+  const isSectionHidden = !!specialOffersSettings?.isSectionHidden;
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Top Banner Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 rounded-3xl bg-zinc-900 border border-white/[0.08]">
-        <div>
-          <h2 className="text-lg font-black text-white flex items-center gap-2">
-            <Gift className="h-5 w-5 text-cyan-400" />
-            <span>Special Offers, Discounts &amp; Giveaway Manager</span>
-          </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Create flash sales, free giveaways, promo codes, custom offer pictures, and feature them live on the Storefront Landing Page.
-          </p>
+    <div className="space-y-6 max-w-5xl">
+      
+      {/* 1. Master Section Customization & Visibility Control Banner */}
+      <div className="p-5 rounded-3xl bg-zinc-950 border border-white/[0.08] shadow-2xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                <Gift className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-white flex items-center gap-2">
+                  <span>Exclusive Deals, Giveaways &amp; Offers Hub</span>
+                </h2>
+                <p className="text-xs text-slate-400">
+                  Manage storefront deals carousel, sequence promo cards, and toggle visibility.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Master Hide / Show Section Toggle */}
+            <button
+              type="button"
+              onClick={async () => {
+                const nextVal = !isSectionHidden;
+                await updateSpecialOffersSettings({ isSectionHidden: nextVal });
+                showFeedback('success', `Exclusive Deals Section is now ${nextVal ? 'HIDDEN from' : 'LIVE on'} Storefront.`);
+              }}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer border shadow-sm ${
+                isSectionHidden
+                  ? 'bg-rose-950/80 text-rose-300 border-rose-500/40 hover:bg-rose-900'
+                  : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900'
+              }`}
+              title="Click to toggle entire section visibility on homepage"
+            >
+              {isSectionHidden ? (
+                <>
+                  <EyeOff className="h-4 w-4 text-rose-400" />
+                  <span>Section: Hidden (Off)</span>
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4 text-emerald-400" />
+                  <span>Section: Live on Store</span>
+                </>
+              )}
+            </button>
+
+            {/* Customizer Drawer Button */}
+            <button
+              type="button"
+              onClick={() => setShowSectionSettings(!showSectionSettings)}
+              className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-slate-300 border border-white/10 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
+            >
+              <Settings2 className="h-4 w-4 text-cyan-400" />
+              <span>Section Text</span>
+              {showSectionSettings ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
+          </div>
         </div>
 
+        {/* Section Text Customizer Collapsible Box */}
+        {showSectionSettings && (
+          <div className="p-4 rounded-2xl bg-zinc-900/90 border border-cyan-500/30 space-y-3 animate-in fade-in duration-200">
+            <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+              <Sliders className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Customize Storefront Deals Section Headings</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">Badge Tagline</label>
+                <input
+                  value={sectionBadge}
+                  onChange={e => setSectionBadge(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-cyan-500"
+                  placeholder="e.g. Special Offers & Promo Hub"
+                />
+              </div>
+              <div>
+                <label className="text-slate-300 font-bold block mb-1">Section Main Heading</label>
+                <input
+                  value={sectionHeading}
+                  onChange={e => setSectionHeading(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-cyan-500"
+                  placeholder="e.g. Exclusive Deals & Giveaways"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-slate-300 font-bold block mb-1">Section Subtitle</label>
+                <input
+                  value={sectionSubtitle}
+                  onChange={e => setSectionSubtitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-cyan-500"
+                  placeholder="e.g. Swipe or scroll to claim promo codes..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => setShowSectionSettings(false)}
+                className="px-3 py-1.5 rounded-xl bg-zinc-800 text-slate-300 text-xs font-bold hover:bg-zinc-700 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingSection}
+                onClick={handleSaveSectionSettings}
+                className="px-4 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-xs font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+              >
+                <Check className="h-3.5 w-3.5" />
+                <span>Save Section Titles</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 2. Action Buttons & Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Filter Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[
+            { id: 'all', label: `All Deals & Codes (${coupons.length})` },
+            { id: 'special', label: `★ Landing Deals (${coupons.filter(c => c.isSpecialOffer && !c.isHidden).length})` },
+            { id: 'giveaway', label: `🎁 Giveaways (${coupons.filter(c => (c.type === 'giveaway' || c.discountPercent >= 100) && !c.isHidden).length})` },
+            { id: 'hidden', label: `👁️‍🗨️ Hidden (${coupons.filter(c => c.isHidden).length})` },
+          ].map(f => (
+            <button
+              key={f.id}
+              onClick={() => setFilterType(f.id as any)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                filterType === f.id
+                  ? 'bg-cyan-500 text-zinc-950 shadow-md shadow-cyan-500/20'
+                  : 'bg-zinc-900 text-slate-400 hover:text-white border border-white/5'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Create Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => {
@@ -108,14 +323,16 @@ export function CouponsTab({
                 offerTitle: 'Community Monthly Premium Giveaway',
                 offerImage: 'https://images.unsplash.com/photo-1513151233558-d860c5398176?auto=format&fit=crop&w=800&q=80',
                 type: 'giveaway',
+                isHidden: false,
+                orderIndex: sortedCoupons.length,
               });
               setShowCouponForm(true);
             }}
-            className="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+            className="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
           >
-            <Plus className="h-4 w-4 text-amber-400" />
+            <Plus className="h-3.5 w-3.5 text-amber-400" />
             <Gift className="h-3.5 w-3.5" />
-            <span>+ Add New Giveaway</span>
+            <span>+ Giveaway</span>
           </button>
 
           <button
@@ -129,54 +346,41 @@ export function CouponsTab({
                 offerTitle: 'Instant 40% Off Storewide Flash Sale',
                 offerImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80',
                 type: 'special_deal',
+                isHidden: false,
+                orderIndex: sortedCoupons.length,
               });
               setShowCouponForm(true);
             }}
-            className="px-3.5 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
+            className="px-3 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm"
           >
-            <Plus className="h-4 w-4 text-cyan-400" />
+            <Plus className="h-3.5 w-3.5 text-cyan-400" />
             <Sparkles className="h-3.5 w-3.5" />
-            <span>+ Add Special Offer</span>
+            <span>+ Special Deal</span>
           </button>
 
           <button
             onClick={() => {
-              setNewCoupon({ code: '', discountPercent: 15, description: '' });
+              setNewCoupon({
+                code: '',
+                discountPercent: 15,
+                description: '',
+                isHidden: false,
+                orderIndex: sortedCoupons.length,
+              });
               setShowCouponForm(!showCouponForm);
             }}
-            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
+            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <Tag className="h-3.5 w-3.5" />
-            <span>+ Add Discount Code</span>
+            <span>+ Add Code</span>
           </button>
         </div>
       </div>
 
-      {/* Filter Chips */}
-      <div className="flex items-center gap-2">
-        {[
-          { id: 'all', label: `All Codes & Deals (${coupons.length})` },
-          { id: 'special', label: `★ Landing Page Featured (${coupons.filter(c => c.isSpecialOffer).length})` },
-          { id: 'giveaway', label: `🎁 Giveaways (${coupons.filter(c => c.type === 'giveaway' || c.discountPercent >= 100).length})` },
-        ].map(f => (
-          <button
-            key={f.id}
-            onClick={() => setFilterType(f.id as any)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              filterType === f.id
-                ? 'bg-zinc-800 text-white border border-white/20 shadow-sm'
-                : 'bg-zinc-950 text-slate-400 hover:text-white border border-white/5'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Form Overlay */}
+      {/* 3. Form Overlay / Drawer */}
       {showCouponForm && (
-        <div className="p-6 rounded-3xl bg-zinc-900 border border-white/15 space-y-5 shadow-2xl">
+        <div className="p-6 rounded-3xl bg-zinc-900 border border-white/15 space-y-5 shadow-2xl animate-in fade-in duration-200">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <Gift className="h-4 w-4 text-cyan-400" />
@@ -195,12 +399,12 @@ export function CouponsTab({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div>
-              <label className="text-slate-300 font-bold block mb-1">Coupon / Code</label>
+              <label className="text-slate-300 font-bold block mb-1">Coupon / Promo Code</label>
               <input
                 value={newCoupon.code}
                 onChange={e => setNewCoupon(p => ({ ...p, code: e.target.value }))}
                 placeholder="e.g. VIP50 or GIVEAWAY100"
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white uppercase focus:outline-none focus:border-blue-500 font-mono font-bold"
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white uppercase focus:outline-none focus:border-cyan-500 font-mono font-bold"
               />
             </div>
 
@@ -210,402 +414,203 @@ export function CouponsTab({
                 type="number"
                 value={newCoupon.discountPercent}
                 onChange={e => setNewCoupon(p => ({ ...p, discountPercent: Number(e.target.value) }))}
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-emerald-400 font-bold font-mono focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-emerald-400 font-bold font-mono focus:outline-none focus:border-cyan-500"
               />
             </div>
 
             <div>
-              <label className="text-slate-300 font-bold block mb-1">Min Order ($)</label>
+              <label className="text-slate-300 font-bold block mb-1">Display Sequence Order</label>
               <input
                 type="number"
-                value={newCoupon.minOrderAmount || ''}
-                onChange={e => setNewCoupon(p => ({ ...p, minOrderAmount: Number(e.target.value) || undefined }))}
-                placeholder="Optional e.g. 30.00"
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                value={newCoupon.orderIndex ?? 0}
+                onChange={e => setNewCoupon(p => ({ ...p, orderIndex: Number(e.target.value) }))}
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-cyan-300 font-mono font-bold focus:outline-none focus:border-cyan-500"
+                placeholder="0 = 1st position"
               />
             </div>
 
-            <div>
-              <label className="text-slate-300 font-bold block mb-1">Expiry Date</label>
-              <input
-                type="date"
-                value={newCoupon.expiryDate || ''}
-                onChange={e => setNewCoupon(p => ({ ...p, expiryDate: e.target.value || undefined }))}
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="text-slate-300 font-bold block mb-1">Max Redemptions Limit</label>
-              <input
-                type="number"
-                min="1"
-                value={newCoupon.maxUses || ''}
-                onChange={e => setNewCoupon(p => ({ ...p, maxUses: Number(e.target.value) || undefined }))}
-                placeholder="Optional e.g. 100"
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
-              />
-            </div>
-
-            {/* 3-Way Targeting Scope Selector */}
-            <div className="col-span-1 sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
-              <label className="text-slate-300 font-bold text-xs block">
-                Targeting Scope (Where can this promo code be applied?)
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setNewCoupon(p => ({ ...p, applicableCategory: 'all', applicableProductIds: [] }))}
-                  className={`py-2 px-3 rounded-xl font-bold border transition-all cursor-pointer ${
-                    targetScope === 'all'
-                      ? 'bg-blue-600 text-white border-blue-500 shadow-md'
-                      : 'bg-zinc-900 text-slate-400 border-white/10 hover:text-white'
-                  }`}
-                >
-                  🌐 Storewide (All Products)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setNewCoupon(p => ({ ...p, applicableCategory: p.applicableCategory === 'all' ? 'ai' : (p.applicableCategory || 'ai'), applicableProductIds: [] }))}
-                  className={`py-2 px-3 rounded-xl font-bold border transition-all cursor-pointer ${
-                    targetScope === 'category'
-                      ? 'bg-indigo-600 text-white border-indigo-500 shadow-md'
-                      : 'bg-zinc-900 text-slate-400 border-white/10 hover:text-white'
-                  }`}
-                >
-                  📁 Specific Category
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setNewCoupon(p => ({ ...p, applicableCategory: 'all', applicableProductIds: p.applicableProductIds && p.applicableProductIds.length > 0 ? p.applicableProductIds : [products[0]?.id || ''] }))}
-                  className={`py-2 px-3 rounded-xl font-bold border transition-all cursor-pointer ${
-                    targetScope === 'products'
-                      ? 'bg-cyan-600 text-white border-cyan-500 shadow-md'
-                      : 'bg-zinc-900 text-slate-400 border-white/10 hover:text-white'
-                  }`}
-                >
-                  🎯 Specific Product(s)
-                </button>
-              </div>
-
-              {/* Category Dropdown Sub-Option */}
-              {targetScope === 'category' && (
-                <div className="pt-2">
-                  <label className="text-slate-400 font-semibold block mb-1">Select Target Category</label>
-                  <select
-                    value={newCoupon.applicableCategory || 'ai'}
-                    onChange={e => setNewCoupon(p => ({ ...p, applicableCategory: e.target.value as any, applicableProductIds: [] }))}
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs"
-                  >
-                    <option value="ai">AI & Productivity (ai)</option>
-                    <option value="streaming">Movies & Music (streaming)</option>
-                    <option value="dev">Developer Tools (dev)</option>
-                    <option value="productivity">Design & Creative (productivity)</option>
-                    <option value="vpn_security">VPN & Security (vpn_security)</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Specific Products Checkboxes Sub-Option */}
-              {targetScope === 'products' && (
-                <div className="pt-2 space-y-2">
-                  <label className="text-slate-400 font-semibold block mb-1">
-                    Select Eligible Products ({ (newCoupon.applicableProductIds || []).length } selected)
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto p-2.5 rounded-xl bg-zinc-900 border border-white/10">
-                    {products.map(prod => {
-                      const isChecked = (newCoupon.applicableProductIds || []).includes(prod.id);
-                      return (
-                        <label key={prod.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-zinc-800/80 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              const checked = e.target.checked;
-                              setNewCoupon(p => {
-                                const currentList = p.applicableProductIds || [];
-                                const newList = checked
-                                  ? [...currentList, prod.id]
-                                  : currentList.filter(id => id !== prod.id);
-                                return { ...p, applicableCategory: 'all', applicableProductIds: newList };
-                              });
-                            }}
-                            className="h-4 w-4 rounded accent-cyan-500 cursor-pointer"
-                          />
-                          <span className="text-xs text-white truncate font-medium">{prod.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="text-slate-300 font-bold block mb-1">Expiry Date</label>
-              <input
-                type="date"
-                value={newCoupon.expiryDate || ''}
-                onChange={e => setNewCoupon(p => ({ ...p, expiryDate: e.target.value || undefined }))}
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="text-slate-300 font-bold block mb-1">Max Redemptions Limit</label>
-              <input
-                type="number"
-                min="1"
-                value={newCoupon.maxUses || ''}
-                onChange={e => setNewCoupon(p => ({ ...p, maxUses: Number(e.target.value) || undefined }))}
-                placeholder="Optional e.g. 100"
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500 font-mono"
-              />
-            </div>
-
-            <div className="col-span-1 sm:col-span-3">
-              <label className="text-slate-300 font-bold block mb-1">Description / Terms</label>
+            <div className="sm:col-span-3">
+              <label className="text-slate-300 font-bold block mb-1">Deal Description &amp; Terms</label>
               <input
                 value={newCoupon.description}
                 onChange={e => setNewCoupon(p => ({ ...p, description: e.target.value }))}
-                placeholder="e.g. 50% discount on annual premium AI & streaming plans"
-                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-blue-500"
+                placeholder="e.g. 50% discount on all Developer Tools subscriptions"
+                className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white focus:outline-none focus:border-cyan-500"
               />
             </div>
 
-            {/* Custom Offer Picture Upload & URL Section */}
-            <div className="col-span-1 sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-white text-xs flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-cyan-400" />
-                  <span>Custom Offer Picture Banner</span>
-                </span>
-                <span className="text-[10px] text-slate-400">Upload or paste image URL for storefront card</span>
+            {/* Special Deals Hub Card Customization */}
+            <div className="sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-cyan-500/20 space-y-3">
+              <span className="font-bold text-slate-200 block text-xs">
+                Featured Offer &amp; Deals Hub Banner Settings
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 block mb-1">Offer Title (Shown on Banner)</label>
+                  <input
+                    value={newCoupon.offerTitle || ''}
+                    onChange={e => setNewCoupon(p => ({ ...p, offerTitle: e.target.value }))}
+                    placeholder="e.g. Free 1-Month ChatGPT Plus Access"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Badge Tag (e.g. 🎁 GIVEAWAY, ⚡ FLASH)</label>
+                  <input
+                    value={newCoupon.offerTag || ''}
+                    onChange={e => setNewCoupon(p => ({ ...p, offerTag: e.target.value }))}
+                    placeholder="e.g. 🎁 FREE GIVEAWAY"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono"
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2 space-y-2">
+              <div>
+                <label className="text-slate-400 block mb-1">Custom Deal Picture URL</label>
+                <div className="flex items-center gap-2">
                   <input
                     value={newCoupon.offerImage || ''}
                     onChange={e => setNewCoupon(p => ({ ...p, offerImage: e.target.value }))}
-                    placeholder="Paste image URL (e.g. https://... or upload below)"
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs focus:outline-none focus:border-cyan-500"
+                    placeholder="https://images.unsplash.com/... or upload"
+                    className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs"
                   />
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageFileUpload}
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-xs font-bold text-slate-200 flex items-center gap-1.5 cursor-pointer transition-all"
-                    >
-                      <Upload className="h-3.5 w-3.5 text-cyan-400" />
-                      <span>Upload Custom Picture File</span>
-                    </button>
-
-                    {newCoupon.offerImage && (
-                      <button
-                        type="button"
-                        onClick={() => setNewCoupon(p => ({ ...p, offerImage: undefined }))}
-                        className="px-2.5 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900 text-red-300 text-xs font-bold flex items-center gap-1 cursor-pointer transition-all"
-                      >
-                        <X className="h-3.5 w-3.5" /> Remove
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Live Image Preview Thumbnail */}
-                <div className="h-24 rounded-xl bg-zinc-900 border border-white/10 overflow-hidden relative flex items-center justify-center">
-                  {newCoupon.offerImage ? (
-                    <img
-                      src={newCoupon.offerImage}
-                      alt="Offer preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-center p-2 text-slate-500 text-[10px]">
-                      No Image Selected
-                    </div>
-                  )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageFileUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-slate-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer border border-white/10 shrink-0"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    <span>Upload Picture</span>
+                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Special Offer Settings */}
-            <div className="col-span-1 sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
-              <label className="flex items-center gap-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!newCoupon.isSpecialOffer}
-                  onChange={e => setNewCoupon(p => ({ ...p, isSpecialOffer: e.target.checked }))}
-                  className="h-4 w-4 rounded accent-cyan-500 cursor-pointer"
-                />
-                <span className="font-bold text-white text-xs">Publish to Storefront Landing Page Special Offers &amp; Giveaway Hub</span>
-              </label>
+              <div className="flex items-center gap-4 pt-2 border-t border-white/5 flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!newCoupon.isSpecialOffer}
+                    onChange={e => setNewCoupon(p => ({ ...p, isSpecialOffer: e.target.checked }))}
+                    className="h-4 w-4 rounded bg-zinc-900 text-cyan-500 focus:ring-0 cursor-pointer"
+                  />
+                  <span className="text-white font-bold text-xs">Featured on Landing Page Deals Hub</span>
+                </label>
 
-              {newCoupon.isSpecialOffer && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Badge Tag</label>
-                    <input
-                      value={newCoupon.offerTag || ''}
-                      onChange={e => setNewCoupon(p => ({ ...p, offerTag: e.target.value }))}
-                      placeholder="e.g. 🎁 FREE GIVEAWAY, ⚡ FLASH SALE, 🔥 VIP 50%"
-                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-cyan-300 font-bold text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-slate-400 font-semibold block mb-1">Offer Headline Title</label>
-                    <input
-                      value={newCoupon.offerTitle || ''}
-                      onChange={e => setNewCoupon(p => ({ ...p, offerTitle: e.target.value }))}
-                      placeholder="e.g. Summer AI &amp; Cinema Giveaway Pass"
-                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Dynamic Social Tasks Builder */}
-            <div className="col-span-1 sm:col-span-3 p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-white text-xs flex items-center gap-1.5">
-                    <Sparkles className="h-4 w-4 text-amber-400" />
-                    <span>Required Social Tasks (User Must Complete to Unlock Code)</span>
-                  </span>
-                  <span className="text-[10px] text-slate-400 block mt-0.5">
-                    Add required links like Telegram channel, Facebook page, or YouTube channel.
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newTask = {
-                      id: `task_${Date.now()}`,
-                      label: 'Join Telegram Channel',
-                      url: 'https://t.me/keyoon_deals',
-                      isRequired: true,
-                    };
-                    setNewCoupon(p => ({
-                      ...p,
-                      requiredTasks: [...(p.requiredTasks || []), newTask],
-                    }));
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" /> Add Task
-                </button>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!newCoupon.isHidden}
+                    onChange={e => setNewCoupon(p => ({ ...p, isHidden: e.target.checked }))}
+                    className="h-4 w-4 rounded bg-zinc-900 text-rose-500 focus:ring-0 cursor-pointer"
+                  />
+                  <span className="text-rose-300 font-bold text-xs">Hide Deal from Storefront</span>
+                </label>
               </div>
-
-              {(newCoupon.requiredTasks || []).length === 0 ? (
-                <p className="text-[11px] text-slate-500 italic">No required tasks added. Users can copy the code directly without task verification.</p>
-              ) : (
-                <div className="space-y-2">
-                  {(newCoupon.requiredTasks || []).map((t, idx) => (
-                    <div key={t.id || idx} className="grid grid-cols-1 sm:grid-cols-5 gap-2 p-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs items-center">
-                      <input
-                        value={t.label}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setNewCoupon(p => ({
-                            ...p,
-                            requiredTasks: (p.requiredTasks || []).map((item, i) => i === idx ? { ...item, label: val } : item),
-                          }));
-                        }}
-                        placeholder="Task Label (e.g. Join Telegram)"
-                        className="sm:col-span-2 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-white/10 text-white font-medium"
-                      />
-                      <input
-                        value={t.url}
-                        onChange={e => {
-                          const val = e.target.value;
-                          setNewCoupon(p => ({
-                            ...p,
-                            requiredTasks: (p.requiredTasks || []).map((item, i) => i === idx ? { ...item, url: val } : item),
-                          }));
-                        }}
-                        placeholder="Task Link URL (https://...)"
-                        className="sm:col-span-2 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-white/10 text-cyan-300 font-mono text-[11px]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setNewCoupon(p => ({
-                            ...p,
-                            requiredTasks: (p.requiredTasks || []).filter((_, i) => i !== idx),
-                          }));
-                        }}
-                        className="p-1.5 rounded-lg bg-red-950/60 hover:bg-red-900 text-red-400 transition-colors justify-self-end cursor-pointer"
-                        title="Remove Task"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex justify-end gap-3 pt-3 border-t border-white/10">
             <button
-              onClick={async () => {
-                await handleCreateCoupon();
-                setEditingCouponCode(null);
-              }}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md"
-            >
-              <Save className="h-3.5 w-3.5" />
-              <span>{editingCouponCode ? 'Save & Update Offer' : 'Save & Publish Offer'}</span>
-            </button>
-            <button
+              type="button"
               onClick={() => {
                 setShowCouponForm(false);
                 setEditingCouponCode(null);
               }}
-              className="px-5 py-2.5 rounded-xl bg-zinc-800 text-slate-300 text-xs font-bold cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-zinc-800 text-slate-300 text-xs font-bold hover:bg-zinc-700 cursor-pointer"
             >
               Cancel
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                if (editingCouponCode) {
+                  await adminUpdateCoupon(editingCouponCode, newCoupon);
+                  showFeedback('success', `Deal ${editingCouponCode} updated.`);
+                  setShowCouponForm(false);
+                  setEditingCouponCode(null);
+                } else {
+                  await handleCreateCoupon();
+                }
+              }}
+              className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-zinc-950 text-xs font-bold cursor-pointer shadow-lg flex items-center gap-1.5"
+            >
+              <Save className="h-4 w-4" />
+              <span>{editingCouponCode ? 'Update Deal' : 'Save & Publish Deal'}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Coupons & Offers List */}
+      {/* 4. Deals & Giveaways List with Sequencing & Instant Hide/Unhide */}
       <div className="space-y-3">
-        {filteredCoupons.map(c => {
+        {filteredCoupons.map((c, idx) => {
           const isGiveaway = c.type === 'giveaway' || c.discountPercent >= 100 || c.offerTag?.toLowerCase().includes('giveaway');
+          const isHidden = !!c.isHidden;
+          const isMoving = movingCode === c.code;
 
           return (
             <div
               key={c.code}
               className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all gap-4 ${
-                c.isSpecialOffer
-                  ? 'bg-zinc-900/90 border-cyan-500/30 shadow-md ring-1 ring-cyan-500/20'
-                  : 'bg-zinc-900 border-white/[0.08]'
+                isHidden
+                  ? 'bg-zinc-950/60 border-rose-500/20 opacity-75'
+                  : c.isSpecialOffer
+                    ? 'bg-zinc-900/90 border-cyan-500/40 shadow-lg ring-1 ring-cyan-500/20'
+                    : 'bg-zinc-900 border-white/[0.08]'
               }`}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                {/* Sequence Number & Up/Down Arrows */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <select
+                    value={sortedCoupons.findIndex(item => item.code === c.code)}
+                    onChange={(e) => handleSetPosition(c.code, Number(e.target.value))}
+                    className="text-[11px] font-mono font-bold px-2 py-1 rounded-lg bg-zinc-950 text-cyan-400 border border-cyan-500/30 cursor-pointer"
+                    title="Change sequence order on storefront"
+                  >
+                    {sortedCoupons.map((_, pIdx) => (
+                      <option key={pIdx} value={pIdx}>
+                        #{pIdx + 1}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      type="button"
+                      disabled={isMoving || idx === 0}
+                      onClick={() => handleMoveCoupon(c.code, 'up')}
+                      className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 text-slate-300 disabled:opacity-30 cursor-pointer"
+                      title="Move deal up (▲)"
+                    >
+                      <ArrowUp className="h-2.5 w-2.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isMoving || idx === sortedCoupons.length - 1}
+                      onClick={() => handleMoveCoupon(c.code, 'down')}
+                      className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 text-slate-300 disabled:opacity-30 cursor-pointer"
+                      title="Move deal down (▼)"
+                    >
+                      <ArrowDown className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                </div>
+
                 {/* Thumbnail if custom offerImage exists */}
                 {c.offerImage ? (
                   <div className="h-12 w-16 rounded-xl border border-white/10 overflow-hidden shrink-0">
                     <img src={c.offerImage} alt={c.code} className="w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <div className={`px-3.5 py-2 rounded-xl border shrink-0 font-mono font-black text-sm ${
+                  <div className={`px-3 py-2 rounded-xl border shrink-0 font-mono font-black text-xs ${
                     isGiveaway
                       ? 'bg-amber-950/60 text-amber-300 border-amber-500/40'
                       : 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
@@ -614,7 +619,8 @@ export function CouponsTab({
                   </div>
                 )}
 
-                <div className="space-y-1">
+                {/* Deal Details */}
+                <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono font-black text-emerald-400 text-sm">{c.code}</span>
                     <span className="text-sm font-black text-white">
@@ -627,84 +633,82 @@ export function CouponsTab({
                       </span>
                     )}
 
-                    {c.applicableProductIds && c.applicableProductIds.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 font-bold text-[10px] uppercase border border-cyan-500/30">
-                        Products ({c.applicableProductIds.length})
-                      </span>
-                    )}
-
-                    {c.applicableCategory && c.applicableCategory !== 'all' && (
-                      <span className="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 font-bold text-[10px] uppercase border border-indigo-500/30">
-                        Category: {c.applicableCategory}
-                      </span>
-                    )}
-
-                    {c.expiryDate && (
-                      <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
-                        new Date(c.expiryDate).getTime() < Date.now()
-                          ? 'bg-rose-950 text-rose-300 border-rose-500/30'
-                          : 'bg-zinc-800 text-slate-300 border-white/10'
-                      }`}>
-                        {new Date(c.expiryDate).getTime() < Date.now() ? 'Expired' : `Expires: ${c.expiryDate}`}
-                      </span>
-                    )}
-
-                    {typeof c.maxUses === 'number' && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-bold text-[10px] border border-amber-500/30 font-mono">
-                        Used: {c.usedCount || 0} / {c.maxUses}
-                      </span>
-                    )}
-
-                    {c.requiredTasks && c.requiredTasks.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 font-bold text-[10px] uppercase border border-amber-500/30">
-                        ⚡ Tasks ({c.requiredTasks.length})
-                      </span>
-                    )}
-
                     {c.isSpecialOffer && (
                       <span className="px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1">
-                        <CheckCircle2 className="h-3 w-3 text-cyan-400" /> Landing Page Hub Active
+                        <CheckCircle2 className="h-3 w-3 text-cyan-400" /> Featured Deal
+                      </span>
+                    )}
+
+                    {isHidden && (
+                      <span className="px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-500/30 text-[9px] font-bold uppercase">
+                        Hidden from Store
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-400 truncate">
                     {c.offerTitle || c.description}
-                    {c.minOrderAmount ? ` · Min order $${c.minOrderAmount}` : ''}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 self-end sm:self-auto">
+              {/* Status & Action Buttons */}
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                {/* 1-Click Hide/Unhide Button */}
+                <button
+                  type="button"
+                  onClick={() => adminToggleCouponVisibility(c.code)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                    isHidden
+                      ? 'bg-rose-950/80 text-rose-300 border-rose-500/40 hover:bg-rose-900'
+                      : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900'
+                  }`}
+                  title="Click to toggle visibility on storefront"
+                >
+                  {isHidden ? (
+                    <>
+                      <EyeOff className="h-3.5 w-3.5 text-rose-400" />
+                      <span>Hidden (Off)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3.5 w-3.5 text-emerald-400" />
+                      <span>Live on Hub</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Edit Button */}
                 <button
                   type="button"
                   onClick={() => handleEditCoupon(c)}
-                  className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-white/10"
-                  title="Edit promo code settings"
+                  className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer border border-white/10"
+                  title="Edit deal settings"
                 >
                   <Edit2 className="h-3.5 w-3.5 text-cyan-400" />
                   <span>Edit</span>
                 </button>
 
+                {/* Star / Featured Toggle */}
                 <button
                   type="button"
                   onClick={() => toggleSpecialOffer(c.code, c.isSpecialOffer)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                  className={`p-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                     c.isSpecialOffer
-                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm'
+                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
                       : 'bg-zinc-800 text-slate-400 border-white/10 hover:text-white'
                   }`}
-                  title="Toggle storefront landing page featured offer status"
+                  title="Toggle storefront featured offer status"
                 >
                   <Star className={`h-3.5 w-3.5 ${c.isSpecialOffer ? 'fill-cyan-400 text-cyan-400' : ''}`} />
-                  <span>{c.isSpecialOffer ? 'Featured' : 'Publish'}</span>
                 </button>
 
+                {/* Delete */}
                 <button
-                  onClick={() => adminDeleteCoupon(c.code).then(() => showFeedback('success', `Coupon ${c.code} deleted.`))}
+                  onClick={() => adminDeleteCoupon(c.code).then(() => showFeedback('success', `Deal ${c.code} deleted.`))}
                   className="p-2 rounded-xl bg-zinc-800 hover:bg-red-950/60 text-red-400 transition-colors cursor-pointer"
-                  title="Delete coupon"
+                  title="Delete deal"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
@@ -713,7 +717,7 @@ export function CouponsTab({
 
         {filteredCoupons.length === 0 && (
           <div className="p-8 text-center text-slate-500 text-xs rounded-2xl bg-zinc-900 border border-white/[0.06]">
-            No coupons or special offers matching query. Click &quot;+ Add Discount Code&quot; or &quot;🎁 Add New Giveaway&quot; above to create one.
+            No deals matching query. Click &quot;+ Special Deal&quot; or &quot;+ Giveaway&quot; above to create one.
           </div>
         )}
       </div>

@@ -93,6 +93,16 @@ export interface Coupon {
   type?: 'discount' | 'giveaway' | 'special_deal' | 'bundle_offer';
   isRecurringDiscount?: boolean;
   requiredTasks?: GiveawayTask[]; // Social tasks required to unlock code
+  isHidden?: boolean; // Hide deal/coupon from Storefront Deals Hub
+  orderIndex?: number; // Display sequence order on Storefront Deals Hub
+}
+
+export interface SpecialOffersSettings {
+  isSectionHidden?: boolean; // Toggle entire Deals & Offers section on/off
+  badgeTitle?: string;       // e.g. "Special Offers & Promo Hub"
+  sectionHeading?: string;   // e.g. "Exclusive Deals & Giveaways"
+  sectionSubtitle?: string;  // Subtitle description text
+  updatedAt?: string;
 }
 
 export type PaymentMethod = 'bkash' | 'nagad' | 'rocket' | 'upay' | 'crypto_usdt' | 'card_stripe' | 'custom';
