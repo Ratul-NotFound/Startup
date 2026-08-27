@@ -21,6 +21,7 @@ export const ProductModal: React.FC = () => {
     setIsCartOpen,
     setIsCheckoutOpen,
     applyCoupon,
+    coupons,
     reviews,
     likeReview,
     setIsWriteReviewOpen,
@@ -42,6 +43,44 @@ export const ProductModal: React.FC = () => {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
   const [copiedCoupon, setCopiedCoupon] = useState(false);
+
+  // Link to any active promo / special deal coupon tied to this product
+  const linkedCoupon = useMemo(() => {
+    if (!selectedProduct) return null;
+    return (coupons || []).find(
+      c => c.linkedProductId === selectedProduct.id ||
+      (selectedProduct.specialConfig?.unlockedCouponCode && c.code.toUpperCase() === selectedProduct.specialConfig.unlockedCouponCode.toUpperCase())
+    );
+  }, [coupons, selectedProduct]);
+
+  // Aggregate all tasks configured for this special product
+  const specialTasks = useMemo(() => {
+    if (!selectedProduct) return [];
+    if (selectedProduct.specialConfig?.tasks && selectedProduct.specialConfig.tasks.length > 0) {
+      return selectedProduct.specialConfig.tasks;
+    }
+    if (linkedCoupon?.requiredTasks && linkedCoupon.requiredTasks.length > 0) {
+      return linkedCoupon.requiredTasks.map(t => ({
+        id: t.id,
+        title: t.label,
+        url: t.url,
+        type: t.type || 'custom_action',
+        isRequired: t.isRequired ?? true,
+      }));
+    }
+    return [];
+  }, [selectedProduct, linkedCoupon]);
+
+  const isSpecialProduct = useMemo(() => {
+    if (!selectedProduct) return false;
+    return (
+      selectedProduct.productType === 'special' ||
+      specialTasks.length > 0 ||
+      !!selectedProduct.specialConfig ||
+      !!selectedProduct.isFreeProduct ||
+      !!linkedCoupon
+    );
+  }, [selectedProduct, specialTasks, linkedCoupon]);
 
   useEffect(() => {
     if (selectedProduct) {
@@ -329,30 +368,33 @@ export const ProductModal: React.FC = () => {
                 </p>
 
                 {/* ═════════ SPECIAL PRODUCT TASKS & MISSION REWARDS DRAWER ═════════ */}
-                {selectedProduct.productType === 'special' && selectedProduct.specialConfig && (
-                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 via-zinc-900 to-zinc-950 border border-amber-500/30 shadow-lg shadow-amber-950/20 space-y-4">
+                {isSpecialProduct && (
+                  <div
+                    id="special-tasks-section"
+                    className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-950/30 via-zinc-900 to-zinc-950 border border-amber-500/30 shadow-lg shadow-amber-950/20 space-y-4"
+                  >
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                           <Sparkles className="h-3 w-3 text-amber-400 animate-pulse" />
-                          {selectedProduct.specialConfig.campaignBadge || '⚡ SPECIAL MISSION DEAL'}
+                          {selectedProduct.specialConfig?.campaignBadge || (selectedProduct.isFreeProduct ? '🎁 100% FREE SPECIAL CLAIM' : '⚡ SPECIAL MISSION DEAL')}
                         </span>
                         <span className="text-[11px] font-bold text-slate-300">
-                          {selectedProduct.specialConfig.campaignTitle || 'Complete Tasks to Unlock Reward'}
+                          {selectedProduct.specialConfig?.campaignTitle || 'Complete Tasks to Unlock Special Access'}
                         </span>
                       </div>
 
                       {/* Tasks Completion Progress Badge */}
                       {(() => {
-                        const tasks = selectedProduct.specialConfig.tasks || [];
+                        const tasks = specialTasks;
                         const completedCount = tasks.filter(t => {
                           if (t.type === 'write_review') {
                             const hasReviewed = reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email));
-                            return hasReviewed || isTaskCompleted(selectedProduct.id, t.id);
+                            return hasReviewed || isTaskCompleted(selectedProduct.id, t.id) || (linkedCoupon ? isTaskCompleted(linkedCoupon.code, t.id) : false);
                           }
-                          return isTaskCompleted(selectedProduct.id, t.id);
+                          return isTaskCompleted(selectedProduct.id, t.id) || (linkedCoupon ? isTaskCompleted(linkedCoupon.code, t.id) : false);
                         }).length;
-                        const isUnlocked = tasks.length > 0 && completedCount === tasks.length;
+                        const isUnlocked = tasks.length === 0 || completedCount === tasks.length;
 
                         return (
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -366,136 +408,152 @@ export const ProductModal: React.FC = () => {
                       })()}
                     </div>
 
-                    {selectedProduct.specialConfig.campaignDescription && (
+                    {selectedProduct.specialConfig?.campaignDescription && (
                       <p className="text-xs text-slate-300 leading-relaxed">
                         {selectedProduct.specialConfig.campaignDescription}
                       </p>
                     )}
 
                     {/* Interactive Tasks Checklist */}
-                    <div className="space-y-2">
-                      {(selectedProduct.specialConfig.tasks || []).map((task, tIdx) => {
-                        // Check review task completion
-                        const isReviewType = task.type === 'write_review';
-                        const hasUserReviewed = isReviewType && (
-                          reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email)) ||
-                          isTaskCompleted(selectedProduct.id, task.id)
-                        );
-                        const isDone = isReviewType ? hasUserReviewed : isTaskCompleted(selectedProduct.id, task.id);
+                    {specialTasks.length > 0 ? (
+                      <div className="space-y-2">
+                        {specialTasks.map((task, tIdx) => {
+                          // Check review task completion
+                          const isReviewType = task.type === 'write_review' || task.id.includes('rev');
+                          const hasUserReviewed = isReviewType && (
+                            reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email)) ||
+                            isTaskCompleted(selectedProduct.id, task.id) ||
+                            (linkedCoupon ? isTaskCompleted(linkedCoupon.code, task.id) : false)
+                          );
+                          const isDone = isReviewType
+                            ? hasUserReviewed
+                            : (isTaskCompleted(selectedProduct.id, task.id) || (linkedCoupon ? isTaskCompleted(linkedCoupon.code, task.id) : false));
 
-                        return (
-                          <div
-                            key={task.id || tIdx}
-                            className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
-                              isDone
-                                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                                : 'bg-zinc-900/90 border-white/10 text-white hover:border-amber-500/30'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
+                          return (
+                            <div
+                              key={task.id || tIdx}
+                              className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
                                 isDone
-                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                  : 'bg-zinc-800 text-amber-300 border border-white/10'
-                              }`}>
-                                {isDone ? (
-                                  <Check className="h-4 w-4 text-emerald-400" />
-                                ) : (
-                                  <span>#{tIdx + 1}</span>
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-xs font-bold truncate flex items-center gap-1.5">
-                                  <span>{task.title}</span>
-                                  {task.isRequired && (
-                                    <span className="text-[9px] text-amber-400 font-normal">(Required)</span>
+                                  ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
+                                  : 'bg-zinc-900/90 border-white/10 text-white hover:border-amber-500/30'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold ${
+                                  isDone
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-zinc-800 text-amber-300 border border-white/10'
+                                }`}>
+                                  {isDone ? (
+                                    <Check className="h-4 w-4 text-emerald-400" />
+                                  ) : (
+                                    <span>#{tIdx + 1}</span>
                                   )}
                                 </div>
-                                <span className="text-[10px] text-slate-400 block truncate">
-                                  {task.type === 'join_telegram' && '📱 Join Official Telegram Channel'}
-                                  {task.type === 'follow_facebook' && '👍 Follow Official Facebook Page'}
-                                  {task.type === 'write_review' && '⭐ Write a verified review for this product'}
-                                  {task.type === 'youtube_sub' && '🎬 Subscribe to YouTube Channel'}
-                                  {task.type === 'discord_join' && '💬 Join Discord Community'}
-                                  {task.type === 'custom_action' && '🔗 Complete promotional mission'}
-                                </span>
+                                <div className="min-w-0">
+                                  <div className="text-xs font-bold truncate flex items-center gap-1.5">
+                                    <span>{task.title}</span>
+                                    {task.isRequired && (
+                                      <span className="text-[9px] text-amber-400 font-normal">(Required)</span>
+                                    )}
+                                  </div>
+                                  <span className="text-[10px] text-slate-400 block truncate">
+                                    {task.type === 'join_telegram' && '📱 Join Official Telegram Channel'}
+                                    {task.type === 'follow_facebook' && '👍 Follow Official Facebook Page'}
+                                    {task.type === 'write_review' && '⭐ Write a verified review for this product'}
+                                    {task.type === 'youtube_sub' && '🎬 Subscribe to YouTube Channel'}
+                                    {task.type === 'discord_join' && '💬 Join Discord Community'}
+                                    {task.type === 'custom_action' && '🔗 Complete promotional mission'}
+                                    {!task.type && '🔗 Complete promotional task'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0">
+                                {isDone ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                                    <Check className="h-3 w-3" /> Verified
+                                  </span>
+                                ) : isReviewType ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setTargetReviewProduct(selectedProduct);
+                                      setIsWriteReviewOpen(true);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Star className="h-3 w-3 fill-zinc-950" />
+                                    Write Review
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (task.url) {
+                                        window.open(task.url, '_blank', 'noopener,noreferrer');
+                                      }
+                                      markTaskCompleted(selectedProduct.id, task.id);
+                                      if (linkedCoupon) {
+                                        markTaskCompleted(linkedCoupon.code, task.id);
+                                      }
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <span>Complete</span>
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                )}
                               </div>
                             </div>
-
-                            <div className="shrink-0">
-                              {isDone ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
-                                  <Check className="h-3 w-3" /> Verified
-                                </span>
-                              ) : isReviewType ? (
-                                <button
-                                  type="button"
-                                  onClick={handleOpenWriteReview}
-                                  className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  <Star className="h-3 w-3 fill-zinc-950" />
-                                  Write Review
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    if (task.url) {
-                                      window.open(task.url, '_blank', 'noopener,noreferrer');
-                                    }
-                                    markTaskCompleted(selectedProduct.id, task.id);
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  <span>Complete</span>
-                                  <ExternalLink className="h-3 w-3" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-zinc-900 border border-white/10 text-xs text-slate-300">
+                        🎁 No external tasks required — this special deal is ready to claim directly!
+                      </div>
+                    )}
 
                     {/* Unlocked Reward Banner */}
                     {(() => {
-                      const tasks = selectedProduct.specialConfig.tasks || [];
+                      const tasks = specialTasks;
                       const completedCount = tasks.filter(t => {
                         if (t.type === 'write_review') {
                           const hasReviewed = reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email));
-                          return hasReviewed || isTaskCompleted(selectedProduct.id, t.id);
+                          return hasReviewed || isTaskCompleted(selectedProduct.id, t.id) || (linkedCoupon ? isTaskCompleted(linkedCoupon.code, t.id) : false);
                         }
-                        return isTaskCompleted(selectedProduct.id, t.id);
+                        return isTaskCompleted(selectedProduct.id, t.id) || (linkedCoupon ? isTaskCompleted(linkedCoupon.code, t.id) : false);
                       }).length;
                       const isUnlocked = tasks.length > 0 && completedCount === tasks.length;
+                      const unlockedCode = selectedProduct.specialConfig?.unlockedCouponCode || linkedCoupon?.code;
 
                       if (isUnlocked) {
                         return (
-                          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between flex-wrap gap-2">
+                          <div className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 flex items-center justify-between flex-wrap gap-2 animate-in fade-in duration-300">
                             <div>
                               <span className="text-xs font-black text-emerald-300 flex items-center gap-1.5">
                                 <Sparkles className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
                                 Exclusive Reward Unlocked!
                               </span>
                               <p className="text-[11px] text-emerald-400/80">
-                                You have fulfilled all task requirements for this special product deal.
+                                All mission requirements completed! You can now claim your special access below.
                               </p>
                             </div>
 
-                            {selectedProduct.specialConfig.unlockedCouponCode && (
+                            {unlockedCode && (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (selectedProduct.specialConfig?.unlockedCouponCode) {
-                                    navigator.clipboard.writeText(selectedProduct.specialConfig.unlockedCouponCode);
-                                    setCopiedCoupon(true);
-                                    setTimeout(() => setCopiedCoupon(false), 2500);
-                                  }
+                                  navigator.clipboard.writeText(unlockedCode);
+                                  applyCoupon(unlockedCode);
+                                  setCopiedCoupon(true);
+                                  setTimeout(() => setCopiedCoupon(false), 2500);
                                 }}
-                                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                                className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
                               >
                                 {copiedCoupon ? <Check className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-                                <span>{copiedCoupon ? 'Copied Code!' : `Code: ${selectedProduct.specialConfig.unlockedCouponCode}`}</span>
+                                <span>{copiedCoupon ? 'Copied & Applied!' : `Code: ${unlockedCode}`}</span>
                               </button>
                             )}
                           </div>
@@ -849,17 +907,29 @@ export const ProductModal: React.FC = () => {
 
           {/* Persistent Footer CTA Row */}
           {(() => {
-            const isSpecial = selectedProduct.productType === 'special';
-            const isFreeReward = isSpecial && (selectedProduct.specialConfig?.isFreeProduct || selectedProduct.isFreeProduct || currentPlan.price === 0);
-            const tasks = isSpecial ? (selectedProduct.specialConfig?.tasks || []) : [];
+            const isFreeReward = isSpecialProduct && (selectedProduct.specialConfig?.isFreeProduct || selectedProduct.isFreeProduct || currentPlan.price === 0);
+            const tasks = specialTasks;
             const completedCount = tasks.filter(t => {
-              if (t.type === 'write_review') {
+              if (t.type === 'write_review' || t.id.includes('rev')) {
                 const hasReviewed = reviews.some(r => r.productId === selectedProduct.id || (user?.email && r.userEmail === user.email));
-                return hasReviewed || isTaskCompleted(selectedProduct.id, t.id);
+                return hasReviewed || isTaskCompleted(selectedProduct.id, t.id) || (linkedCoupon ? isTaskCompleted(linkedCoupon.code, t.id) : false);
               }
-              return isTaskCompleted(selectedProduct.id, t.id);
+              return isTaskCompleted(selectedProduct.id, t.id) || (linkedCoupon ? isTaskCompleted(linkedCoupon.code, t.id) : false);
             }).length;
             const isTasksCompleted = tasks.length === 0 || completedCount === tasks.length;
+            const unlockedCode = selectedProduct.specialConfig?.unlockedCouponCode || linkedCoupon?.code;
+
+            const handleScrollToTasks = () => {
+              setActiveTab('overview');
+              setTimeout(() => {
+                const el = document.getElementById('special-tasks-section');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  el.classList.add('ring-2', 'ring-amber-400');
+                  setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400'), 1500);
+                }
+              }, 100);
+            };
 
             return (
               <div className="shrink-0 p-4 sm:p-5 border-t border-white/[0.08] bg-zinc-950/95 flex items-center justify-between gap-4">
@@ -897,26 +967,26 @@ export const ProductModal: React.FC = () => {
                       disabled={(selectedProduct.stockCount ?? 0) <= 0}
                       onClick={() => {
                         if (!isTasksCompleted) {
-                          setActiveTab('overview');
+                          handleScrollToTasks();
                           return;
                         }
                         addToCart(selectedProduct, { ...currentPlan, price: 0 }, customEmail || undefined);
-                        if (selectedProduct.specialConfig?.unlockedCouponCode) {
-                          applyCoupon(selectedProduct.specialConfig.unlockedCouponCode);
+                        if (unlockedCode) {
+                          applyCoupon(unlockedCode);
                         }
                         setSelectedProduct(null);
                         setIsCheckoutOpen(true);
                       }}
                       className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all shadow-lg cursor-pointer ${
                         !isTasksCompleted
-                          ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20'
+                          ? 'bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20 font-extrabold'
                           : 'bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-zinc-950 shadow-emerald-500/20 font-black'
                       }`}
                     >
                       {!isTasksCompleted ? (
                         <>
                           <Zap className="h-4 w-4" />
-                          <span>⚡ Complete Tasks to Claim Free</span>
+                          <span>⚡ Complete Tasks to Claim Free ({completedCount}/{tasks.length})</span>
                         </>
                       ) : (
                         <>
@@ -925,13 +995,41 @@ export const ProductModal: React.FC = () => {
                         </>
                       )}
                     </motion.button>
+                  ) : isSpecialProduct && tasks.length > 0 && !isTasksCompleted ? (
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleScrollToTasks}
+                      className="flex items-center gap-2 px-6 py-3 rounded-2xl font-extrabold text-xs sm:text-sm tracking-wide transition-all bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-lg shadow-amber-500/20 cursor-pointer"
+                    >
+                      <Zap className="h-4 w-4" />
+                      <span>⚡ Complete Tasks to Unlock Deal ({completedCount}/{tasks.length})</span>
+                    </motion.button>
+                  ) : isSpecialProduct && isTasksCompleted ? (
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      disabled={(selectedProduct.stockCount ?? 0) <= 0}
+                      onClick={() => {
+                        addToCart(selectedProduct, currentPlan, customEmail || undefined);
+                        if (unlockedCode) {
+                          applyCoupon(unlockedCode);
+                        }
+                        setSelectedProduct(null);
+                        setIsCheckoutOpen(true);
+                      }}
+                      className="flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs sm:text-sm tracking-wide transition-all bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 text-zinc-950 shadow-lg shadow-cyan-500/20 cursor-pointer"
+                    >
+                      <Sparkles className="h-4 w-4 fill-zinc-950" />
+                      <span>⚡ Claim Special Offer ({formatPrice(currentPlan.price)})</span>
+                    </motion.button>
                   ) : (
                     <motion.button
                       whileHover={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 1.03 }}
                       whileTap={(selectedProduct.stockCount ?? 0) <= 0 ? {} : { scale: 0.97 }}
                       disabled={(selectedProduct.stockCount ?? 0) <= 0}
                       onClick={() => (selectedProduct.stockCount ?? 0) > 0 && handleAddToCart()}
-                      className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all ${
+                      className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all cursor-pointer ${
                         (selectedProduct.stockCount ?? 0) <= 0
                           ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-white/10 opacity-70'
                           : 'bg-white text-zinc-950 shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:bg-zinc-100'
