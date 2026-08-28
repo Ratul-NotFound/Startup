@@ -13,7 +13,6 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { InteractiveCursorGlow } from '@/components/ui/InteractiveCursorGlow';
 import { HydrationGuard } from '@/components/ui/HydrationGuard';
-import { LoadingRevealScreen } from '@/components/ui/LoadingRevealScreen';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://keyoon.com'),
@@ -132,7 +131,6 @@ export default function RootLayout({
       <body className="min-h-screen bg-zinc-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200" suppressHydrationWarning>
         <HydrationGuard />
         <AppProvider>
-          <LoadingRevealScreen />
           <ScrollProgress />
           <InteractiveCursorGlow />
           <div className="relative min-h-screen flex flex-col" suppressHydrationWarning>
