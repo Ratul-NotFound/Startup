@@ -9,8 +9,8 @@ import {
 } from '@/types';
 import { detectVisitorCountry, getInstantCountryCode } from '@/lib/geo-currency';
 import {
-  MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
-  INITIAL_FINANCIAL_METRICS, MOCK_REVIEWS, MOCK_PAYMENT_METHODS, MOCK_HERO_SLIDES,
+  INITIAL_USER_PROFILE,
+  INITIAL_FINANCIAL_METRICS,
 } from '@/lib/mock-data';
 import { generateOrderNumber, generateRandomId, generateMockCredentials } from '@/lib/utils';
 import { auth, db, initAnalytics } from '@/lib/firebase';
@@ -357,7 +357,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialSyncReady, setIsInitialSyncReady] = useState(false);
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // Cart
@@ -367,15 +367,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Reviews State
-  const [reviews, setReviews] = useState<Review[]>(MOCK_REVIEWS);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [isWriteReviewOpen, setIsWriteReviewOpen] = useState(false);
   const [targetReviewProduct, setTargetReviewProduct] = useState<Product | null>(null);
 
   // Bangladesh Payment Methods State
-  const [paymentMethods, setPaymentMethods] = useState<BangladeshPaymentMethod[]>(MOCK_PAYMENT_METHODS);
+  const [paymentMethods, setPaymentMethods] = useState<BangladeshPaymentMethod[]>([]);
 
   // Hero Slides State
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(MOCK_HERO_SLIDES);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
 
   // Quick Messages & Bot Auto-Replies State
   const [quickMessages, setQuickMessages] = useState<QuickMessage[]>(DEFAULT_QUICK_MESSAGES);
@@ -400,7 +400,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [allUsers, setAllUsers] = useState<CustomerProfile[]>([]);
   const [allSubscriptions, setAllSubscriptions] = useState<UserSubscription[]>([]);
   const [allTickets, setAllTickets] = useState<SupportTicket[]>([]);
-  const [coupons, setCoupons] = useState<Coupon[]>(MOCK_COUPONS);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [adminActivityLogs, setAdminActivityLogs] = useState<AdminActivityLog[]>([]);
   const [brandSettings, setBrandSettings] = useState<BrandSettings>({
     brandName: 'Keyoon',
@@ -880,55 +880,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const seedFirestoreIfEmpty = useCallback(async () => {
     if (typeof window !== 'undefined' && localStorage.getItem(SEED_FLAG)) return;
     try {
-      // 1. Seed products if empty
-      const prodSnap = await getDocs(collection(db, 'products'));
-      if (prodSnap.empty) {
-        const batch = writeBatch(db);
-        for (const prod of MOCK_PRODUCTS) batch.set(doc(db, 'products', prod.id), prod);
-        await batch.commit();
-      }
-
-      // 2. Seed coupons if empty
-      const couponSnap = await getDocs(collection(db, 'coupons'));
-      if (couponSnap.empty) {
-        const batch = writeBatch(db);
-        for (const c of MOCK_COUPONS) batch.set(doc(db, 'coupons', c.code), c);
-        await batch.commit();
-      }
-
-      // 3. Seed reviews if empty
-      const reviewSnap = await getDocs(collection(db, 'reviews'));
-      if (reviewSnap.empty) {
-        const batch = writeBatch(db);
-        for (const rev of MOCK_REVIEWS) batch.set(doc(db, 'reviews', rev.id), rev);
-        await batch.commit();
-      }
-
-      // 4. Seed Bangladesh payment methods if empty
-      const pmSnap = await getDocs(collection(db, 'payment_methods'));
-      if (pmSnap.empty) {
-        const batch = writeBatch(db);
-        for (const pm of MOCK_PAYMENT_METHODS) batch.set(doc(db, 'payment_methods', pm.id), pm);
-        await batch.commit();
-      }
-
-      // 5. Seed Hero Slides if empty
-      const heroSnap = await getDocs(collection(db, 'hero_slides'));
-      if (heroSnap.empty) {
-        const batch = writeBatch(db);
-        for (const s of MOCK_HERO_SLIDES) batch.set(doc(db, 'hero_slides', s.id), s);
-        await batch.commit();
-      }
-
-      // 6. Seed Quick Messages if empty
-      const qmSnap = await getDocs(collection(db, 'quick_messages'));
-      if (qmSnap.empty) {
-        const batch = writeBatch(db);
-        for (const qm of DEFAULT_QUICK_MESSAGES) batch.set(doc(db, 'quick_messages', qm.id), qm);
-        await batch.commit();
-      }
-
-      // 7. Seed Category Settings if empty
+      // 1. Seed Category Settings if empty
       const catSnap = await getDoc(doc(db, 'settings', 'categories'));
       if (!catSnap.exists()) {
         await setDoc(doc(db, 'settings', 'categories'), {
@@ -937,7 +889,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
 
-      // 8. Ensure superadmin docs exist in admins collection
+      // 2. Ensure superadmin docs exist in admins collection
       for (const sEmail of SUPERADMIN_EMAILS) {
         const superAdminRef = doc(db, 'admins', sEmail.toLowerCase().replace(/[^a-z0-9]/g, '_'));
         const superAdminSnap = await getDoc(superAdminRef);
@@ -965,40 +917,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // ─── Global Data Listeners ────────────────────────────────────────────
-  // REAL-TIME (onSnapshot): products, coupons, payment_methods
-  //   → Admins change these live; customers must see price/availability instantly.
+  // REAL-TIME (onSnapshot): products, coupons, payment_methods (100% database-driven)
   // CACHED (getDoc/getDocs + 10-min localStorage TTL): everything else
-  //   → Reduces ~8 persistent WebSocket connections → saves thousands of Firestore reads/day.
-  //   → Admin writes to these collections call bustCache() so next visitor gets fresh data.
   useEffect(() => {
     seedFirestoreIfEmpty();
 
-    // 1. REAL-TIME: products (price, availability, details change live)
+    // 1. REAL-TIME: products (100% pure database-driven)
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       if (!snapshot.empty) {
         const prods = snapshot.docs.map(d => {
           const data = d.data() as Product;
-          const fallback = MOCK_PRODUCTS.find(p => p.id === d.id || p.slug === data.slug);
           const gallery = (data.images && data.images.length > 0)
             ? data.images
-            : (fallback?.images && fallback.images.length > 0)
-              ? fallback.images
-              : [data.logo || fallback?.logo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'];
+            : [data.logo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'];
 
           return {
-            ...fallback,
             ...data,
             id: d.id,
             images: gallery,
-            features: (data.features && data.features.length > 0) ? data.features : (fallback?.features || ['Full access included', 'Fast reliable delivery', 'Replacement warranty']),
-            instructions: (data.instructions && data.instructions.length > 0) ? data.instructions : (fallback?.instructions || ['Log in with credentials from your Vault.', 'Start using the premium service immediately.']),
+            features: (data.features && data.features.length > 0) ? data.features : ['Full access included', 'Fast reliable delivery', 'Replacement warranty'],
+            instructions: (data.instructions && data.instructions.length > 0) ? data.instructions : ['Log in with credentials from your Vault.', 'Start using the premium service immediately.'],
             specs: {
-              screens: data.specs?.screens ?? fallback?.specs?.screens ?? 1,
-              quality: data.specs?.quality || fallback?.specs?.quality || 'Ultra High Definition',
-              warranty: data.specs?.warranty || fallback?.specs?.warranty || 'Full Period Replacement Warranty',
-              platforms: (data.specs?.platforms && data.specs.platforms.length > 0) ? data.specs.platforms : (fallback?.specs?.platforms || ['Web', 'iOS', 'Android', 'macOS', 'Windows']),
-              region: data.specs?.region || fallback?.specs?.region || 'Global / Region-free',
+              screens: data.specs?.screens ?? 1,
+              quality: data.specs?.quality || 'Ultra High Definition',
+              warranty: data.specs?.warranty || 'Full Period Replacement Warranty',
+              platforms: (data.specs?.platforms && data.specs.platforms.length > 0) ? data.specs.platforms : ['Web', 'iOS', 'Android', 'macOS', 'Windows'],
+              region: data.specs?.region || 'Global / Region-free',
             },
+            pricingTiers: data.pricingTiers || [],
           } as Product;
         });
 
@@ -1018,6 +964,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (!prev) return null;
           return prods.find(p => p.id === prev.id) || prev;
         });
+
+        setIsInitialSyncReady(true);
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') {
@@ -1096,9 +1044,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setHeroSlides(slides);
           writeCache('keyoon_cache_hero_slides', slides);
         } else {
-          setHeroSlides(MOCK_HERO_SLIDES);
+          setHeroSlides([]);
         }
-      }).catch(() => setHeroSlides(MOCK_HERO_SLIDES));
+      }).catch(() => setHeroSlides([]));
     }
 
     // 6. CACHED: quick messages (chat template buttons)
@@ -2322,15 +2270,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const snap = await getDocs(collection(db, 'products'));
       const batch = writeBatch(db);
       for (const d of snap.docs) {
-        const fallback = MOCK_PRODUCTS.find(p => p.id === d.id);
-        const stockToSet = fallback?.stockCount ?? defaultStock;
-        batch.update(d.ref, { stockCount: stockToSet });
+        batch.update(d.ref, { stockCount: defaultStock });
       }
       await batch.commit();
-      setProducts(prev => prev.map(p => {
-        const fallback = MOCK_PRODUCTS.find(m => m.id === p.id);
-        return { ...p, stockCount: fallback?.stockCount ?? defaultStock };
-      }));
+      setProducts(prev => prev.map(p => ({ ...p, stockCount: defaultStock })));
       await logAdminActivity('PRODUCTS_RESTOCKED', 'catalog', `Refilled inventory stock for all products (Default: ${defaultStock})`);
     } catch (err) {
       console.error('adminResetAllProductStock error:', err);
@@ -2612,14 +2555,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminResetPaymentMethods = async () => {
-    setPaymentMethods(MOCK_PAYMENT_METHODS);
+    const defaultPMs: BangladeshPaymentMethod[] = [
+      {
+        id: 'pm_bkash_01',
+        name: 'bKash Personal',
+        type: 'bkash',
+        accountNumber: '01712-345678',
+        accountType: 'Personal',
+        instructions: 'Go to your bKash App > Send Money > Enter the number above > Enter amount in BDT > Complete and copy the TrxID.',
+        bdtRate: 125,
+        isActive: true,
+        showQrCode: true,
+        color: '#e2136e',
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: 'pm_nagad_01',
+        name: 'Nagad Personal',
+        type: 'nagad',
+        accountNumber: '01912-345678',
+        accountType: 'Personal',
+        instructions: 'Go to your Nagad App > Send Money > Enter the number above > Submit transaction and copy the TrxID.',
+        bdtRate: 125,
+        isActive: true,
+        showQrCode: true,
+        color: '#f7931e',
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+    setPaymentMethods(defaultPMs);
     try {
       const snap = await getDocs(collection(db, 'payment_methods'));
       const batch = writeBatch(db);
       for (const d of snap.docs) {
         batch.delete(d.ref);
       }
-      for (const pm of MOCK_PAYMENT_METHODS) {
+      for (const pm of defaultPMs) {
         batch.set(doc(db, 'payment_methods', pm.id), pm);
       }
       await batch.commit();
@@ -3203,14 +3174,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminResetReviews = async () => {
-    setReviews(MOCK_REVIEWS);
+    const defaultRevs: Review[] = [
+      {
+        id: 'rev_01',
+        userId: 'usr_01',
+        userName: 'Tanvir Ahmed',
+        productId: 'chatgpt-plus',
+        productName: 'ChatGPT Plus',
+        rating: 5,
+        title: 'Instant vault delivery',
+        comment: 'Got my login details in the vault in less than 30 seconds after sending bKash payment. Fantastic service!',
+        verifiedPurchase: true,
+        likes: 42,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 'rev_02',
+        userId: 'usr_02',
+        userName: 'Siam Chowdhury',
+        productId: 'netflix-4k',
+        productName: 'Netflix 4K UHD',
+        rating: 5,
+        title: 'Flawless 4K UHD Streaming',
+        comment: 'Ultra HD streaming works flawlessly on my Smart TV. Very responsive support team on live chat.',
+        verifiedPurchase: true,
+        likes: 28,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    setReviews(defaultRevs);
     try {
       const snap = await getDocs(collection(db, 'reviews'));
       const batch = writeBatch(db);
       for (const d of snap.docs) {
         batch.delete(d.ref);
       }
-      for (const rev of MOCK_REVIEWS) {
+      for (const rev of defaultRevs) {
         batch.set(doc(db, 'reviews', rev.id), rev);
       }
       await batch.commit();
@@ -3255,14 +3254,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminResetHeroSlides = async () => {
-    setHeroSlides(MOCK_HERO_SLIDES);
+    const defaultSlides: HeroSlide[] = [
+      {
+        id: 'slide_01',
+        title: 'Unlock Infinite Possibilities with Premium Subscriptions',
+        sub: 'Automated 30-second vault delivery for ChatGPT Plus, Claude, Netflix 4K, and 20+ services with full replacement warranty.',
+        bgImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80',
+        tag: '⚡ INSTANT VAULT DELIVERY',
+        order: 1,
+      },
+    ];
+    setHeroSlides(defaultSlides);
     try {
       const snap = await getDocs(collection(db, 'hero_slides'));
       const batch = writeBatch(db);
       for (const d of snap.docs) {
         batch.delete(d.ref);
       }
-      for (const s of MOCK_HERO_SLIDES) {
+      for (const s of defaultSlides) {
         batch.set(doc(db, 'hero_slides', s.id), s);
       }
       await batch.commit();

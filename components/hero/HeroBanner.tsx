@@ -5,7 +5,17 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { ArrowRight, Zap } from 'lucide-react';
 import { MagneticButton } from '@/components/ui/MagneticButton';
 import { useApp } from '@/context/AppContext';
-import { MOCK_HERO_SLIDES } from '@/lib/mock-data';
+import { HeroSlide } from '@/types';
+
+const FALLBACK_SLIDES: HeroSlide[] = [
+  {
+    id: 'slide_default',
+    title: 'Unlock Infinite Possibilities with Premium Subscriptions',
+    sub: 'Automated 30-second vault delivery for ChatGPT Plus, Claude, Netflix 4K, and 20+ services.',
+    bgImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80',
+    tag: '⚡ INSTANT VAULT DELIVERY',
+  }
+];
 
 export const HeroBanner: React.FC = () => {
   const { heroSlides } = useApp();
@@ -13,17 +23,17 @@ export const HeroBanner: React.FC = () => {
   const isInView = useInView(containerRef, { margin: '150px 0px 150px 0px', once: false });
   const [activeSlide, setActiveSlide] = useState(0);
 
-  const slides = (heroSlides && heroSlides.length > 0) ? heroSlides : MOCK_HERO_SLIDES;
+  const slides = (heroSlides && heroSlides.length > 0) ? heroSlides : FALLBACK_SLIDES;
 
   useEffect(() => {
-    if (!isInView) return;
+    if (!isInView || slides.length <= 1) return;
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % slides.length);
     }, 6000);
     return () => clearInterval(timer);
   }, [slides.length, isInView]);
 
-  const current = slides[activeSlide % slides.length] || slides[0] || MOCK_HERO_SLIDES[0];
+  const current = slides[activeSlide % slides.length] || slides[0] || FALLBACK_SLIDES[0];
 
   return (
     <section ref={containerRef} className="relative min-h-[84vh] sm:min-h-[90vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12" suppressHydrationWarning>
