@@ -47,36 +47,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      if (cred?.user) {
-        setSuccessMsg('Signed in successfully with Google!');
-        setTimeout(() => onClose(), 400);
-      }
+      // Use redirect instead of popup — avoids all COOP / X-Frame-Options /
+      // window.closed cross-origin issues on custom domains like keyoon.com
+      await signInWithRedirect(auth, googleProvider);
+      // Page will redirect to Google and come back — no code runs after this line
     } catch (err: any) {
-      const code: string = err?.code ?? '';
-
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        setLoading(false);
-        return;
-      }
-
-      if (code === 'auth/unauthorized-domain') {
-        setError('This domain is not authorized in Firebase Console. Please try email sign-in.');
-        setLoading(false);
-        return;
-      }
-
-      if (code === 'auth/popup-blocked') {
-        // Browser blocked the popup — fall back to redirect
-        try {
-          await signInWithRedirect(auth, googleProvider);
-        } catch (redirectErr: any) {
-          setError(redirectErr.message || 'Sign-in failed. Please try again.');
-          setLoading(false);
-        }
-        return;
-      }
-
       setError(err.message || 'Failed to sign in with Google. Please try again.');
       setLoading(false);
     }

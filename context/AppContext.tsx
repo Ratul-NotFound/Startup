@@ -1252,6 +1252,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Auth state listener & User-specific live listeners ─────────────
   useEffect(() => {
+    // Handle Google redirect sign-in result on page load
+    // (signInWithRedirect returns here after Google OAuth completes)
+    getRedirectResult(auth).catch(() => {
+      // Silently ignore — user may not have come from a redirect
+    });
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
 
