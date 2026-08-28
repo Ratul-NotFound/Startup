@@ -74,12 +74,12 @@ export const Navbar: React.FC = () => {
         >
           <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4" suppressHydrationWarning>
 
-            {/* Brand Logo & Favicon Badge with Keyoon Typography */}
+            {/* Brand Logo & Favicon Badge with Two-Tone Keyoon Typography */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0 group select-none" suppressHydrationWarning>
-              <div className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 p-0.5 group-hover:border-cyan-500/40 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all duration-300 flex items-center justify-center shrink-0">
+              <div className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 p-0.5 group-hover:border-cyan-500/40 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all duration-300 flex items-center justify-center shrink-0">
                 <img
                   src={brandSettings?.faviconUrl || '/images/Fabicon.png'}
-                  alt={brandSettings?.brandName || 'Keyoon'}
+                  alt="Keyoon"
                   className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/images/Fabicon.png';
@@ -87,16 +87,9 @@ export const Navbar: React.FC = () => {
                 />
               </div>
 
-              <div className="flex flex-col leading-none">
-                <span
-                  className="text-lg sm:text-xl font-black tracking-tight text-white group-hover:text-cyan-300 transition-colors"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  {brandSettings?.brandName || 'Keyoon'}
-                </span>
-                <span className="text-[9px] uppercase tracking-widest font-bold text-zinc-500 group-hover:text-cyan-400/70 transition-colors">
-                  Digital Subscriptions
-                </span>
+              <div className="flex items-center tracking-tight text-xl sm:text-2xl font-black font-sans leading-none select-none">
+                <span className="text-white drop-shadow-sm group-hover:text-slate-100 transition-colors">Key</span>
+                <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">oon</span>
               </div>
             </Link>
 

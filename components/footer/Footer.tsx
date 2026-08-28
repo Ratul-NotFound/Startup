@@ -17,12 +17,12 @@ export const Footer: React.FC = () => {
           
           {/* Column 1: Brand & Status */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Brand Logo with Favicon + Keyoon Typography */}
-            <Link href="/" className="flex items-center gap-3 group w-fit select-none">
+            {/* Brand Logo with Favicon + Two-Tone Keyoon Typography */}
+            <Link href="/" className="flex items-center gap-2.5 group w-fit select-none">
               <div className="relative h-9 w-9 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 p-0.5 group-hover:border-cyan-500/40 group-hover:scale-105 transition-all duration-300 flex items-center justify-center shrink-0">
                 <img
                   src={brandSettings?.faviconUrl || '/images/Fabicon.png'}
-                  alt={brandSettings?.brandName || 'Keyoon'}
+                  alt="Keyoon"
                   className="h-full w-full object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/images/Fabicon.png';
@@ -30,16 +30,9 @@ export const Footer: React.FC = () => {
                 />
               </div>
 
-              <div className="flex flex-col leading-none">
-                <span
-                  className="text-lg font-black tracking-tight text-white group-hover:text-cyan-300 transition-colors"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  {brandSettings?.brandName || 'Keyoon'}
-                </span>
-                <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mt-0.5">
-                  {brandSettings?.brandTagline || 'Premium Digital Subscriptions'}
-                </span>
+              <div className="flex items-center tracking-tight text-xl font-black font-sans leading-none select-none">
+                <span className="text-white drop-shadow-sm group-hover:text-slate-100 transition-colors">Key</span>
+                <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">oon</span>
               </div>
             </Link>
 
