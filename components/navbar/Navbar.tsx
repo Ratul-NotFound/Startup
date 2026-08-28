@@ -89,7 +89,7 @@ export const Navbar: React.FC = () => {
 
               <div className="flex items-center tracking-tight text-xl sm:text-2xl font-black font-sans leading-none select-none">
                 <span className="text-white drop-shadow-sm group-hover:text-slate-100 transition-colors">Key</span>
-                <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]">oon</span>
+                <span className="text-cyan-400">oon</span>
               </div>
             </Link>
 
