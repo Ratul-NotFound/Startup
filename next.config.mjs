@@ -34,7 +34,18 @@ const nextConfig = {
         // Apply to every route
         source: '/:path*',
         headers: [
-          // Prevent clickjacking while allowing self/Firebase Auth frame communication
+          // Allow Firebase auth popup to communicate via window.closed / postMessage
+          // Must be unsafe-none so the popup can report back to the opener
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'unsafe-none',
+          },
+          // Allow cross-origin resources (needed for Firebase auth iframe)
+          {
+            key: 'Cross-Origin-Resource-Policy',
+            value: 'cross-origin',
+          },
+          // Prevent clickjacking on main pages (Firebase auth popup overrides this for /__/auth/*)
           {
             key: 'X-Frame-Options',
             value: 'SAMEORIGIN',
@@ -90,11 +101,16 @@ const nextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
-          // Cross-origin policies
-          {
-            key: 'Cross-Origin-Resource-Policy',
-            value: 'cross-origin',
-          },
+        ],
+      },
+      // ─── Firebase auth handler routes: remove X-Frame-Options so Firebase ──
+      // can load keyoon.com/__/auth/handler inside an iframe during OAuth
+      {
+        source: '/__/auth/:path*',
+        headers: [
+          { key: 'X-Frame-Options', value: 'ALLOWALL' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
+          { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
         ],
       },
       // ─── Sensitive routes: no caching, no indexing ──────────────────
