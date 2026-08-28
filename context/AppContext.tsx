@@ -375,7 +375,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [paymentMethods, setPaymentMethods] = useState<BangladeshPaymentMethod[]>([]);
 
   // Hero Slides State
-  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>([]);
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = readCache<HeroSlide[]>('keyoon_cache_hero_slides');
+      if (cached && cached.length > 0) return cached;
+    }
+    return [];
+  });
 
   // Quick Messages & Bot Auto-Replies State
   const [quickMessages, setQuickMessages] = useState<QuickMessage[]>(DEFAULT_QUICK_MESSAGES);
@@ -1031,23 +1037,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).catch(() => {});
     }
 
-    // 5. CACHED: hero slides
-    const cachedHero = readCache<HeroSlide[]>('keyoon_cache_hero_slides');
-    if (cachedHero) {
-      setHeroSlides(cachedHero);
-    } else {
-      getDocs(collection(db, 'hero_slides')).then(snap => {
-        if (!snap.empty) {
-          const slides = snap.docs
-            .map(d => ({ ...d.data(), id: d.id } as HeroSlide))
-            .sort((a, b) => (a.order || 0) - (b.order || 0));
-          setHeroSlides(slides);
-          writeCache('keyoon_cache_hero_slides', slides);
-        } else {
-          setHeroSlides([]);
-        }
-      }).catch(() => setHeroSlides([]));
-    }
+    // 5. REAL-TIME: hero slides (100% database-driven)
+    const unsubHero = onSnapshot(collection(db, 'hero_slides'), (snapshot) => {
+      if (!snapshot.empty) {
+        const slides = snapshot.docs
+          .map(d => ({ ...d.data(), id: d.id } as HeroSlide))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+        setHeroSlides(slides);
+        writeCache('keyoon_cache_hero_slides', slides);
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') console.warn('[Firestore] Hero slides listener error:', err);
+    });
 
     // 6. CACHED: quick messages (chat template buttons)
     const cachedQM = readCache<QuickMessage[]>('keyoon_cache_quick_messages');
@@ -1172,6 +1173,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubProducts();
       unsubCoupons();
       unsubPaymentMethods();
+      unsubHero();
     };
   }, [seedFirestoreIfEmpty]);
 
