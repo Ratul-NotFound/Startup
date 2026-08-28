@@ -2,9 +2,20 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
+// Use keyoon.com as authDomain when browsing on the live site.
+// Next.js rewrites /__/auth/* → rflix-91ab8.firebaseapp.com/__/auth/*
+// so Firebase can complete the OAuth handshake through the custom domain.
+const getAuthDomain = (): string => {
+  if (typeof window !== 'undefined') {
+    const h = window.location.hostname;
+    if (h === 'keyoon.com' || h === 'www.keyoon.com') return 'keyoon.com';
+  }
+  return process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? 'rflix-91ab8.firebaseapp.com';
+};
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBE8M11pu50TRfRx-s7khgdys6X1zkj44M",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "rflix-91ab8.firebaseapp.com",
+  authDomain: getAuthDomain(),
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "rflix-91ab8",
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "rflix-91ab8.firebasestorage.app",
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "844475180177",
