@@ -85,9 +85,16 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/images/Fabicon.png',
-    shortcut: '/images/Fabicon.png',
-    apple: '/images/Fabicon.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '512x512' },
+      { url: '/images/Fabicon.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/images/Fabicon.png' },
+    ],
   },
   verification: {
     google: 'googlee00d45a9bd1652d0',
@@ -103,9 +110,12 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <JsonLd />
-        {/* Favicon links */}
+        {/* Favicon & Web App Icons — Googlebot-Image & Browser compliant */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/icon.png" />
         <link rel="icon" type="image/png" href="/images/Fabicon.png" />
-        <link rel="shortcut icon" type="image/png" href="/images/Fabicon.png" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" href="/images/Fabicon.png" />
         {/* Security meta tags */}
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
