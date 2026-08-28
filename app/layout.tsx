@@ -114,11 +114,11 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no, email=no, address=no" />
         {/* Canonical URL */}
         <link rel="canonical" href="https://subnexus.io" />
-        {/* Fonts */}
+        {/* Fonts — preconnect first, then load with swap to prevent FOIT */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
         {/* Pre-hydration filter for browser extensions injecting arbitrary attributes like bis_skin_checked */}

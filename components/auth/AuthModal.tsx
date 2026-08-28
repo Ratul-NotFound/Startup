@@ -47,12 +47,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      // Use redirect instead of popup — avoids all COOP / X-Frame-Options /
-      // window.closed cross-origin issues on custom domains like keyoon.com
-      await signInWithRedirect(auth, googleProvider);
-      // Page will redirect to Google and come back — no code runs after this line
+      // authDomain = rflix-91ab8.firebaseapp.com (Firebase's own server)
+      // COOP: unsafe-none is set on keyoon.com so window.closed works fine
+      const cred = await signInWithPopup(auth, googleProvider);
+      if (cred?.user) {
+        setSuccessMsg('Signed in with Google! Welcome to Keyoon.');
+        setTimeout(() => onClose(), 500);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in with Google. Please try again.');
+      const code: string = err?.code ?? '';
+      // User closed the popup — not an error
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        setLoading(false);
+        return;
+      }
+      // Popup was blocked by browser — fall back to full page redirect
+      if (code === 'auth/popup-blocked') {
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch {
+          setError('Sign-in failed. Please allow popups for this site and try again.');
+          setLoading(false);
+        }
+        return;
+      }
+      setError(err.message || 'Google sign-in failed. Please try again.');
       setLoading(false);
     }
   };
