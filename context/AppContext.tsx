@@ -7,7 +7,7 @@ import {
   AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog, BrandSettings, CurrencySettings,
   CategoryConfig, SubscriptionCategory, SpecialOffersSettings,
 } from '@/types';
-import { detectVisitorCountry } from '@/lib/geo-currency';
+import { detectVisitorCountry, getInstantCountryCode } from '@/lib/geo-currency';
 import {
   MOCK_PRODUCTS, MOCK_COUPONS, INITIAL_USER_PROFILE,
   INITIAL_FINANCIAL_METRICS, MOCK_REVIEWS, MOCK_PAYMENT_METHODS, MOCK_HERO_SLIDES,
@@ -21,6 +21,34 @@ import {
   doc, setDoc, getDoc, collection, getDocs, addDoc, updateDoc,
   deleteDoc, query, where, orderBy, onSnapshot, writeBatch, arrayUnion,
 } from 'firebase/firestore';
+
+// ─── localStorage TTL Cache Helper ───────────────────────────────────
+// Saves Firestore reads and hydrates state instantly to eliminate content flashes
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+export const readCache = <T,>(key: string): T | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw) as { data: T; ts: number };
+    if (Date.now() - ts > CACHE_TTL_MS) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return data;
+  } catch { return null; }
+};
+
+export const writeCache = <T,>(key: string, data: T): void => {
+  if (typeof window === 'undefined') return;
+  try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch { }
+};
+
+export const bustCache = (...keys: string[]): void => {
+  if (typeof window === 'undefined') return;
+  keys.forEach(k => { try { localStorage.removeItem(k); } catch { } });
+};
 
 // ─── Superadmin emails ───────────────────────────────────────────────
 export const SUPERADMIN_EMAILS = ['m.h.ratul18@gmail.com', 'admin@keyoon.com'];
@@ -427,25 +455,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Special Offers & Exclusive Deals Section configuration state
   const [specialOffersSettings, setSpecialOffersSettings] = useState<SpecialOffersSettings>(DEFAULT_SPECIAL_OFFERS_SETTINGS);
 
-  // Load client-side local cache safely in useEffect to prevent React hydration mismatch (#418)
+  // Load client-side local cache immediately upon mounting to prevent content flashing/glitching (#418)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedCat = localStorage.getItem('keyoon_category_configs');
-        if (savedCat) {
-          const parsed = JSON.parse(savedCat);
-          if (Array.isArray(parsed) && parsed.length > 0) setCategoryConfigs(parsed);
-        }
-      } catch { }
+    if (typeof window === 'undefined') return;
 
-      try {
-        const savedOffers = localStorage.getItem('keyoon_special_offers_settings');
-        if (savedOffers) {
-          const parsed = JSON.parse(savedOffers);
-          if (parsed && typeof parsed === 'object') setSpecialOffersSettings(parsed);
-        }
-      } catch { }
-    }
+    // 1. Instant currency check (0ms)
+    try {
+      const instantCountry = getInstantCountryCode();
+      const isInstantBdt = currencySettings.bdtEnabled && currencySettings.bdtCountries.includes(instantCountry.toUpperCase());
+      setDetectedCurrency(isInstantBdt ? 'BDT' : 'USD');
+    } catch {}
+
+    // 2. Hydrate products from local cache
+    try {
+      const cachedProds = readCache<Product[]>('keyoon_cache_products');
+      if (cachedProds && Array.isArray(cachedProds) && cachedProds.length > 0) {
+        setProducts(cachedProds);
+      }
+    } catch {}
+
+    // 3. Hydrate coupons from local cache
+    try {
+      const cachedCoupons = readCache<Coupon[]>('keyoon_cache_coupons');
+      if (cachedCoupons && Array.isArray(cachedCoupons) && cachedCoupons.length > 0) {
+        setCoupons(cachedCoupons);
+      }
+    } catch {}
+
+    // 4. Hydrate payment methods from local cache
+    try {
+      const cachedPms = readCache<BangladeshPaymentMethod[]>('keyoon_cache_payment_methods');
+      if (cachedPms && Array.isArray(cachedPms) && cachedPms.length > 0) {
+        setPaymentMethods(cachedPms);
+      }
+    } catch {}
+
+    // 5. Hydrate reviews from local cache
+    try {
+      const cachedRevs = readCache<Review[]>('keyoon_cache_reviews');
+      if (cachedRevs && Array.isArray(cachedRevs) && cachedRevs.length > 0) {
+        setReviews(cachedRevs);
+      }
+    } catch {}
+
+    // 6. Hydrate hero slides from local cache
+    try {
+      const cachedSlides = readCache<HeroSlide[]>('keyoon_cache_hero_slides');
+      if (cachedSlides && Array.isArray(cachedSlides) && cachedSlides.length > 0) {
+        setHeroSlides(cachedSlides);
+      }
+    } catch {}
+
+    // 7. Hydrate brand settings from local cache
+    try {
+      const cachedBrand = readCache<BrandSettings>('keyoon_cache_brand');
+      if (cachedBrand && typeof cachedBrand === 'object') {
+        setBrandSettings(cachedBrand);
+      }
+    } catch {}
+
+    // 8. Hydrate currency settings from local cache
+    try {
+      const cachedCurrency = readCache<CurrencySettings>('keyoon_cache_currency');
+      if (cachedCurrency && typeof cachedCurrency === 'object') {
+        setCurrencySettings(cachedCurrency);
+      }
+    } catch {}
+
+    // 9. Hydrate categories from local cache
+    try {
+      const savedCat = localStorage.getItem('keyoon_category_configs');
+      if (savedCat) {
+        const parsed = JSON.parse(savedCat);
+        if (Array.isArray(parsed) && parsed.length > 0) setCategoryConfigs(parsed);
+      }
+    } catch {}
+
+    // 10. Hydrate special offers settings from local cache
+    try {
+      const savedOffers = localStorage.getItem('keyoon_special_offers_settings');
+      if (savedOffers) {
+        const parsed = JSON.parse(savedOffers);
+        if (parsed && typeof parsed === 'object') setSpecialOffersSettings(parsed);
+      }
+    } catch {}
   }, []);
 
   const adminUpdateCategoryConfigs = async (configs: CategoryConfig[]) => {
@@ -752,35 +845,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ─── Analytics init ────────────────────────────────────────────────
   useEffect(() => { initAnalytics(); }, []);
 
-  // ─── localStorage TTL Cache Helper ───────────────────────────────────
-  // Saves Firestore reads for static/rarely-changing data.
-  // TTL = 10 minutes. Admin writes bust the cache so new data is fetched next visit.
-  const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-
-  const readCache = <T,>(key: string): T | null => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return null;
-      const { data, ts } = JSON.parse(raw) as { data: T; ts: number };
-      if (Date.now() - ts > CACHE_TTL_MS) {
-        localStorage.removeItem(key);
-        return null;
-      }
-      return data;
-    } catch { return null; }
-  };
-
-  const writeCache = <T,>(key: string, data: T): void => {
-    if (typeof window === 'undefined') return;
-    try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch { }
-  };
-
-  const bustCache = (...keys: string[]): void => {
-    if (typeof window === 'undefined') return;
-    keys.forEach(k => { try { localStorage.removeItem(k); } catch { } });
-  };
-
   // ─── Handle Google redirect sign-in result ─────────────────────────
   useEffect(() => {
     getRedirectResult(auth)
@@ -927,7 +991,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             },
           } as Product;
         });
-        setProducts(prods);
+
+        // Only trigger state update if content actually changed to avoid layout shift / glitch
+        setProducts(prev => {
+          if (
+            prev.length === prods.length &&
+            prev.every((p, idx) => p.id === prods[idx]?.id && p.updatedAt === prods[idx]?.updatedAt && p.name === prods[idx]?.name && p.stockCount === prods[idx]?.stockCount)
+          ) {
+            return prev;
+          }
+          return prods;
+        });
+        writeCache('keyoon_cache_products', prods);
+
         setSelectedProduct(prev => {
           if (!prev) return null;
           return prods.find(p => p.id === prev.id) || prev;
@@ -943,7 +1019,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubCoupons = onSnapshot(collection(db, 'coupons'), (snapshot) => {
       if (!snapshot.empty) {
         const cps = snapshot.docs.map(d => d.data() as Coupon);
-        setCoupons(cps);
+        setCoupons(prev => {
+          if (
+            prev.length === cps.length &&
+            prev.every((c, idx) => c.code === cps[idx]?.code && c.discountPercent === cps[idx]?.discountPercent && c.isHidden === cps[idx]?.isHidden)
+          ) {
+            return prev;
+          }
+          return cps;
+        });
+        writeCache('keyoon_cache_coupons', cps);
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Coupons listener error:', err);
@@ -953,7 +1038,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubPaymentMethods = onSnapshot(collection(db, 'payment_methods'), (snapshot) => {
       if (!snapshot.empty) {
         const pms = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as BangladeshPaymentMethod));
-        setPaymentMethods(pms);
+        setPaymentMethods(prev => {
+          if (
+            prev.length === pms.length &&
+            prev.every((pm, idx) => pm.id === pms[idx]?.id && pm.accountNumber === pms[idx]?.accountNumber && pm.isActive === pms[idx]?.isActive)
+          ) {
+            return prev;
+          }
+          return pms;
+        });
+        writeCache('keyoon_cache_payment_methods', pms);
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Payment methods listener error:', err);
@@ -1125,17 +1219,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── IP-based currency detection on mount (runs once per session) ────
   useEffect(() => {
+    // 1. Instant synchronous check (0ms)
+    try {
+      const instantCountry = getInstantCountryCode();
+      if (currencySettings.bdtEnabled) {
+        const isBDT = currencySettings.bdtCountries.includes(instantCountry.toUpperCase());
+        setDetectedCurrency(isBDT ? 'BDT' : 'USD');
+      } else {
+        setDetectedCurrency('USD');
+      }
+    } catch {}
+
+    // 2. Background verify
     let cancelled = false;
     detectVisitorCountry().then((country) => {
-      if (cancelled) return;
-      // We derive the currency from the latest currencySettings
-      // but we must use a functional update to read the latest state
+      if (cancelled || !country) return;
       setCurrencySettings((prev) => {
         if (!prev.bdtEnabled) {
           setDetectedCurrency('USD');
           return prev;
         }
-        const isBDT = country ? prev.bdtCountries.includes(country.toUpperCase()) : false;
+        const isBDT = prev.bdtCountries.includes(country.toUpperCase());
         setDetectedCurrency(isBDT ? 'BDT' : 'USD');
         return prev;
       });
@@ -1150,15 +1254,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDetectedCurrency('USD');
       return;
     }
-    // Re-read cached country to re-apply settings without another API call
     try {
-      const cached = sessionStorage.getItem('subnexus_detected_country');
+      const cached = localStorage.getItem('keyoon_detected_country') || sessionStorage.getItem('keyoon_detected_country') || getInstantCountryCode();
       if (cached) {
         const isBDT = currencySettings.bdtCountries.includes(cached.toUpperCase());
         setDetectedCurrency(isBDT ? 'BDT' : 'USD');
       }
     } catch {
-      // sessionStorage not available
+      // Storage not available
     }
   }, [currencySettings]);
 
@@ -2121,6 +2224,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminCreateProduct = async (product: Omit<Product, 'id'>): Promise<string> => {
     const id = generateRandomId('prod');
     const newProduct: Product = { ...product, id };
+    setProducts(prev => {
+      const next = [...prev, newProduct];
+      writeCache('keyoon_cache_products', next);
+      return next;
+    });
     try {
       await setDoc(doc(db, 'products', id), newProduct);
       if (newProduct.productType === 'special') {
@@ -2133,10 +2241,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminUpdateProduct = async (id: string, updates: Partial<Product>) => {
+    setProducts(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, ...updates } : p);
+      writeCache('keyoon_cache_products', next);
+      return next;
+    });
+    setSelectedProduct(prev => (prev && prev.id === id) ? { ...prev, ...updates } : prev);
     try {
       await updateDoc(doc(db, 'products', id), updates as Record<string, unknown>);
-      setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-      setSelectedProduct(prev => (prev && prev.id === id) ? { ...prev, ...updates } : prev);
       const fullProd = products.find(p => p.id === id);
       if (fullProd) {
         const merged = { ...fullProd, ...updates } as Product;
@@ -2150,6 +2262,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminDeleteProduct = async (id: string) => {
+    setProducts(prev => {
+      const next = prev.filter(p => p.id !== id);
+      writeCache('keyoon_cache_products', next);
+      return next;
+    });
+    setSelectedProduct(prev => prev?.id === id ? null : prev);
     try {
       await deleteDoc(doc(db, 'products', id));
     } catch (err) {
@@ -2634,19 +2752,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Admin: Coupon CRUD ────────────────────────────────────────────
   const adminCreateCoupon = async (coupon: Coupon) => {
+    const cleanCode = coupon.code.toUpperCase();
+    const cleanCoupon = { ...coupon, code: cleanCode };
+    setCoupons(prev => {
+      const filtered = prev.filter(c => c.code !== cleanCode);
+      const next = [...filtered, cleanCoupon];
+      writeCache('keyoon_cache_coupons', next);
+      return next;
+    });
     try {
-      await setDoc(doc(db, 'coupons', coupon.code.toUpperCase()), {
-        ...coupon,
-        code: coupon.code.toUpperCase(),
-      });
+      await setDoc(doc(db, 'coupons', cleanCode), cleanCoupon);
     } catch (err) {
       console.error('adminCreateCoupon error:', err);
     }
   };
 
   const adminDeleteCoupon = async (code: string) => {
+    const cleanCode = code.toUpperCase();
+    setCoupons(prev => {
+      const next = prev.filter(c => c.code !== cleanCode);
+      writeCache('keyoon_cache_coupons', next);
+      return next;
+    });
     try {
-      await deleteDoc(doc(db, 'coupons', code.toUpperCase()));
+      await deleteDoc(doc(db, 'coupons', cleanCode));
     } catch (err) {
       console.error('adminDeleteCoupon error:', err);
     }

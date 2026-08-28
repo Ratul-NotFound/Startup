@@ -9,7 +9,7 @@
  * All configuration is controlled by admins via Firestore.
  */
 
-const CACHE_KEY = 'subnexus_detected_country';
+const CACHE_KEY = 'keyoon_detected_country';
 const API_TIMEOUT_MS = 2000; // 2s — fast enough for geo, safe for slow networks
 
 /**
@@ -49,6 +49,28 @@ const TIMEZONE_COUNTRY_MAP: Record<string, string> = {
 };
 
 /**
+ * Synchronously returns the visitor's likely country code (0ms, no network delay).
+ * Checks localStorage first, then browser timezone.
+ */
+export function getInstantCountryCode(): string {
+  if (typeof window === 'undefined') return 'BD';
+
+  try {
+    const cached = localStorage.getItem(CACHE_KEY) || sessionStorage.getItem(CACHE_KEY);
+    if (cached) return cached;
+  } catch {}
+
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz && TIMEZONE_COUNTRY_MAP[tz]) {
+      return TIMEZONE_COUNTRY_MAP[tz];
+    }
+  } catch {}
+
+  return 'BD'; // Default to BD
+}
+
+/**
  * Attempts to detect country code via IP geolocation API.
  * Uses a 2-second timeout. Browser caching allowed (no cache: no-store).
  */
@@ -57,7 +79,6 @@ async function detectCountryViaIP(): Promise<string | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
-    // No cache:'no-store' — allow browser to cache this response for performance
     const response = await fetch('https://ipapi.co/json/', {
       signal: controller.signal,
     });
@@ -70,14 +91,12 @@ async function detectCountryViaIP(): Promise<string | null> {
     }
     return null;
   } catch {
-    // Network error, timeout, or blocked — silently return null
     return null;
   }
 }
 
 /**
  * Fallback: detect country from browser timezone string.
- * Less accurate but works offline and has no rate limit.
  */
 function detectCountryViaTimezone(): string | null {
   try {
@@ -89,34 +108,27 @@ function detectCountryViaTimezone(): string | null {
 }
 
 /**
- * Main function: returns the visitor's ISO 3166-1 alpha-2 country code.
+ * Main async function: returns the visitor's verified ISO 3166-1 alpha-2 country code.
  * Order of precedence:
- *   1. sessionStorage cache (fastest — avoids repeated API calls during SPA navigation)
+ *   1. localStorage/sessionStorage cache
  *   2. IP geolocation API (ipapi.co)
  *   3. Browser timezone heuristic
- *   4. null (caller should default to USD)
  */
 export async function detectVisitorCountry(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
 
-  // Check sessionStorage cache first
   try {
-    const cached = sessionStorage.getItem(CACHE_KEY);
+    const cached = localStorage.getItem(CACHE_KEY) || sessionStorage.getItem(CACHE_KEY);
     if (cached) return cached;
-  } catch {
-    // sessionStorage may be blocked in some environments
-  }
+  } catch {}
 
-  // Try IP API, fall back to timezone
   const country = (await detectCountryViaIP()) || detectCountryViaTimezone();
 
-  // Cache result for this session
   if (country) {
     try {
+      localStorage.setItem(CACHE_KEY, country);
       sessionStorage.setItem(CACHE_KEY, country);
-    } catch {
-      // Ignore storage errors
-    }
+    } catch {}
   }
 
   return country;

@@ -97,6 +97,7 @@ export interface Product {
   productType?: ProductType; // 'general' | 'special'
   isFreeProduct?: boolean;   // Directly marked as 100% free claimable product
   specialConfig?: SpecialProductConfig;
+  updatedAt?: string;
 }
 
 export interface CartItem {
