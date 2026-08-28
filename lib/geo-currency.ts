@@ -10,7 +10,7 @@
  */
 
 const CACHE_KEY = 'subnexus_detected_country';
-const API_TIMEOUT_MS = 4000; // 4 second timeout — fast enough, safe enough
+const API_TIMEOUT_MS = 2000; // 2s — fast enough for geo, safe for slow networks
 
 /**
  * Maps IANA timezone strings to ISO 3166-1 alpha-2 country codes.
@@ -50,16 +50,16 @@ const TIMEZONE_COUNTRY_MAP: Record<string, string> = {
 
 /**
  * Attempts to detect country code via IP geolocation API.
- * Uses a 4-second timeout to avoid blocking the page.
+ * Uses a 2-second timeout. Browser caching allowed (no cache: no-store).
  */
 async function detectCountryViaIP(): Promise<string | null> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
+    // No cache:'no-store' — allow browser to cache this response for performance
     const response = await fetch('https://ipapi.co/json/', {
       signal: controller.signal,
-      cache: 'no-store',
     });
     clearTimeout(timeoutId);
 

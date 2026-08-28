@@ -392,6 +392,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBrandSettings = async (updates: Partial<BrandSettings>) => {
     const nextSettings = { ...brandSettings, ...updates, updatedAt: new Date().toISOString() };
     setBrandSettings(nextSettings);
+    bustCache('keyoon_cache_brand'); // Invalidate so next visitor fetches fresh brand data
 
     try {
       await setDoc(doc(db, 'settings', 'brand'), nextSettings, { merge: true });
@@ -410,6 +411,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedBy: firebaseUser?.email || 'admin',
     };
     setCurrencySettings(nextSettings);
+    bustCache('keyoon_cache_currency'); // Invalidate so next visitor fetches fresh data
     try {
       await setDoc(doc(db, 'settings', 'currency'), nextSettings, { merge: true });
       await logAdminActivity('CURRENCY_SETTINGS_UPDATED', 'system', `BDT: ${nextSettings.bdtEnabled}, Rate: ${nextSettings.bdtRate}, Countries: ${nextSettings.bdtCountries.join(', ')}`);
@@ -446,20 +448,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const adminUpdateCategoryConfigs = async (configs: CategoryConfig[]) => {
-    // Normalize orderIndex
-    const normalized = configs.map((c, idx) => ({
-      ...c,
-      orderIndex: idx,
-    }));
-
+    const normalized = configs.map((c, idx) => ({ ...c, orderIndex: idx }));
     setCategoryConfigs(normalized);
-
+    bustCache('keyoon_cache_categories'); // Invalidate so next visitor fetches fresh order
     if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('keyoon_category_configs', JSON.stringify(normalized));
-      } catch { }
+      try { localStorage.setItem('keyoon_category_configs', JSON.stringify(normalized)); } catch { }
     }
-
     try {
       await setDoc(doc(db, 'settings', 'categories'), { categories: normalized, updatedAt: new Date().toISOString() }, { merge: true });
       await logAdminActivity('CATEGORY_SETTINGS_UPDATED', 'catalog', 'Updated category sequence & visibility in storefront');
@@ -520,19 +514,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSpecialOffersSettings = async (updates: Partial<SpecialOffersSettings>) => {
-    const nextSettings = {
-      ...specialOffersSettings,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
+    const nextSettings = { ...specialOffersSettings, ...updates, updatedAt: new Date().toISOString() };
     setSpecialOffersSettings(nextSettings);
-
+    bustCache('keyoon_cache_special_offers'); // Invalidate so next visitor fetches fresh settings
     if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('keyoon_special_offers_settings', JSON.stringify(nextSettings));
-      } catch { }
+      try { localStorage.setItem('keyoon_special_offers_settings', JSON.stringify(nextSettings)); } catch { }
     }
-
     try {
       await setDoc(doc(db, 'settings', 'special_offers'), nextSettings, { merge: true });
       await logAdminActivity('SPECIAL_OFFERS_SETTINGS_UPDATED', 'coupons', `Deals Section visibility: ${nextSettings.isSectionHidden ? 'Hidden' : 'Visible'}`);
@@ -751,6 +738,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ─── Analytics init ────────────────────────────────────────────────
   useEffect(() => { initAnalytics(); }, []);
 
+  // ─── localStorage TTL Cache Helper ───────────────────────────────────
+  // Saves Firestore reads for static/rarely-changing data.
+  // TTL = 10 minutes. Admin writes bust the cache so new data is fetched next visit.
+  const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+  const readCache = <T,>(key: string): T | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const { data, ts } = JSON.parse(raw) as { data: T; ts: number };
+      if (Date.now() - ts > CACHE_TTL_MS) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      return data;
+    } catch { return null; }
+  };
+
+  const writeCache = <T,>(key: string, data: T): void => {
+    if (typeof window === 'undefined') return;
+    try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch { }
+  };
+
+  const bustCache = (...keys: string[]): void => {
+    if (typeof window === 'undefined') return;
+    keys.forEach(k => { try { localStorage.removeItem(k); } catch { } });
+  };
+
   // ─── Handle Google redirect sign-in result ─────────────────────────
   useEffect(() => {
     getRedirectResult(auth)
@@ -770,77 +786,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // ─── Auto-seed Firestore if empty on startup ──────────────────────
+  // Guard: skip ALL Firestore reads if already seeded (saves ~7 reads × N visitors/day)
+  const SEED_FLAG = 'keyoon_db_seeded_v1';
+
   const seedFirestoreIfEmpty = useCallback(async () => {
+    if (typeof window !== 'undefined' && localStorage.getItem(SEED_FLAG)) return;
     try {
       // 1. Seed products if empty
       const prodSnap = await getDocs(collection(db, 'products'));
       if (prodSnap.empty) {
-        console.log('[Firestore] Seeding initial products...');
         const batch = writeBatch(db);
-        for (const prod of MOCK_PRODUCTS) {
-          const docRef = doc(db, 'products', prod.id);
-          batch.set(docRef, prod);
-        }
+        for (const prod of MOCK_PRODUCTS) batch.set(doc(db, 'products', prod.id), prod);
         await batch.commit();
       }
 
       // 2. Seed coupons if empty
       const couponSnap = await getDocs(collection(db, 'coupons'));
       if (couponSnap.empty) {
-        console.log('[Firestore] Seeding initial coupons...');
         const batch = writeBatch(db);
-        for (const c of MOCK_COUPONS) {
-          const docRef = doc(db, 'coupons', c.code);
-          batch.set(docRef, c);
-        }
+        for (const c of MOCK_COUPONS) batch.set(doc(db, 'coupons', c.code), c);
         await batch.commit();
       }
 
       // 3. Seed reviews if empty
       const reviewSnap = await getDocs(collection(db, 'reviews'));
       if (reviewSnap.empty) {
-        console.log('[Firestore] Seeding initial customer reviews...');
         const batch = writeBatch(db);
-        for (const rev of MOCK_REVIEWS) {
-          const docRef = doc(db, 'reviews', rev.id);
-          batch.set(docRef, rev);
-        }
+        for (const rev of MOCK_REVIEWS) batch.set(doc(db, 'reviews', rev.id), rev);
         await batch.commit();
       }
 
       // 4. Seed Bangladesh payment methods if empty
       const pmSnap = await getDocs(collection(db, 'payment_methods'));
       if (pmSnap.empty) {
-        console.log('[Firestore] Seeding initial Bangladesh payment methods...');
         const batch = writeBatch(db);
-        for (const pm of MOCK_PAYMENT_METHODS) {
-          const docRef = doc(db, 'payment_methods', pm.id);
-          batch.set(docRef, pm);
-        }
+        for (const pm of MOCK_PAYMENT_METHODS) batch.set(doc(db, 'payment_methods', pm.id), pm);
         await batch.commit();
       }
 
       // 5. Seed Hero Slides if empty
       const heroSnap = await getDocs(collection(db, 'hero_slides'));
       if (heroSnap.empty) {
-        console.log('[Firestore] Seeding initial hero slides...');
         const batch = writeBatch(db);
-        for (const s of MOCK_HERO_SLIDES) {
-          const docRef = doc(db, 'hero_slides', s.id);
-          batch.set(docRef, s);
-        }
+        for (const s of MOCK_HERO_SLIDES) batch.set(doc(db, 'hero_slides', s.id), s);
         await batch.commit();
       }
 
       // 6. Seed Quick Messages if empty
       const qmSnap = await getDocs(collection(db, 'quick_messages'));
       if (qmSnap.empty) {
-        console.log('[Firestore] Seeding initial quick messages...');
         const batch = writeBatch(db);
-        for (const qm of DEFAULT_QUICK_MESSAGES) {
-          const docRef = doc(db, 'quick_messages', qm.id);
-          batch.set(docRef, qm);
-        }
+        for (const qm of DEFAULT_QUICK_MESSAGES) batch.set(doc(db, 'quick_messages', qm.id), qm);
         await batch.commit();
       }
 
@@ -868,6 +864,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         }
       }
+
+      // Mark as seeded so subsequent page loads skip all these reads
+      if (typeof window !== 'undefined') {
+        try { localStorage.setItem(SEED_FLAG, '1'); } catch { }
+      }
     } catch (err: any) {
       if (err?.code !== 'permission-denied') {
         console.info('[Firestore] Seed check note:', err?.message || err);
@@ -875,11 +876,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // ─── Global Real-time Listeners (Products & Coupons & Reviews & Payment Methods & Admin List) ─
+  // ─── Global Data Listeners ────────────────────────────────────────────
+  // REAL-TIME (onSnapshot): products, coupons, payment_methods
+  //   → Admins change these live; customers must see price/availability instantly.
+  // CACHED (getDoc/getDocs + 10-min localStorage TTL): everything else
+  //   → Reduces ~8 persistent WebSocket connections → saves thousands of Firestore reads/day.
+  //   → Admin writes to these collections call bustCache() so next visitor gets fresh data.
   useEffect(() => {
     seedFirestoreIfEmpty();
 
-    // 1. Real-time products listener (available to all users)
+    // 1. REAL-TIME: products (price, availability, details change live)
     const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
       if (!snapshot.empty) {
         const prods = snapshot.docs.map(d => {
@@ -919,231 +925,187 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // 2. Real-time coupons listener (available to all users)
+    // 2. REAL-TIME: coupons (discount codes — validity must be instant)
     const unsubCoupons = onSnapshot(collection(db, 'coupons'), (snapshot) => {
       if (!snapshot.empty) {
         const cps = snapshot.docs.map(d => d.data() as Coupon);
         setCoupons(cps);
       }
     }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[Firestore] Coupons listener error:', err);
-      }
+      if (err?.code !== 'permission-denied') console.warn('[Firestore] Coupons listener error:', err);
     });
 
-    // 3. Real-time customer reviews listener (available to all users)
-    const unsubReviews = onSnapshot(collection(db, 'reviews'), (snapshot) => {
-      if (!snapshot.empty) {
-        const revs = snapshot.docs.map(d => ({
-          ...d.data(),
-          id: d.id,
-        } as Review));
-        revs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setReviews(revs);
-      }
-    }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[Firestore] Reviews listener error:', err);
-      }
-    });
-
-    // 4. Real-time Bangladesh payment methods listener (available to all users)
+    // 3. REAL-TIME: payment methods (bKash/Nagad numbers — customers use these to send money)
     const unsubPaymentMethods = onSnapshot(collection(db, 'payment_methods'), (snapshot) => {
       if (!snapshot.empty) {
-        const pms = snapshot.docs.map(d => ({
-          ...d.data(),
-          id: d.id,
-        } as BangladeshPaymentMethod));
+        const pms = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as BangladeshPaymentMethod));
         setPaymentMethods(pms);
       }
     }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[Firestore] Payment methods listener error:', err);
-      }
+      if (err?.code !== 'permission-denied') console.warn('[Firestore] Payment methods listener error:', err);
     });
 
-    // 5. Real-time admin list listener (only if authenticated/permitted)
-    const unsubAdmins = onSnapshot(collection(db, 'admins'), (snapshot) => {
-      if (!snapshot.empty) {
-        const admins = snapshot.docs.map(d => d.data() as AdminMember);
+    // ── CACHED one-time reads for static/rarely-changing data ─────────
+    // Each uses a 10-minute localStorage TTL cache.
+    // Admin writes bust the cache so the next visitor always gets fresh data.
+
+    // 4. CACHED: reviews
+    const cachedReviews = readCache<Review[]>('keyoon_cache_reviews');
+    if (cachedReviews) {
+      setReviews(cachedReviews);
+    } else {
+      getDocs(collection(db, 'reviews')).then(snap => {
+        if (!snap.empty) {
+          const revs = snap.docs
+            .map(d => ({ ...d.data(), id: d.id } as Review))
+            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setReviews(revs);
+          writeCache('keyoon_cache_reviews', revs);
+        }
+      }).catch(() => {});
+    }
+
+    // 5. CACHED: hero slides
+    const cachedHero = readCache<HeroSlide[]>('keyoon_cache_hero_slides');
+    if (cachedHero) {
+      setHeroSlides(cachedHero);
+    } else {
+      getDocs(collection(db, 'hero_slides')).then(snap => {
+        if (!snap.empty) {
+          const slides = snap.docs
+            .map(d => ({ ...d.data(), id: d.id } as HeroSlide))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          setHeroSlides(slides);
+          writeCache('keyoon_cache_hero_slides', slides);
+        } else {
+          setHeroSlides(MOCK_HERO_SLIDES);
+        }
+      }).catch(() => setHeroSlides(MOCK_HERO_SLIDES));
+    }
+
+    // 6. CACHED: quick messages (chat template buttons)
+    const cachedQM = readCache<QuickMessage[]>('keyoon_cache_quick_messages');
+    if (cachedQM) {
+      setQuickMessages(cachedQM);
+    } else {
+      getDocs(collection(db, 'quick_messages')).then(snap => {
+        if (!snap.empty) {
+          const qms = snap.docs
+            .map(d => ({ ...d.data(), id: d.id } as QuickMessage))
+            .sort((a, b) => (a.order || 0) - (b.order || 0));
+          setQuickMessages(qms);
+          writeCache('keyoon_cache_quick_messages', qms);
+        } else {
+          setQuickMessages(DEFAULT_QUICK_MESSAGES);
+        }
+      }).catch(() => setQuickMessages(DEFAULT_QUICK_MESSAGES));
+    }
+
+    // 7. CACHED: admins list
+    const fallbackAdmin: AdminMember[] = [{ id: 'superadmin', email: SUPERADMIN_EMAIL, name: 'Owner', role: 'superadmin', addedBy: 'System', addedAt: new Date().toISOString() }];
+    const cachedAdmins = readCache<AdminMember[]>('keyoon_cache_admins');
+    if (cachedAdmins) {
+      setAdminList(cachedAdmins);
+    } else {
+      getDocs(collection(db, 'admins')).then(snap => {
+        const admins = snap.empty ? fallbackAdmin : snap.docs.map(d => d.data() as AdminMember);
         setAdminList(admins);
-      } else {
-        setAdminList([{
-          id: 'superadmin',
-          email: SUPERADMIN_EMAIL,
-          name: 'Owner',
-          role: 'superadmin',
-          addedBy: 'System',
-          addedAt: new Date().toISOString(),
-        }]);
-      }
-    }, (_err) => {
-      setAdminList([{
-        id: 'superadmin',
-        email: SUPERADMIN_EMAIL,
-        name: 'Owner',
-        role: 'superadmin',
-        addedBy: 'System',
-        addedAt: new Date().toISOString(),
-      }]);
-    });
+        writeCache('keyoon_cache_admins', admins);
+      }).catch(() => setAdminList(fallbackAdmin));
+    }
 
-    // 6. Real-time Hero Slides listener (available to all users)
-    const unsubHeroSlides = onSnapshot(collection(db, 'hero_slides'), (snapshot) => {
-      if (!snapshot.empty) {
-        const slides = snapshot.docs.map(d => ({
-          ...d.data(),
-          id: d.id,
-        } as HeroSlide));
-        slides.sort((a, b) => (a.order || 0) - (b.order || 0));
-        setHeroSlides(slides);
-      } else {
-        setHeroSlides(MOCK_HERO_SLIDES);
-      }
-    }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[Firestore] Hero slides listener error:', err);
-      }
-      setHeroSlides(MOCK_HERO_SLIDES);
-    });
+    // 8. CACHED: brand settings (logo, name, favicon)
+    const cachedBrand = readCache<BrandSettings>('keyoon_cache_brand');
+    if (cachedBrand) {
+      setBrandSettings(cachedBrand);
+    } else {
+      getDoc(doc(db, 'settings', 'brand')).then(snap => {
+        if (snap.exists()) {
+          const data = snap.data() as BrandSettings;
+          const validFavicon = (data.faviconUrl && !data.faviconUrl.startsWith('data:image/jpeg')) ? data.faviconUrl : '/images/Fabicon.png';
+          const validNavbarLogo = (data.navbarLogoUrl && !data.navbarLogoUrl.startsWith('data:image/jpeg') && !data.navbarLogoUrl.includes('One_Row_logo')) ? data.navbarLogoUrl : '/images/Fabicon.png';
+          const brand: BrandSettings = { brandName: data.brandName || 'Keyoon', brandTagline: data.brandTagline || 'Premium Digital Subscriptions', faviconUrl: validFavicon, navbarLogoUrl: validNavbarLogo, updatedAt: data.updatedAt };
+          setBrandSettings(brand);
+          writeCache('keyoon_cache_brand', brand);
+        }
+      }).catch(() => {});
+    }
 
-    // 7. Real-time Quick Messages listener (available to all visitors/users)
-    const unsubQuickMessages = onSnapshot(collection(db, 'quick_messages'), (snapshot) => {
-      if (!snapshot.empty) {
-        const qms = snapshot.docs.map(d => ({
-          ...d.data(),
-          id: d.id,
-        } as QuickMessage));
-        qms.sort((a, b) => (a.order || 0) - (b.order || 0));
-        setQuickMessages(qms);
-      } else {
-        setQuickMessages(DEFAULT_QUICK_MESSAGES);
-      }
-    }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[Firestore] Quick messages listener error:', err);
-      }
-      setQuickMessages(DEFAULT_QUICK_MESSAGES);
-    });
+    // 9. CACHED: currency settings (BDT rate & enabled countries)
+    const cachedCurrency = readCache<CurrencySettings>('keyoon_cache_currency');
+    if (cachedCurrency) {
+      setCurrencySettings(cachedCurrency);
+    } else {
+      getDoc(doc(db, 'settings', 'currency')).then(snap => {
+        if (snap.exists()) {
+          const data = snap.data() as CurrencySettings;
+          const cs: CurrencySettings = {
+            bdtEnabled: data.bdtEnabled ?? true,
+            bdtCountries: Array.isArray(data.bdtCountries) && data.bdtCountries.length > 0 ? data.bdtCountries.map((c: string) => c.toUpperCase().trim()) : ['BD'],
+            bdtRate: typeof data.bdtRate === 'number' && data.bdtRate > 0 ? data.bdtRate : 125,
+            updatedAt: data.updatedAt,
+            updatedBy: data.updatedBy,
+          };
+          setCurrencySettings(cs);
+          writeCache('keyoon_cache_currency', cs);
+        }
+      }).catch(() => {});
+    }
 
-    // 8. Real-time Brand Settings & Favicon listener
-    const unsubBrandSettings = onSnapshot(doc(db, 'settings', 'brand'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as BrandSettings;
-        const validFavicon = (data.faviconUrl && !data.faviconUrl.startsWith('data:image/jpeg')) ? data.faviconUrl : '/images/Fabicon.png';
-        const validNavbarLogo = (data.navbarLogoUrl && !data.navbarLogoUrl.startsWith('data:image/jpeg') && !data.navbarLogoUrl.includes('One_Row_logo')) ? data.navbarLogoUrl : '/images/Fabicon.png';
-
-        setBrandSettings({
-          brandName: data.brandName || 'Keyoon',
-          brandTagline: data.brandTagline || 'Premium Digital Subscriptions',
-          faviconUrl: validFavicon,
-          navbarLogoUrl: validNavbarLogo,
-          updatedAt: data.updatedAt,
-        });
-      }
-    });
-
-    // 9. Real-time Currency Settings listener (admin-controlled)
-    const unsubCurrencySettings = onSnapshot(doc(db, 'settings', 'currency'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as CurrencySettings;
-        setCurrencySettings({
-          bdtEnabled: data.bdtEnabled ?? true,
-          bdtCountries: Array.isArray(data.bdtCountries) && data.bdtCountries.length > 0
-            ? data.bdtCountries.map((c: string) => c.toUpperCase().trim())
-            : ['BD'],
-          bdtRate: typeof data.bdtRate === 'number' && data.bdtRate > 0 ? data.bdtRate : 125,
-          updatedAt: data.updatedAt,
-          updatedBy: data.updatedBy,
-        });
-      }
-      // If doc doesn't exist yet, keep the default state
-    }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[AppContext] Currency settings listener error:', err);
-      }
-    });
-
-    // 10. Real-time Category Configuration listener (admin-controlled sequence & visibility)
-    const unsubCategorySettings = onSnapshot(doc(db, 'settings', 'categories'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (Array.isArray(data?.categories) && data.categories.length > 0) {
-          const loaded: CategoryConfig[] = data.categories;
-          // Build a map of loaded categories with their saved order and visibility
-          const validMap = new Map(loaded.map(c => [c.id, c]));
-          // Make sure all default categories are represented
-          const allCats: CategoryConfig[] = [];
-          
-          // First add all loaded items in their exact saved order
-          loaded.forEach((item, idx) => {
-            const def = DEFAULT_CATEGORY_CONFIGS.find(d => d.id === item.id);
-            if (def) {
-              allCats.push({
-                ...def,
-                ...item,
-                orderIndex: typeof item.orderIndex === 'number' ? item.orderIndex : idx,
-              });
-            }
-          });
-
-          // Then add any missing default categories at the end
-          DEFAULT_CATEGORY_CONFIGS.forEach(def => {
-            if (!validMap.has(def.id)) {
-              allCats.push({
-                ...def,
-                orderIndex: allCats.length,
-              });
-            }
-          });
-
-          allCats.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
-          const normalized = allCats.map((c, idx) => ({ ...c, orderIndex: idx }));
-          setCategoryConfigs(normalized);
-
-          if (typeof window !== 'undefined') {
-            try {
-              localStorage.setItem('keyoon_category_configs', JSON.stringify(normalized));
-            } catch { }
+    // 10. CACHED: category config (ordering & visibility)
+    const cachedCats = readCache<CategoryConfig[]>('keyoon_cache_categories');
+    if (cachedCats) {
+      setCategoryConfigs(cachedCats);
+    } else {
+      getDoc(doc(db, 'settings', 'categories')).then(snap => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (Array.isArray(data?.categories) && data.categories.length > 0) {
+            const loaded: CategoryConfig[] = data.categories;
+            const validMap = new Map(loaded.map(c => [c.id, c]));
+            const allCats: CategoryConfig[] = [];
+            loaded.forEach((item, idx) => {
+              const def = DEFAULT_CATEGORY_CONFIGS.find(d => d.id === item.id);
+              if (def) allCats.push({ ...def, ...item, orderIndex: typeof item.orderIndex === 'number' ? item.orderIndex : idx });
+            });
+            DEFAULT_CATEGORY_CONFIGS.forEach(def => {
+              if (!validMap.has(def.id)) allCats.push({ ...def, orderIndex: allCats.length });
+            });
+            allCats.sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+            const normalized = allCats.map((c, idx) => ({ ...c, orderIndex: idx }));
+            setCategoryConfigs(normalized);
+            writeCache('keyoon_cache_categories', normalized);
+            try { localStorage.setItem('keyoon_category_configs', JSON.stringify(normalized)); } catch { }
           }
         }
-      }
-    }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[AppContext] Category settings listener error:', err);
-      }
-    });
+      }).catch(() => {});
+    }
 
-    // 11. Real-time Special Offers & Deals Section Settings listener
-    const unsubSpecialOffersSettings = onSnapshot(doc(db, 'settings', 'special_offers'), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as SpecialOffersSettings;
-        setSpecialOffersSettings({
-          isSectionHidden: data.isSectionHidden ?? false,
-          badgeTitle: data.badgeTitle || DEFAULT_SPECIAL_OFFERS_SETTINGS.badgeTitle,
-          sectionHeading: data.sectionHeading || DEFAULT_SPECIAL_OFFERS_SETTINGS.sectionHeading,
-          sectionSubtitle: data.sectionSubtitle || DEFAULT_SPECIAL_OFFERS_SETTINGS.sectionSubtitle,
-          updatedAt: data.updatedAt,
-        });
-      }
-    }, (err) => {
-      if (err?.code !== 'permission-denied') {
-        console.warn('[AppContext] Special offers settings listener error:', err);
-      }
-    });
+    // 11. CACHED: special offers section settings
+    const cachedOffers = readCache<SpecialOffersSettings>('keyoon_cache_special_offers');
+    if (cachedOffers) {
+      setSpecialOffersSettings(cachedOffers);
+    } else {
+      getDoc(doc(db, 'settings', 'special_offers')).then(snap => {
+        if (snap.exists()) {
+          const data = snap.data() as SpecialOffersSettings;
+          const so: SpecialOffersSettings = {
+            isSectionHidden: data.isSectionHidden ?? false,
+            badgeTitle: data.badgeTitle || DEFAULT_SPECIAL_OFFERS_SETTINGS.badgeTitle,
+            sectionHeading: data.sectionHeading || DEFAULT_SPECIAL_OFFERS_SETTINGS.sectionHeading,
+            sectionSubtitle: data.sectionSubtitle || DEFAULT_SPECIAL_OFFERS_SETTINGS.sectionSubtitle,
+            updatedAt: data.updatedAt,
+          };
+          setSpecialOffersSettings(so);
+          writeCache('keyoon_cache_special_offers', so);
+        }
+      }).catch(() => {});
+    }
 
     return () => {
       unsubProducts();
       unsubCoupons();
-      unsubReviews();
       unsubPaymentMethods();
-      unsubAdmins();
-      unsubHeroSlides();
-      unsubQuickMessages();
-      unsubBrandSettings();
-      unsubCurrencySettings();
-      unsubCategorySettings();
-      unsubSpecialOffersSettings();
     };
   }, [seedFirestoreIfEmpty]);
 
