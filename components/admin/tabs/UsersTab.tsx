@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Search, MessageSquare } from 'lucide-react';
+import { Users, Search, MessageSquare } from 'lucide-react';
 import { CustomerProfile } from '@/types';
-import { SUPERADMIN_EMAIL } from '@/context/AppContext';
+import { isSuperadminEmail } from '@/context/AppContext';
 
 interface UsersTabProps {
   allUsers: CustomerProfile[];
@@ -58,7 +58,7 @@ export function UsersTab({
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
               {allUsers.filter(u => u.name?.toLowerCase().includes(userSearch.toLowerCase()) || u.email?.toLowerCase().includes(userSearch.toLowerCase())).map(u => {
-                const isOwner = u.email?.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+                const isOwner = isSuperadminEmail(u.email);
 
                 return (
                   <tr key={u.id} className="hover:bg-white/[0.02]">

@@ -22,8 +22,15 @@ import {
   deleteDoc, query, where, orderBy, onSnapshot, writeBatch, arrayUnion,
 } from 'firebase/firestore';
 
-// ─── Superadmin email ───────────────────────────────────────────────
+// ─── Superadmin emails ───────────────────────────────────────────────
+export const SUPERADMIN_EMAILS = ['m.h.ratul18@gmail.com', 'admin@keyoon.com'];
 export const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
+
+export const isSuperadminEmail = (email?: string | null): boolean => {
+  if (!email) return false;
+  const clean = email.toLowerCase().trim();
+  return SUPERADMIN_EMAILS.includes(clean);
+};
 
 // ─── Default Special Offers & Exclusive Deals Settings ─────────────
 export const DEFAULT_SPECIAL_OFFERS_SETTINGS: SpecialOffersSettings = {
@@ -846,18 +853,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
 
-      // 8. Ensure superadmin doc exists in admins collection
-      const superAdminRef = doc(db, 'admins', SUPERADMIN_EMAIL.toLowerCase().replace(/[^a-z0-9]/g, '_'));
-      const superAdminSnap = await getDoc(superAdminRef);
-      if (!superAdminSnap.exists()) {
-        await setDoc(superAdminRef, {
-          id: superAdminRef.id,
-          email: SUPERADMIN_EMAIL.toLowerCase(),
-          name: 'Owner (Superadmin)',
-          role: 'superadmin',
-          addedBy: 'System',
-          addedAt: new Date().toISOString(),
-        });
+      // 8. Ensure superadmin docs exist in admins collection
+      for (const sEmail of SUPERADMIN_EMAILS) {
+        const superAdminRef = doc(db, 'admins', sEmail.toLowerCase().replace(/[^a-z0-9]/g, '_'));
+        const superAdminSnap = await getDoc(superAdminRef);
+        if (!superAdminSnap.exists()) {
+          await setDoc(superAdminRef, {
+            id: superAdminRef.id,
+            email: sEmail.toLowerCase(),
+            name: sEmail === 'admin@keyoon.com' ? 'Keyoon Administrator' : 'Owner (Superadmin)',
+            role: 'superadmin',
+            addedBy: 'System',
+            addedAt: new Date().toISOString(),
+          });
+        }
       }
     } catch (err: any) {
       if (err?.code !== 'permission-denied') {
@@ -1248,7 +1257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (fbUser) {
         const userEmailLower = (fbUser.email || '').toLowerCase().trim();
-        const isSuper = userEmailLower === SUPERADMIN_EMAIL.toLowerCase();
+        const isSuper = isSuperadminEmail(userEmailLower);
         setIsSuperAdmin(isSuper);
 
         // Check if user is an admin in the adminList or has admin role in Firestore

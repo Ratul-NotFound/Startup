@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 // These paths require the user to be authenticated
 const PROTECTED_PATHS = ['/dashboard', '/admin'];
 
-// Only this email can access /admin
-const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
+// Superadmin emails permitted to access /admin command hub
+const SUPERADMIN_EMAILS = ['m.h.ratul18@gmail.com', 'admin@keyoon.com'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

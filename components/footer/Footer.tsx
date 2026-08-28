@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Layers, ShieldCheck, Zap, Lock, Globe, ArrowUpRight } from 'lucide-react';
+import { Layers, ShieldCheck, Zap, Lock, Globe, ArrowUpRight, Mail, CreditCard, Shield } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
 export const Footer: React.FC = () => {
@@ -62,17 +62,12 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <Link href="/#catalog" className="hover:text-cyan-400 transition-colors">
-                  Cinema & 4K Streaming
+                  Streaming & Cinema
                 </Link>
               </li>
               <li>
                 <Link href="/#catalog" className="hover:text-cyan-400 transition-colors">
-                  Developer Tools
-                </Link>
-              </li>
-              <li>
-                <Link href="/#catalog" className="hover:text-cyan-400 transition-colors">
-                  Design & Creative Apps
+                  Developer & Cloud
                 </Link>
               </li>
               <li>
@@ -118,27 +113,47 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Column 4: Guarantee & Safety */}
+          {/* Column 4: Official Email Channels */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold tracking-wider uppercase text-white font-sans">
-              Guarantee & Safety
+              Official Channels
             </h4>
             <ul className="space-y-2.5 text-xs text-zinc-400 font-medium">
-              <li className="flex items-center gap-1.5 text-zinc-300">
-                <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
-                <span>100% Replacement Warranty</span>
+              <li>
+                <a
+                  href="mailto:support@keyoon.com"
+                  className="flex items-center gap-2 hover:text-cyan-300 transition-colors group"
+                >
+                  <Mail className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold leading-tight">General Support</span>
+                    <span className="text-zinc-300 group-hover:text-cyan-300 transition-colors font-mono">support@keyoon.com</span>
+                  </div>
+                </a>
               </li>
-              <li className="flex items-center gap-1.5 text-zinc-300">
-                <Zap className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Under 30s Instant Delivery</span>
+              <li>
+                <a
+                  href="mailto:billing@keyoon.com"
+                  className="flex items-center gap-2 hover:text-emerald-300 transition-colors group"
+                >
+                  <CreditCard className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold leading-tight">Billing &amp; Payments</span>
+                    <span className="text-zinc-300 group-hover:text-emerald-300 transition-colors font-mono">billing@keyoon.com</span>
+                  </div>
+                </a>
               </li>
-              <li className="flex items-center gap-1.5 text-zinc-300">
-                <Lock className="h-3.5 w-3.5 text-indigo-400" />
-                <span>Encrypted & Safe Checkout</span>
-              </li>
-              <li className="flex items-center gap-1.5 text-zinc-300">
-                <Globe className="h-3.5 w-3.5 text-blue-400" />
-                <span>Global Multi-Device Access</span>
+              <li>
+                <a
+                  href="mailto:admin@keyoon.com"
+                  className="flex items-center gap-2 hover:text-indigo-300 transition-colors group"
+                >
+                  <Shield className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold leading-tight">Administration</span>
+                    <span className="text-zinc-300 group-hover:text-indigo-300 transition-colors font-mono">admin@keyoon.com</span>
+                  </div>
+                </a>
               </li>
             </ul>
           </div>

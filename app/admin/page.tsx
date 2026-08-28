@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useApp, SUPERADMIN_EMAIL } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import {
   TrendingUp, DollarSign, Users, Package, Tag, Headphones, ShoppingBag,
   BarChart2, MessageSquare, Lock, Star, Sparkles, CreditCard, UserCheck,

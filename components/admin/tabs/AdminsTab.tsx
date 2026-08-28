@@ -3,7 +3,7 @@
 import React from 'react';
 import { UserPlus, Plus, UserX, X } from 'lucide-react';
 import { AdminMember } from '@/types';
-import { SUPERADMIN_EMAIL } from '@/context/AppContext';
+import { isSuperadminEmail } from '@/context/AppContext';
 
 interface AdminsTabProps {
   isSuperAdmin: boolean;
@@ -34,64 +34,66 @@ export function AdminsTab({
 }: AdminsTabProps) {
   return (
     <div className="space-y-6">
-      <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4">
-        <div className="flex items-center justify-between">
+      {/* SECTION 1: ADD NEW ADMIN FORM */}
+      {isSuperAdmin && (
+        <div className="p-6 rounded-3xl bg-zinc-900/90 border border-white/[0.08] backdrop-blur-xl shadow-2xl space-y-4">
           <div>
-            <h2 className="text-lg font-bold text-white">Administrator Access Control</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Grant team members access to the SubNexus Admin Control Panel.
-            </p>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-indigo-400" />
+              <span>Grant Admin Privileges</span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">Authorize a team member to access this Command Hub by email.</p>
           </div>
+
+          <form onSubmit={handleAddAdmin} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-[11px] font-semibold text-slate-300 block mb-1">Team Member Email</label>
+              <input
+                type="email"
+                required
+                value={newAdminEmail}
+                onChange={e => setNewAdminEmail(e.target.value)}
+                placeholder="e.g. employee@keyoon.com"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="text-[11px] font-semibold text-slate-300 block mb-1">Display Name (Optional)</label>
+              <input
+                type="text"
+                value={newAdminName}
+                onChange={e => setNewAdminName(e.target.value)}
+                placeholder="e.g. Operations Manager"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white text-xs"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={isAddingAdmin}
+                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <Plus className="h-4 w-4" />
+                <span>{isAddingAdmin ? 'Granting...' : 'Grant Access'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* SECTION 2: ACTIVE ADMIN ROSTER */}
+      <div className="p-6 rounded-3xl bg-zinc-900/90 border border-white/[0.08] backdrop-blur-xl shadow-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-bold text-white">Authorized Administrators ({adminList.length})</h3>
         </div>
 
-        {/* Add New Admin Form */}
-        {isSuperAdmin && (
-          <form onSubmit={handleAddAdmin} className="p-5 rounded-2xl bg-zinc-950 border border-white/[0.08] space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <UserPlus className="h-4 w-4 text-cyan-400" /> Add New Administrator
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-              <div className="sm:col-span-6">
-                <input
-                  type="email"
-                  required
-                  value={newAdminEmail}
-                  onChange={e => setNewAdminEmail(e.target.value)}
-                  placeholder="admin.email@domain.com"
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div className="sm:col-span-4">
-                <input
-                  type="text"
-                  value={newAdminName}
-                  onChange={e => setNewAdminName(e.target.value)}
-                  placeholder="Display Name (optional)"
-                  className="w-full px-4 py-2.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <button
-                  type="submit"
-                  disabled={isAddingAdmin}
-                  className="w-full h-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  <Plus className="h-4 w-4" /> Grant Access
-                </button>
-              </div>
-            </div>
-            <p className="text-[11px] text-slate-500">
-              When this user signs in with Google or Email, they will immediately have administrator panel access.
-            </p>
-          </form>
-        )}
-
-        {/* Admin Members List */}
-        <div className="rounded-2xl border border-white/[0.08] overflow-hidden">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-950 text-slate-400 uppercase font-semibold border-b border-white/[0.06]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-400">
+            <thead className="border-b border-white/[0.06] text-slate-500 font-mono uppercase text-[10px]">
               <tr>
-                <th className="p-4">Admin</th>
+                <th className="p-4">Name</th>
                 <th className="p-4">Email</th>
                 <th className="p-4">Role</th>
                 <th className="p-4">Added On</th>
@@ -101,7 +103,7 @@ export function AdminsTab({
             </thead>
             <tbody className="divide-y divide-white/[0.04]">
               {adminList.map(admin => {
-                const isOwner = admin.email.toLowerCase() === SUPERADMIN_EMAIL.toLowerCase();
+                const isOwner = isSuperadminEmail(admin.email);
 
                 return (
                   <tr key={admin.id || admin.email} className="hover:bg-white/[0.02]">

@@ -284,7 +284,7 @@ export function printCleanInvoice(order: Order) {
         <div class="footer-note">
           <p>Thank you for your business with Keyoon!</p>
           <p>Your subscription credentials and license details are securely stored in your private <strong>Keyoon Vault</strong>.</p>
-          <div class="stamp">Verified Electronic Receipt · 100% Replacement Warranty Active · support@keyoon.com</div>
+          <div class="stamp">Verified Electronic Receipt · 100% Full-Term Warranty · support@keyoon.com · billing@keyoon.com</div>
         </div>
       </body>
     </html>
