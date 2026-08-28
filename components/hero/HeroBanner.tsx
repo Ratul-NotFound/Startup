@@ -10,7 +10,7 @@ import { MOCK_HERO_SLIDES } from '@/lib/mock-data';
 export const HeroBanner: React.FC = () => {
   const { heroSlides } = useApp();
   const containerRef = useRef<HTMLElement>(null);
-  const isInView = useInView(containerRef, { margin: '200px 0px 200px 0px', once: false });
+  const isInView = useInView(containerRef, { margin: '150px 0px 150px 0px', once: false });
   const [activeSlide, setActiveSlide] = useState(0);
 
   const slides = (heroSlides && heroSlides.length > 0) ? heroSlides : MOCK_HERO_SLIDES;
@@ -26,15 +26,15 @@ export const HeroBanner: React.FC = () => {
   const current = slides[activeSlide % slides.length] || slides[0] || MOCK_HERO_SLIDES[0];
 
   return (
-    <section ref={containerRef} className="relative min-h-[86vh] sm:min-h-[92vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12" suppressHydrationWarning>
+    <section ref={containerRef} className="relative min-h-[84vh] sm:min-h-[90vh] w-full flex flex-col justify-between overflow-hidden -mt-16 pt-24 pb-12" suppressHydrationWarning>
       
-      {/* 100% Full-Viewport Responsive Dynamic Slides Background Carousel */}
+      {/* Responsive Dynamic Slides Background Carousel */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none" style={{ transform: 'translateZ(0)' }} suppressHydrationWarning>
         {slides.map((slide, idx) => (
           <div
             key={slide.id || idx}
             suppressHydrationWarning
-            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out will-change-[opacity] ${
+            className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
               idx === (activeSlide % slides.length) ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -43,9 +43,7 @@ export const HeroBanner: React.FC = () => {
               alt="Cinematic Background"
               loading={idx === 0 ? 'eager' : 'lazy'}
               decoding="async"
-              className={`w-full h-full object-cover object-center transition-transform duration-[8000ms] ease-out will-change-transform ${
-                idx === (activeSlide % slides.length) ? 'scale-108' : 'scale-100'
-              }`}
+              className="w-full h-full object-cover object-center"
             />
           </div>
         ))}
@@ -59,17 +57,15 @@ export const HeroBanner: React.FC = () => {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none" suppressHydrationWarning />
       </div>
 
-      {/* Main Centered Content with 3D Depth Layering */}
+      {/* Main Centered Content */}
       <div
         suppressHydrationWarning
-        style={{ perspective: 1200, transformStyle: 'preserve-3d' }}
         className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center my-auto space-y-6"
       >
         
         {/* Live Status Pill with Radar Pulse Ring */}
         <div
-          style={{ transform: 'translateZ(30px)' }}
-          className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/70 border border-cyan-500/30 text-cyan-300 text-xs font-semibold backdrop-blur-md shadow-sm"
+          className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 text-xs font-semibold shadow-sm"
         >
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
@@ -82,16 +78,15 @@ export const HeroBanner: React.FC = () => {
 
         {/* Cursive Subtitle with Smooth Animated Transitions */}
         <div
-          style={{ transform: 'translateZ(45px)' }}
           className="min-h-[2.5rem] flex items-center justify-center"
         >
           <AnimatePresence mode="wait">
             <motion.p
               key={`sub-${activeSlide}`}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
               className="text-2xl sm:text-4xl text-cyan-400 drop-shadow-[0_0_25px_rgba(6,182,212,0.7)] select-none font-bold"
               style={{ fontFamily: "'Caveat', cursive" }}
             >
@@ -100,18 +95,17 @@ export const HeroBanner: React.FC = () => {
           </AnimatePresence>
         </div>
 
-        {/* Modern Headline with Smooth Word Fluidity */}
+        {/* Modern Headline with Smooth Fluidity */}
         <div
-          style={{ transform: 'translateZ(65px)' }}
           className="min-h-[4rem] sm:min-h-[6rem] flex items-center justify-center"
         >
           <AnimatePresence mode="wait">
             <motion.h1
               key={`title-${activeSlide}`}
-              initial={{ opacity: 0, y: 18 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -18 }}
-              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+              exit={{ opacity: 0, y: -14 }}
+              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
               className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)] max-w-4xl mx-auto leading-[1.1]"
               style={{ fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif" }}
             >
@@ -122,15 +116,14 @@ export const HeroBanner: React.FC = () => {
 
         {/* Centered Dual Action Buttons with Magnetic Cursor Attraction */}
         <div
-          style={{ transform: 'translateZ(50px)' }}
           className="flex flex-wrap items-center justify-center gap-4 pt-4"
         >
-          <MagneticButton strength={0.28}>
+          <MagneticButton strength={0.2}>
             <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               href="#catalog"
-              className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs tracking-wider uppercase shadow-[0_0_25px_rgba(37,99,235,0.4)] transition-colors flex items-center gap-2"
+              className="px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs tracking-wider uppercase shadow-[0_0_20px_rgba(37,99,235,0.35)] transition-colors flex items-center gap-2"
             >
               <Zap className="h-4 w-4" />
               <span>Explore Subscriptions</span>
@@ -138,12 +131,12 @@ export const HeroBanner: React.FC = () => {
             </motion.a>
           </MagneticButton>
 
-          <MagneticButton strength={0.28}>
+          <MagneticButton strength={0.2}>
             <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.96 }}
               href="#catalog"
-              className="px-8 py-3.5 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 border border-white/10 font-bold text-xs tracking-wider uppercase backdrop-blur-md transition-colors block"
+              className="px-8 py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/10 font-bold text-xs tracking-wider uppercase transition-colors block"
             >
               View All Plans
             </motion.a>
@@ -152,7 +145,7 @@ export const HeroBanner: React.FC = () => {
 
       </div>
 
-      {/* Hero Carousel Indicators with Smooth Spring Bar Transition */}
+      {/* Hero Carousel Indicators with Smooth Transition */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 w-full flex justify-center">
         <div className="flex items-center justify-center gap-2">
           {slides.map((_, idx) => (

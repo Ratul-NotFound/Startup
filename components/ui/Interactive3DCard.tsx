@@ -16,7 +16,7 @@ interface Interactive3DCardProps {
 export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
   children,
   className = '',
-  maxTilt = 12,
+  maxTilt = 8,
   index = 0,
   delay,
   showBorderBeam = false,
@@ -30,17 +30,16 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
   const y = useMotionValue(0.5);
 
   const rotateX = useSpring(useTransform(y, [0, 1], [maxTilt, -maxTilt]), {
-    stiffness: 280,
-    damping: 25,
+    stiffness: 350,
+    damping: 30,
   });
   const rotateY = useSpring(useTransform(x, [0, 1], [-maxTilt, maxTilt]), {
-    stiffness: 280,
-    damping: 25,
+    stiffness: 350,
+    damping: 30,
   });
 
-  // Zero-rerender cursor tracking using direct CSS variables on DOM node
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current || !isHovered) return;
+    if (!cardRef.current || isLowEnd) return;
     const rect = cardRef.current.getBoundingClientRect();
     const width = rect.width;
     const height = rect.height;
@@ -56,10 +55,10 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
 
     cardRef.current.style.setProperty('--mouse-x', `${(normX * 100).toFixed(1)}%`);
     cardRef.current.style.setProperty('--mouse-y', `${(normY * 100).toFixed(1)}%`);
-  }, [cardRef, isHovered, x, y]);
+  }, [isLowEnd, x, y]);
 
   const handleMouseEnter = () => {
-    setIsHovered(true);
+    if (!isLowEnd) setIsHovered(true);
   };
 
   const handleMouseLeave = () => {
@@ -68,16 +67,16 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
     y.set(0.5);
   };
 
-  const animationDelay = delay !== undefined ? delay : Math.min(index * 0.06, 0.35);
+  const animationDelay = delay !== undefined ? delay : Math.min(index * 0.03, 0.15);
 
-  // On low-end devices skip 3D physics — just use a simple fade-in
+  // Low-end / mobile rendering: zero 3D overhead
   if (isLowEnd) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.35, delay: animationDelay }}
+        viewport={{ once: true, margin: '-30px' }}
+        transition={{ duration: 0.28, delay: animationDelay, ease: 'easeOut' }}
         className={`relative h-full ${className}`}
       >
         {children}
@@ -86,7 +85,7 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
   }
 
   return (
-    <div style={{ perspective: 1200 }} className="h-full">
+    <div className="h-full">
       <motion.div
         ref={cardRef}
         onMouseMove={handleMouseMove}
@@ -94,67 +93,48 @@ export const Interactive3DCard: React.FC<Interactive3DCardProps> = ({
         onMouseLeave={handleMouseLeave}
         initial={{
           opacity: 0,
-          y: 30,
-          scale: 0.95,
-          rotateX: 10,
-          rotateY: index % 2 === 0 ? -4 : 4,
+          y: 20,
         }}
         whileInView={{
           opacity: 1,
           y: 0,
-          scale: 1,
-          rotateX: 0,
-          rotateY: 0,
         }}
-        viewport={{ once: true, margin: '-40px' }}
+        viewport={{ once: true, margin: '-30px' }}
         transition={{
-          duration: 0.5,
+          duration: 0.35,
           delay: animationDelay,
-          ease: [0.16, 1, 0.3, 1],
+          ease: [0.22, 1, 0.36, 1],
         }}
         style={{
-          transformStyle: 'preserve-3d',
           rotateX: isHovered ? rotateX : 0,
           rotateY: isHovered ? rotateY : 0,
           transform: 'translateZ(0)',
           backfaceVisibility: 'hidden',
           WebkitBackfaceVisibility: 'hidden',
-          willChange: isHovered ? 'transform' : 'auto',
         }}
         whileHover={{
-          scale: 1.03,
-          z: 25,
+          y: -4,
           transition: { duration: 0.2, ease: 'easeOut' },
         }}
-        className={`relative h-full ${className}`}
+        className={`relative h-full transition-shadow duration-200 ${className}`}
       >
         {children}
 
-        {/* Dynamic Holographic Specular Glare Layer driven by CSS variable */}
-        <div
-          className={`pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-300 z-30 ${
-            isHovered ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={{
-            background: 'radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(6, 182, 212, 0.28), rgba(255, 255, 255, 0.25) 25%, transparent 65%)',
-          }}
-        />
-
-        {/* Ambient Neon Spotlight Glow driven by CSS variable */}
-        <div
-          className={`pointer-events-none absolute -inset-[2px] rounded-[inherit] transition-opacity duration-400 z-10 ${
-            isHovered ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={{
-            background: 'radial-gradient(350px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(6,182,212,0.4), rgba(59,130,246,0.18) 40%, transparent 70%)',
-          }}
-        />
+        {/* Dynamic Specular Glare Layer - CSS variable driven */}
+        {isHovered && (
+          <div
+            className="pointer-events-none absolute inset-0 rounded-[inherit] transition-opacity duration-200 z-30 opacity-100"
+            style={{
+              background: 'radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(6, 182, 212, 0.2), transparent 60%)',
+            }}
+          />
+        )}
 
         {/* Optional Animated Radiant Border Beam */}
         {showBorderBeam && (
           <div className="pointer-events-none absolute -inset-[1px] rounded-[inherit] overflow-hidden z-20">
             <div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-40 blur-[2px] animate-shimmer-text"
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-30 blur-[1px] animate-shimmer-text"
               style={{ backgroundSize: '200% 100%' }}
             />
           </div>
