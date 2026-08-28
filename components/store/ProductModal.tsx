@@ -17,6 +17,7 @@ export const ProductModal: React.FC = () => {
   const {
     selectedProduct,
     setSelectedProduct,
+    cart,
     addToCart,
     setIsCartOpen,
     setIsCheckoutOpen,
@@ -547,15 +548,31 @@ export const ProductModal: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(unlockedCode);
-                                  applyCoupon(unlockedCode);
+                                  if (!selectedProduct.specialConfig?.isPromoCodeHidden) {
+                                    try { navigator.clipboard.writeText(unlockedCode); } catch {}
+                                  }
+                                  const targetCartItem = {
+                                    product: selectedProduct,
+                                    selectedPlan: currentPlan,
+                                    quantity: 1,
+                                    customEmail: customEmail || undefined,
+                                  };
+                                  const updatedCart = [...cart.filter(i => !(i.product.id === selectedProduct.id && i.selectedPlan.duration === currentPlan.duration)), targetCartItem];
+                                  addToCart(selectedProduct, currentPlan, customEmail || undefined);
+                                  applyCoupon(unlockedCode, updatedCart);
                                   setCopiedCoupon(true);
                                   setTimeout(() => setCopiedCoupon(false), 2500);
                                 }}
                                 className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-mono font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
                               >
                                 {copiedCoupon ? <Check className="h-3.5 w-3.5" /> : <Sparkles className="h-3.5 w-3.5" />}
-                                <span>{copiedCoupon ? 'Copied & Applied!' : `Code: ${unlockedCode}`}</span>
+                                <span>
+                                  {copiedCoupon
+                                    ? 'Applied to Cart!'
+                                    : selectedProduct.specialConfig?.isPromoCodeHidden
+                                    ? '🎁 Claim Unlocked Deal'
+                                    : `Code: ${unlockedCode}`}
+                                </span>
                               </button>
                             )}
                           </div>
@@ -982,9 +999,17 @@ export const ProductModal: React.FC = () => {
                           handleScrollToTasks();
                           return;
                         }
-                        addToCart(selectedProduct, { ...currentPlan, price: 0 }, customEmail || undefined);
+                        const targetPlan = { ...currentPlan, price: 0 };
+                        const targetCartItem = {
+                          product: selectedProduct,
+                          selectedPlan: targetPlan,
+                          quantity: 1,
+                          customEmail: customEmail || undefined,
+                        };
+                        const updatedCart = [...cart.filter(i => !(i.product.id === selectedProduct.id && i.selectedPlan.duration === targetPlan.duration)), targetCartItem];
+                        addToCart(selectedProduct, targetPlan, customEmail || undefined);
                         if (unlockedCode) {
-                          applyCoupon(unlockedCode);
+                          applyCoupon(unlockedCode, updatedCart);
                         }
                         setSelectedProduct(null);
                         setIsCheckoutOpen(true);
@@ -1023,9 +1048,16 @@ export const ProductModal: React.FC = () => {
                       whileTap={{ scale: 0.97 }}
                       disabled={(selectedProduct.stockCount ?? 0) <= 0}
                       onClick={() => {
+                        const targetCartItem = {
+                          product: selectedProduct,
+                          selectedPlan: currentPlan,
+                          quantity: 1,
+                          customEmail: customEmail || undefined,
+                        };
+                        const updatedCart = [...cart.filter(i => !(i.product.id === selectedProduct.id && i.selectedPlan.duration === currentPlan.duration)), targetCartItem];
                         addToCart(selectedProduct, currentPlan, customEmail || undefined);
                         if (unlockedCode) {
-                          applyCoupon(unlockedCode);
+                          applyCoupon(unlockedCode, updatedCart);
                         }
                         setSelectedProduct(null);
                         setIsCheckoutOpen(true);

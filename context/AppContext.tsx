@@ -139,8 +139,9 @@ interface AppContextType {
   updateCartItemQuantity: (productId: string, duration: string, quantity: number) => void;
   clearCart: () => void;
   appliedCoupon: Coupon | null;
-  applyCoupon: (code: string) => { success: boolean; message: string };
+  applyCoupon: (code: string, targetCart?: CartItem[]) => { success: boolean; message: string };
   removeCoupon: () => void;
+  isItemEligibleForCoupon: (item: CartItem, coupon: Coupon) => boolean;
   isCouponAlreadyUsed: (code: string) => boolean;
   isSpecialOfferClaimed: (productId: string) => boolean;
   cartSubtotal: number;
@@ -612,8 +613,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sync a special product to the storefront deals & coupons hub if configured
   const syncSpecialProductToDeals = async (prod: Product) => {
-    if (prod.productType === 'special' && prod.specialConfig?.isSpecialOfferSynced) {
-      const dealCode = (prod.specialConfig.unlockedCouponCode || `DEAL_${prod.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`).toUpperCase();
+    if (prod.productType === 'special' && prod.specialConfig) {
+      const dealCode = (prod.specialConfig.unlockedCouponCode || `DEAL_${prod.name.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 8)}`).toUpperCase().trim();
       const dealDocRef = doc(db, 'coupons', dealCode);
       const requiredTasks = (prod.specialConfig.tasks || []).map(t => ({
         id: t.id,
@@ -623,19 +624,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         type: t.type,
       }));
 
+      const isHidden = !!(prod.specialConfig.isPromoCodeHidden || prod.isHidden);
+
       const dealData: Partial<Coupon> = {
         code: dealCode,
-        discountPercent: prod.specialConfig.discountPercent || prod.pricingTiers[0]?.discountPercentage || 20,
+        discountPercent: prod.specialConfig.discountPercent || (prod.specialConfig.isFreeProduct ? 100 : prod.pricingTiers[0]?.discountPercentage || 20),
         description: prod.specialConfig.campaignDescription || `Exclusive mission deal for ${prod.name}`,
-        isSpecialOffer: true,
-        offerTag: prod.specialConfig.campaignBadge || '⚡ Special Product Deal',
+        isSpecialOffer: !!prod.specialConfig.isSpecialOfferSynced,
+        offerTag: prod.specialConfig.campaignBadge || (prod.specialConfig.isFreeProduct ? '🎁 FREE GIVEAWAY' : '⚡ Special Product Deal'),
         offerTitle: prod.specialConfig.campaignTitle || `${prod.name} Campaign Offer`,
         offerImage: prod.logo,
-        type: 'special_deal',
+        type: prod.specialConfig.isFreeProduct || prod.specialConfig.discountPercent === 100 ? 'giveaway' : 'special_deal',
         requiredTasks,
         applicableProductIds: [prod.id],
         linkedProductId: prod.id,
-        isHidden: prod.isHidden ?? false,
+        isHidden,
       };
 
       try {
@@ -645,10 +648,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...dealData,
             maxUses: 1000,
             usedCount: 0,
+            orderIndex: 0,
           });
         } else {
           await updateDoc(dealDocRef, dealData as Record<string, unknown>);
         }
+        // Update local coupons state immediately
+        setCoupons(prev => {
+          const idx = prev.findIndex(c => c.code.toUpperCase() === dealCode);
+          if (idx > -1) {
+            const updated = [...prev];
+            updated[idx] = { ...updated[idx], ...dealData } as Coupon;
+            return updated;
+          }
+          return [...prev, { ...dealData, maxUses: 1000, usedCount: 0, orderIndex: 0 } as Coupon];
+        });
       } catch (err) {
         console.warn('[AppContext] Error syncing special product to deals:', err);
       }
@@ -1560,18 +1574,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Helper: check if a cart item is eligible for a given coupon
   const isItemEligibleForCoupon = useCallback((item: CartItem, coupon: Coupon): boolean => {
-    // 1. Check direct linkedProductId
+    if (!item || !coupon) return false;
+
+    // 1. If coupon has a linkedProductId, it MUST match this item
+    if (coupon.linkedProductId && coupon.linkedProductId === item.product.id) {
+      return true;
+    }
     if (coupon.linkedProductId && coupon.linkedProductId !== item.product.id) {
       return false;
     }
-    // 2. Check specific product ID restriction
+
+    // 2. If coupon has specific applicableProductIds list, item MUST be in the list
     if (coupon.applicableProductIds && coupon.applicableProductIds.length > 0) {
-      if (!coupon.applicableProductIds.includes(item.product.id)) return false;
+      return coupon.applicableProductIds.includes(item.product.id);
     }
-    // 3. Check category restriction
+
+    // 3. If coupon has a category restriction, category MUST match
     if (coupon.applicableCategory && coupon.applicableCategory !== 'all') {
-      if (item.product.category !== coupon.applicableCategory) return false;
+      return item.product.category === coupon.applicableCategory;
     }
+
+    // 4. Default: storewide promo code valid for all products
     return true;
   }, []);
 
@@ -1707,7 +1730,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [cart, appliedCoupon, isItemEligibleForCoupon]);
 
-  const applyCoupon = (code: string) => {
+  const applyCoupon = (code: string, targetCart?: CartItem[]) => {
     const cleanCode = code.trim().toUpperCase();
     const found = coupons.find(c => c.code.toUpperCase() === cleanCode);
     if (!found) return { success: false, message: 'Invalid promo code.' };
@@ -1732,22 +1755,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // 3. Minimum Order Amount Check
-    if (found.minOrderAmount && cartSubtotal < found.minOrderAmount) {
+    const activeCart = targetCart || cart;
+    const activeSubtotal = activeCart.reduce((acc, i) => acc + i.selectedPlan.price * i.quantity, 0);
+    if (found.minOrderAmount && activeSubtotal < found.minOrderAmount) {
       return { success: false, message: `Minimum order amount of $${found.minOrderAmount} is required for this code.` };
     }
 
     // 4. Product / Category / Linked Product Eligibility Check
-    const hasEligibleItems = cart.some(item => isItemEligibleForCoupon(item, found));
+    const hasEligibleItems = activeCart.some(item => isItemEligibleForCoupon(item, found));
     if (!hasEligibleItems) {
       if (found.linkedProductId) {
         const targetProd = products.find(p => p.id === found.linkedProductId);
         return {
           success: false,
-          message: `This promo code is exclusively synced with "${targetProd?.name || 'the linked special product'}". Please add it to your cart.`,
+          message: `This promo code is valid only for "${targetProd?.name || 'the linked product'}". Please add it to your cart.`,
         };
       }
       if (found.applicableProductIds && found.applicableProductIds.length > 0) {
-        return { success: false, message: 'This promo code is only valid for specific products not currently in your cart.' };
+        const targetProds = products.filter(p => found.applicableProductIds?.includes(p.id));
+        const names = targetProds.map(p => p.name).join(', ');
+        return {
+          success: false,
+          message: `This promo code is only valid for: ${names || 'specific products'}. Please add them to your cart.`,
+        };
       }
       if (found.applicableCategory && found.applicableCategory !== 'all') {
         return { success: false, message: `This promo code is only valid for ${found.applicableCategory.toUpperCase()} category items.` };
@@ -1755,7 +1785,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     setAppliedCoupon(found);
-    return { success: true, message: `${found.discountPercent}% discount applied to eligible items!` };
+    return { success: true, message: `${found.discountPercent}% discount applied to eligible product(s)!` };
   };
 
   const removeCoupon = () => setAppliedCoupon(null);
@@ -3130,7 +3160,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const contextValue = useMemo(() => ({
     products, selectedProduct, setSelectedProduct,
     cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart,
-    appliedCoupon, applyCoupon, removeCoupon, isCouponAlreadyUsed, isSpecialOfferClaimed, cartSubtotal, cartDiscount, cartTotal,
+    appliedCoupon, applyCoupon, removeCoupon, isItemEligibleForCoupon, isCouponAlreadyUsed, isSpecialOfferClaimed, cartSubtotal, cartDiscount, cartTotal,
     isCartOpen, setIsCartOpen, isCheckoutOpen, setIsCheckoutOpen,
     processCheckout, orders, latestOrder, setLatestOrder,
     subscriptions, toggleAutoRenew, extendSubscription, activeVaultSub, setActiveVaultSub,

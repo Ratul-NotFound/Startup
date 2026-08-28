@@ -7,7 +7,7 @@ import { useApp } from '@/context/AppContext';
 import {
   Package, X, ImageIcon, DollarSign, Zap, CheckCircle2, Shield, BookOpen,
   Loader2, Upload, Sparkles, Plus, Trash2, Star, Save, ArrowLeft, ArrowRight,
-  Layers, Film, Check, Eye,
+  Layers, Film, Check, Eye, EyeOff, Tag,
 } from 'lucide-react';
 
 interface ProductEditorModalProps {
@@ -695,16 +695,134 @@ export function ProductEditorModal({
 
               {isSpecial && (
                 <>
-                  {/* Campaign Configuration Fields */}
-                  <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                      <Zap className="h-3.5 w-3.5 text-amber-400" />
-                      1. Campaign &amp; Offer Details
-                    </h4>
+                  {/* Campaign & Promo Code Configuration Fields */}
+                  <div className="p-4 rounded-2xl bg-zinc-950 border border-cyan-500/20 space-y-4 shadow-xl">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                        <Zap className="h-3.5 w-3.5 text-amber-400" />
+                        1. Special Campaign &amp; Promo Code Details
+                      </h4>
+                      {editingProduct.specialConfig?.unlockedCouponCode && (
+                        <span className="px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-bold flex items-center gap-1">
+                          <Tag className="h-3 w-3 text-cyan-400" />
+                          Code: {editingProduct.specialConfig.unlockedCouponCode}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Promo Code Input */}
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-300">Campaign Badge Title</label>
+                        <div className="flex items-center justify-between">
+                          <label className="font-bold text-slate-300 text-xs">Unlockable Promo Code</label>
+                          <span className="text-[10px] text-cyan-400 font-semibold">Auto-synced with product</span>
+                        </div>
+                        <input
+                          type="text"
+                          value={editingProduct.specialConfig?.unlockedCouponCode || ''}
+                          onChange={e => {
+                            const val = e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), unlockedCouponCode: val }
+                              };
+                            });
+                          }}
+                          placeholder="e.g. SPECIAL25 or FREE100"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-cyan-500/40 text-cyan-300 font-mono font-bold text-xs focus:outline-none focus:border-cyan-400"
+                        />
+                        <span className="text-[10px] text-slate-400 block">
+                          This code will be unlocked when users complete the tasks and is tied specifically to this product.
+                        </span>
+                      </div>
+
+                      {/* Promo Code Discount % */}
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-300 text-xs">Promo Discount % (100 = 100% Free)</label>
+                        <input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={editingProduct.specialConfig?.discountPercent ?? (editingProduct.specialConfig?.isFreeProduct ? 100 : 20)}
+                          onChange={e => {
+                            const val = Math.min(100, Math.max(1, Number(e.target.value)));
+                            setEditingProduct(prev => {
+                              if (!prev) return null;
+                              return {
+                                ...prev,
+                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), discountPercent: val }
+                              };
+                            });
+                          }}
+                          placeholder="20 (or 100 for Free)"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-mono font-bold text-xs focus:outline-none focus:border-emerald-400"
+                        />
+                        <span className="text-[10px] text-slate-400 block">
+                          Percentage deducted from this specific product price when this promo code is used.
+                        </span>
+                      </div>
+
+                      {/* Promo Code Visibility (Hide / Unhide Button) */}
+                      <div className="col-span-1 sm:col-span-2">
+                        <div className="p-3.5 rounded-xl bg-zinc-900/90 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="space-y-0.5">
+                            <span className="font-bold text-white text-xs block flex items-center gap-2">
+                              <span>Promo Code Visibility on Storefront</span>
+                              <span className={`px-2 py-0.2 rounded-full text-[9px] font-black uppercase ${
+                                editingProduct.specialConfig?.isPromoCodeHidden
+                                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                              }`}>
+                                {editingProduct.specialConfig?.isPromoCodeHidden ? 'Hidden' : 'Visible'}
+                              </span>
+                            </span>
+                            <span className="text-[11px] text-slate-400 block">
+                              {editingProduct.specialConfig?.isPromoCodeHidden
+                                ? '🔴 Promo code is currently HIDDEN from public visitors. Users can still unlock by completing tasks.'
+                                : '🟢 Promo code is VISIBLE to customers and shows the unlockable code button upon task completion.'}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const currentHidden = !!editingProduct.specialConfig?.isPromoCodeHidden;
+                              setEditingProduct(prev => {
+                                if (!prev) return null;
+                                return {
+                                  ...prev,
+                                  specialConfig: {
+                                    ...(prev.specialConfig || { tasks: [] }),
+                                    isPromoCodeHidden: !currentHidden,
+                                  }
+                                };
+                              });
+                            }}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0 ${
+                              editingProduct.specialConfig?.isPromoCodeHidden
+                                ? 'bg-rose-950/80 text-rose-300 border-rose-500/40 hover:bg-rose-900'
+                                : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900'
+                            }`}
+                          >
+                            {editingProduct.specialConfig?.isPromoCodeHidden ? (
+                              <>
+                                <EyeOff className="h-3.5 w-3.5 text-rose-400" />
+                                <span>Promo Code: Hidden (Click to Unhide)</span>
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>Promo Code: Visible (Click to Hide)</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="font-bold text-slate-300 text-xs">Campaign Badge Title</label>
                         <input
                           type="text"
                           value={editingProduct.specialConfig?.campaignBadge || ''}
@@ -719,12 +837,12 @@ export function ProductEditorModal({
                             });
                           }}
                           placeholder="e.g. ⚡ FLASH MISSION DEAL"
-                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-amber-300 font-bold"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-amber-300 font-bold text-xs"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="font-bold text-slate-300">Campaign Headline</label>
+                        <label className="font-bold text-slate-300 text-xs">Campaign Headline</label>
                         <input
                           type="text"
                           value={editingProduct.specialConfig?.campaignTitle || ''}
@@ -738,48 +856,8 @@ export function ProductEditorModal({
                               };
                             });
                           }}
-                          placeholder="e.g. Join Community to Unlock 25% Off"
-                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-300">Unlockable Coupon Code (Optional)</label>
-                        <input
-                          type="text"
-                          value={editingProduct.specialConfig?.unlockedCouponCode || ''}
-                          onChange={e => {
-                            const val = e.target.value.toUpperCase();
-                            setEditingProduct(prev => {
-                              if (!prev) return null;
-                              return {
-                                ...prev,
-                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), unlockedCouponCode: val }
-                              };
-                            });
-                          }}
-                          placeholder="e.g. SPECIAL25 or FREE100"
-                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-cyan-300 font-mono font-bold"
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="font-bold text-slate-300">Extra Reward Discount %</label>
-                        <input
-                          type="number"
-                          value={editingProduct.specialConfig?.discountPercent ?? (editingProduct.specialConfig?.isFreeProduct ? 100 : 20)}
-                          onChange={e => {
-                            const val = Number(e.target.value);
-                            setEditingProduct(prev => {
-                              if (!prev) return null;
-                              return {
-                                ...prev,
-                                specialConfig: { ...(prev.specialConfig || { tasks: [] }), discountPercent: val }
-                              };
-                            });
-                          }}
-                          placeholder="20 (or 100 for Free)"
-                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-emerald-400 font-bold"
+                          placeholder="e.g. Join Community to Unlock Special Pricing"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs"
                         />
                       </div>
 
@@ -830,7 +908,7 @@ export function ProductEditorModal({
                       </div>
 
                       <div className="col-span-1 sm:col-span-2 space-y-1">
-                        <label className="font-bold text-slate-300">Campaign Instructions &amp; Description</label>
+                        <label className="font-bold text-slate-300 text-xs">Campaign Instructions &amp; Description</label>
                         <textarea
                           rows={2}
                           value={editingProduct.specialConfig?.campaignDescription || ''}
@@ -845,7 +923,7 @@ export function ProductEditorModal({
                             });
                           }}
                           placeholder="Complete all required tasks below to unlock this exclusive special deal!"
-                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white resize-none"
+                          className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white resize-none text-xs"
                         />
                       </div>
 

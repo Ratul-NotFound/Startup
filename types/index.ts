@@ -55,11 +55,13 @@ export interface SpecialProductConfig {
   unlockedCouponCode?: string;     // e.g. "SPECIAL25" (unlocked upon completing tasks)
   discountPercent?: number;        // e.g. 25 or 100 for 100% Free
   isSpecialOfferSynced?: boolean;  // Automatically sync and display in Special Offers & Deals hub
+  isPromoCodeHidden?: boolean;     // Hide / unhide promo code banner or offer from storefront
   isFreeProduct?: boolean;         // 100% Free Claim Mode (Tasks required, no payment needed)
   noPaymentRequired?: boolean;     // Explicit flag allowing 0 payment instant checkout
   claimSuccessMessage?: string;    // Custom instant allocation message
   tasks: SpecialProductTask[];
 }
+
 
 export interface Product {
   id: string;

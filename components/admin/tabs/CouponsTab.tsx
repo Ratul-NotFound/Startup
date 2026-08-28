@@ -402,7 +402,7 @@ export function CouponsTab({
               <label className="text-slate-300 font-bold block mb-1">Coupon / Promo Code</label>
               <input
                 value={newCoupon.code}
-                onChange={e => setNewCoupon(p => ({ ...p, code: e.target.value }))}
+                onChange={e => setNewCoupon(p => ({ ...p, code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') }))}
                 placeholder="e.g. VIP50 or GIVEAWAY100"
                 className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white uppercase focus:outline-none focus:border-cyan-500 font-mono font-bold"
               />
@@ -412,8 +412,10 @@ export function CouponsTab({
               <label className="text-slate-300 font-bold block mb-1">Discount % (100 = Free Giveaway)</label>
               <input
                 type="number"
+                min={1}
+                max={100}
                 value={newCoupon.discountPercent}
-                onChange={e => setNewCoupon(p => ({ ...p, discountPercent: Number(e.target.value) }))}
+                onChange={e => setNewCoupon(p => ({ ...p, discountPercent: Math.min(100, Math.max(1, Number(e.target.value))) }))}
                 className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-emerald-400 font-bold font-mono focus:outline-none focus:border-cyan-500"
               />
             </div>
@@ -427,6 +429,94 @@ export function CouponsTab({
                 className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-cyan-300 font-mono font-bold focus:outline-none focus:border-cyan-500"
                 placeholder="0 = 1st position"
               />
+            </div>
+
+            {/* Applicable Scope & Target Product Picker */}
+            <div className="sm:col-span-3 p-3.5 rounded-2xl bg-zinc-950/90 border border-cyan-500/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white text-xs flex items-center gap-1.5">
+                  <Tag className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>Target Product &amp; Eligibility Scope</span>
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Controls which product this code discounts in multi-item carts
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-400 block mb-1">Coupon Scope</label>
+                  <select
+                    value={
+                      (newCoupon.linkedProductId || (newCoupon.applicableProductIds && newCoupon.applicableProductIds.length > 0))
+                        ? 'product'
+                        : (newCoupon.applicableCategory && newCoupon.applicableCategory !== 'all')
+                        ? 'category'
+                        : 'all'
+                    }
+                    onChange={e => {
+                      const scope = e.target.value;
+                      if (scope === 'all') {
+                        setNewCoupon(p => ({ ...p, linkedProductId: undefined, applicableProductIds: [], applicableCategory: 'all' }));
+                      } else if (scope === 'category') {
+                        setNewCoupon(p => ({ ...p, linkedProductId: undefined, applicableProductIds: [], applicableCategory: 'ai' }));
+                      } else if (scope === 'product') {
+                        const firstProdId = products[0]?.id || '';
+                        setNewCoupon(p => ({ ...p, linkedProductId: firstProdId, applicableProductIds: [firstProdId], applicableCategory: 'all' }));
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="all">🌐 All Products (Storewide Discount)</option>
+                    <option value="product">🎯 Specific Target Product</option>
+                    <option value="category">🏷️ Specific Category Only</option>
+                  </select>
+                </div>
+
+                {/* If Product scope selected, show product picker */}
+                {(newCoupon.linkedProductId || (newCoupon.applicableProductIds && newCoupon.applicableProductIds.length > 0)) && (
+                  <div>
+                    <label className="text-slate-400 block mb-1">Select Applicable Product</label>
+                    <select
+                      value={newCoupon.linkedProductId || newCoupon.applicableProductIds?.[0] || ''}
+                      onChange={e => {
+                        const prodId = e.target.value;
+                        setNewCoupon(p => ({
+                          ...p,
+                          linkedProductId: prodId,
+                          applicableProductIds: [prodId],
+                          applicableCategory: 'all',
+                        }));
+                      }}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-cyan-500/40 text-cyan-300 font-bold text-xs focus:outline-none focus:border-cyan-400"
+                    >
+                      {products.map(prod => (
+                        <option key={prod.id} value={prod.id}>
+                          {prod.name} ({prod.category.toUpperCase()}) {prod.productType === 'special' ? '⚡ Special' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* If Category scope selected, show category picker */}
+                {!newCoupon.linkedProductId && (!newCoupon.applicableProductIds || newCoupon.applicableProductIds.length === 0) && newCoupon.applicableCategory && newCoupon.applicableCategory !== 'all' && (
+                  <div>
+                    <label className="text-slate-400 block mb-1">Select Category</label>
+                    <select
+                      value={newCoupon.applicableCategory}
+                      onChange={e => setNewCoupon(p => ({ ...p, applicableCategory: e.target.value as any }))}
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-cyan-500"
+                    >
+                      <option value="ai">AI &amp; GPT</option>
+                      <option value="streaming">Streaming &amp; OTT</option>
+                      <option value="dev">Developer Tools</option>
+                      <option value="productivity">Productivity &amp; Cloud</option>
+                      <option value="vpn_security">Security &amp; VPN</option>
+                    </select>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="sm:col-span-3">
@@ -626,6 +716,43 @@ export function CouponsTab({
                     <span className="text-sm font-black text-white">
                       {isGiveaway ? '🎁 100% FREE GIVEAWAY' : `${c.discountPercent}% OFF`}
                     </span>
+
+                    {/* Scope Badge */}
+                    {(() => {
+                      const linkedProd = c.linkedProductId ? products.find(p => p.id === c.linkedProductId) : null;
+                      const applicableProds = (c.applicableProductIds && c.applicableProductIds.length > 0)
+                        ? products.filter(p => c.applicableProductIds?.includes(p.id))
+                        : [];
+                      
+                      if (linkedProd) {
+                        return (
+                          <span className="px-2 py-0.5 rounded-full bg-blue-950/80 text-blue-300 border border-blue-500/30 text-[9px] font-bold flex items-center gap-1">
+                            <span>🎯</span>
+                            <span>Target: {linkedProd.name}</span>
+                          </span>
+                        );
+                      }
+                      if (applicableProds.length > 0) {
+                        return (
+                          <span className="px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-500/30 text-[9px] font-bold flex items-center gap-1">
+                            <span>🎯</span>
+                            <span>Applies to: {applicableProds.map(p => p.name).join(', ')}</span>
+                          </span>
+                        );
+                      }
+                      if (c.applicableCategory && c.applicableCategory !== 'all') {
+                        return (
+                          <span className="px-2 py-0.5 rounded-full bg-purple-950/80 text-purple-300 border border-purple-500/30 text-[9px] font-bold">
+                            🏷️ Category: {c.applicableCategory.toUpperCase()}
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-white/10 text-[9px] font-bold">
+                          🌐 Storewide
+                        </span>
+                      );
+                    })()}
 
                     {c.offerTag && (
                       <span className="px-2 py-0.5 rounded-full bg-zinc-800 text-cyan-300 font-bold text-[10px] uppercase border border-white/10">

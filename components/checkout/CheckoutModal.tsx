@@ -14,8 +14,8 @@ import confetti from 'canvas-confetti';
 export const CheckoutModal: React.FC = () => {
   const {
     isCheckoutOpen, setIsCheckoutOpen, cart, cartSubtotal, cartDiscount, cartTotal,
-    appliedCoupon, processCheckout, user, firebaseUser,
-    paymentMethods, setIsAuthModalOpen,
+    appliedCoupon, isItemEligibleForCoupon, processCheckout, user, firebaseUser,
+    paymentMethods, setIsAuthModalOpen, formatPrice,
   } = useApp();
 
   // Active payment methods (filtered to active only)
@@ -470,6 +470,60 @@ export const CheckoutModal: React.FC = () => {
                         </button>
                       );
                     })}
+                  </div>
+
+                  {/* Cart Items & Promo Discount Breakdown */}
+                  <div className="p-3.5 rounded-2xl bg-zinc-950/90 border border-white/10 space-y-2 text-xs">
+                    <div className="flex items-center justify-between font-bold text-slate-300 pb-1.5 border-b border-white/5">
+                      <span>Order Items ({cart.length} item{cart.length > 1 ? 's' : ''})</span>
+                      <span className="font-mono text-cyan-400">{formatPrice(cartTotal)}</span>
+                    </div>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                      {cart.map((item, cIdx) => {
+                        const isEligible = appliedCoupon ? isItemEligibleForCoupon(item, appliedCoupon) : false;
+                        const itemSubtotal = item.selectedPlan.price * item.quantity;
+                        const itemDiscount = isEligible && appliedCoupon ? (itemSubtotal * appliedCoupon.discountPercent) / 100 : 0;
+                        const itemFinal = Math.max(0, itemSubtotal - itemDiscount);
+
+                        return (
+                          <div key={cIdx} className="flex items-center justify-between text-[11px] py-1 border-b border-white/[0.03] last:border-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <img src={item.product.logo} alt="" className="h-6 w-6 rounded-lg object-contain bg-zinc-900 border border-white/10 p-0.5 shrink-0" />
+                              <div className="min-w-0">
+                                <span className="text-white font-semibold truncate block">{item.product.name}</span>
+                                <span className="text-[10px] text-zinc-400 block">{item.selectedPlan.label} × {item.quantity}</span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {isEligible && appliedCoupon && (
+                                <span className="text-[9px] text-emerald-400 font-bold block font-mono">
+                                  🏷️ -{appliedCoupon.discountPercent}% ({appliedCoupon.code})
+                                </span>
+                              )}
+                              <div className="flex items-center gap-1.5 justify-end">
+                                {isEligible && appliedCoupon && (
+                                  <span className="text-[10px] text-zinc-500 line-through">
+                                    {formatPrice(itemSubtotal)}
+                                  </span>
+                                )}
+                                <span className={`font-mono font-bold ${isEligible && appliedCoupon ? 'text-emerald-400' : 'text-white'}`}>
+                                  {formatPrice(itemFinal)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {appliedCoupon && (
+                      <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-emerald-300">
+                        <span>Promo Code Applied:</span>
+                        <span className="font-mono font-bold bg-emerald-950 px-2 py-0.5 rounded text-emerald-300 border border-emerald-500/30">
+                          {appliedCoupon.code} (-{appliedCoupon.discountPercent}%)
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Payment Box with Account Number, QR & Amount */}

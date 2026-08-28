@@ -23,6 +23,7 @@ export const CartDrawer: React.FC = () => {
 
   const {
     cart,
+    products,
     isCartOpen,
     setIsCartOpen,
     removeFromCart,
@@ -30,6 +31,7 @@ export const CartDrawer: React.FC = () => {
     appliedCoupon,
     applyCoupon,
     removeCoupon,
+    isItemEligibleForCoupon,
     cartSubtotal,
     cartDiscount,
     cartTotal,
@@ -48,8 +50,6 @@ export const CartDrawer: React.FC = () => {
       const el = document.getElementById('catalog');
       if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        window.scrollTo({ top: 600, behavior: 'smooth' });
       }
     } else {
       router.push('/#catalog');
@@ -61,7 +61,9 @@ export const CartDrawer: React.FC = () => {
     if (!couponInput.trim()) return;
     const res = applyCoupon(couponInput);
     setCouponFeedback(res);
-    if (res.success) setCouponInput('');
+    if (res.success) {
+      setCouponInput('');
+    }
   };
 
   const handleProceedToCheckout = () => {
@@ -77,76 +79,82 @@ export const CartDrawer: React.FC = () => {
   return (
     <AnimatePresence>
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Backdrop with Progressive Blur */}
+        <div className="fixed inset-0 z-50 overflow-hidden" suppressHydrationWarning>
+          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            animate={{ opacity: 1, backdropFilter: 'blur(12px)' }}
-            exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={() => setIsCartOpen(false)}
-            className="absolute inset-0 bg-black/75"
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm"
           />
 
-          <div
-            style={{ perspective: 1200 }}
-            className="fixed inset-y-0 right-0 max-w-full flex pl-10"
+          {/* Drawer Panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="fixed inset-y-0 right-0 max-w-md w-full bg-zinc-950 border-l border-white/[0.08] shadow-2xl flex flex-col z-10"
           >
-            {/* 3D Perspective Slide-In Drawer */}
-            <motion.div
-              initial={{ x: '100%', rotateY: -15, opacity: 0 }}
-              animate={{ x: 0, rotateY: 0, opacity: 1 }}
-              exit={{ x: '100%', rotateY: 10, opacity: 0 }}
-              transition={{ type: 'spring', damping: 28, stiffness: 320, mass: 0.85 }}
-              style={{ transformStyle: 'preserve-3d' }}
-              className="w-screen max-w-md bg-zinc-900/95 border-l border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.9)] flex flex-col justify-between backdrop-blur-2xl"
-            >
-              
-              {/* Header */}
-              <div className="p-6 border-b border-white/[0.08] flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                    <ShoppingBag className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-white">Your Cart</h3>
-                    <p className="text-xs text-zinc-400">{cart.length} item{cart.length !== 1 ? 's' : ''} in cart</p>
-                  </div>
+            {/* Header */}
+            <div className="p-6 border-b border-white/[0.08] flex items-center justify-between bg-zinc-950/60 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-blue-600/10 text-cyan-400 border border-blue-500/20">
+                  <ShoppingBag className="h-5 w-5" />
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.1, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setIsCartOpen(false)}
-                  className="p-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </motion.button>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">Your Cart</h3>
+                  <p className="text-xs text-zinc-400">
+                    {cart.reduce((acc, i) => acc + i.quantity, 0)} {cart.reduce((acc, i) => acc + i.quantity, 0) === 1 ? 'item' : 'items'}
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="text-zinc-400 hover:text-white p-2 rounded-xl hover:bg-zinc-800 transition-colors"
+                aria-label="Close cart"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-              {/* Cart Items List */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {cart.length === 0 ? (
-                  <div className="text-center py-20 space-y-3">
-                    <ShoppingBag className="h-12 w-12 text-zinc-600 mx-auto" />
-                    <p className="text-sm font-semibold text-zinc-300">Your cart is empty</p>
-                    <p className="text-xs text-zinc-500">Pick a subscription plan to get instant access.</p>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={handleBrowseCatalog}
-                      className="mt-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] cursor-pointer"
-                    >
-                      Browse Catalog
-                    </motion.button>
+            {/* Cart Items List */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {cart.length === 0 ? (
+                <div className="text-center py-16 space-y-4">
+                  <div className="h-16 w-16 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center mx-auto text-zinc-500">
+                    <ShoppingBag className="h-8 w-8" />
                   </div>
-                ) : (
-                  cart.map((item, idx) => (
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-white">Your cart is empty</p>
+                    <p className="text-xs text-zinc-500">Discover premium software and streaming services below</p>
+                  </div>
+                  <button
+                    onClick={handleBrowseCatalog}
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30 transition-all inline-flex items-center gap-2 cursor-pointer"
+                  >
+                    <span>Browse Catalog</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                cart.map((item) => {
+                  const isEligible = appliedCoupon ? isItemEligibleForCoupon(item, appliedCoupon) : false;
+                  const itemSubtotal = item.selectedPlan.price * item.quantity;
+                  const itemDiscount = isEligible && appliedCoupon ? (itemSubtotal * appliedCoupon.discountPercent) / 100 : 0;
+                  const itemFinalPrice = Math.max(0, itemSubtotal - itemDiscount);
+
+                  return (
                     <motion.div
+                      layout
                       key={`${item.product.id}-${item.selectedPlan.duration}`}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05, duration: 0.3 }}
-                      className="p-4 rounded-2xl bg-zinc-950/70 border border-white/[0.06] space-y-3 relative group hover:border-cyan-500/30 transition-colors"
+                      className={`p-4 rounded-2xl bg-zinc-900/60 border transition-all space-y-3 ${
+                        isEligible && appliedCoupon
+                          ? 'border-emerald-500/40 bg-emerald-950/20 shadow-md ring-1 ring-emerald-500/20'
+                          : 'border-white/[0.06]'
+                      }`}
                     >
                       <div className="flex items-start gap-3.5">
                         <img
@@ -162,6 +170,21 @@ export const CartDrawer: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm font-bold text-white truncate">{item.product.name}</h4>
                           <p className="text-xs text-cyan-300 font-semibold">{item.selectedPlan.label}</p>
+
+                          {/* Specific Promo Code Discount Badge */}
+                          {isEligible && appliedCoupon && (
+                            <div className="mt-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30 font-mono">
+                                <span>🏷️</span>
+                                <span>
+                                  {appliedCoupon.discountPercent >= 100
+                                    ? `🎁 100% Free with ${appliedCoupon.code}`
+                                    : `-${appliedCoupon.discountPercent}% with ${appliedCoupon.code}`}
+                                </span>
+                              </span>
+                            </div>
+                          )}
+
                           <p className="text-[11px] text-emerald-400 mt-0.5">
                             <span className="font-bold">{formatPrice(item.selectedPlan.price)}</span>{' '}
                             <span className="text-zinc-500 line-through">{formatPrice(item.selectedPlan.originalPrice)}</span>
@@ -210,59 +233,73 @@ export const CartDrawer: React.FC = () => {
                             <Plus className="h-3 w-3" />
                           </button>
                         </div>
-                        <span className="font-bold text-white">
-                          {formatPrice(item.selectedPlan.price * item.quantity)}
-                        </span>
-                      </div>
-                    </motion.div>
-                  ))
-                )}
-              </div>
 
-              {/* Drawer Footer */}
-              {cart.length > 0 && (
-                <div className="p-6 border-t border-white/[0.08] bg-zinc-950/80 space-y-4">
-                  
-                  {/* Promo Code Input */}
-                  <div>
-                    {appliedCoupon ? (
-                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-xs">
-                        <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-                          <Tag className="h-3.5 w-3.5" />
-                          <span>
-                            {appliedCoupon.code} applied ({appliedCoupon.discountPercent}% off
-                            {appliedCoupon.applicableCategory && appliedCoupon.applicableCategory !== 'all'
-                              ? ` for ${appliedCoupon.applicableCategory.toUpperCase()}`
-                              : appliedCoupon.applicableProductIds && appliedCoupon.applicableProductIds.length > 0
-                              ? ' for select products'
-                              : ''}
-                            )
+                        {/* Calculated Final Price for Item */}
+                        <div className="flex items-baseline gap-1.5">
+                          {isEligible && appliedCoupon && (
+                            <span className="text-xs text-zinc-500 line-through">
+                              {formatPrice(itemSubtotal)}
+                            </span>
+                          )}
+                          <span className={`font-bold ${isEligible && appliedCoupon ? 'text-emerald-400 font-mono text-sm' : 'text-white'}`}>
+                            {formatPrice(itemFinalPrice)}
                           </span>
                         </div>
-                        <button
-                          onClick={removeCoupon}
-                          className="text-zinc-400 hover:text-rose-400 text-[11px] font-bold underline cursor-pointer"
-                        >
-                          Remove
-                        </button>
                       </div>
-                    ) : (
-                      <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                        <input
-                          type="text"
-                          value={couponInput}
-                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                          placeholder="Promo code (e.g. VIP20)"
-                          className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 uppercase"
-                        />
-                        <button
-                          type="submit"
-                          className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors"
-                        >
-                          Apply
-                        </button>
-                      </form>
-                    )}
+                    </motion.div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Drawer Footer */}
+            {cart.length > 0 && (
+              <div className="p-6 border-t border-white/[0.08] bg-zinc-950/80 space-y-4">
+                
+                {/* Promo Code Input */}
+                <div>
+                  {appliedCoupon ? (
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-xs">
+                      <div className="flex items-center gap-2 text-emerald-400 font-semibold min-w-0">
+                        <Tag className="h-3.5 w-3.5 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="font-bold text-white font-mono">{appliedCoupon.code}</span>
+                          <span className="text-[11px] text-emerald-300 block truncate">
+                            {appliedCoupon.discountPercent}% OFF
+                            {appliedCoupon.linkedProductId
+                              ? ` on "${products.find(p => p.id === appliedCoupon.linkedProductId)?.name || 'linked product'}"`
+                              : appliedCoupon.applicableProductIds && appliedCoupon.applicableProductIds.length > 0
+                              ? ' on select products'
+                              : appliedCoupon.applicableCategory && appliedCoupon.applicableCategory !== 'all'
+                              ? ` on ${appliedCoupon.applicableCategory.toUpperCase()}`
+                              : ' storewide'}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={removeCoupon}
+                        className="text-zinc-400 hover:text-rose-400 text-[11px] font-bold underline cursor-pointer shrink-0 ml-2"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleApplyCoupon} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        placeholder="Promo code (e.g. VIP20)"
+                        className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500/50 uppercase font-mono"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                      >
+                        Apply
+                      </button>
+                    </form>
+                  )}
 
                     {couponFeedback && (
                       <p
@@ -335,7 +372,6 @@ export const CartDrawer: React.FC = () => {
               )}
 
             </motion.div>
-          </div>
         </div>
       )}
     </AnimatePresence>
