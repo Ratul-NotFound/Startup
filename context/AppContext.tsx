@@ -198,6 +198,8 @@ interface AppContextType {
   adminToggleProductVisibility: (productId: string) => Promise<void>;
   adminToggleProductType: (productId: string) => Promise<void>;
   adminReorderProduct: (productId: string, newOrderIndex: number) => Promise<void>;
+  adminResetAllProductStock: (defaultStock?: number) => Promise<void>;
+  adminUpdateProductStock: (productId: string, newStock: number) => Promise<void>;
 
   // Admin: Category Configuration & Sequencing
   categoryConfigs: CategoryConfig[];
@@ -2146,6 +2148,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // Refill or reset product stock counts across Firestore database
+  const adminResetAllProductStock = async (defaultStock: number = 50) => {
+    try {
+      const snap = await getDocs(collection(db, 'products'));
+      const batch = writeBatch(db);
+      for (const d of snap.docs) {
+        const fallback = MOCK_PRODUCTS.find(p => p.id === d.id);
+        const stockToSet = fallback?.stockCount ?? defaultStock;
+        batch.update(d.ref, { stockCount: stockToSet });
+      }
+      await batch.commit();
+      setProducts(prev => prev.map(p => {
+        const fallback = MOCK_PRODUCTS.find(m => m.id === p.id);
+        return { ...p, stockCount: fallback?.stockCount ?? defaultStock };
+      }));
+      await logAdminActivity('PRODUCTS_RESTOCKED', 'catalog', `Refilled inventory stock for all products (Default: ${defaultStock})`);
+    } catch (err) {
+      console.error('adminResetAllProductStock error:', err);
+    }
+  };
+
+  const adminUpdateProductStock = async (productId: string, newStock: number) => {
+    try {
+      const cleanStock = Math.max(0, Number(newStock) || 0);
+      await updateDoc(doc(db, 'products', productId), { stockCount: cleanStock });
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, stockCount: cleanStock } : p));
+      await logAdminActivity('PRODUCT_STOCK_UPDATED', 'catalog', `Updated stock count for product ID: ${productId} to ${cleanStock}`, productId);
+    } catch (err) {
+      console.error('adminUpdateProductStock error:', err);
+    }
+  };
+
   // ─── Admin: Order management & Verification ───────────────────────
   const adminUpdateOrderStatus = async (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => {
     try {
@@ -2344,6 +2378,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Notify customer
       const ord = allOrders.find(o => o.id === orderId);
       if (ord) {
+        // Restore stock for rejected order items
+        if (ord.items && ord.items.length > 0) {
+          for (const item of ord.items) {
+            try {
+              const prodRef = doc(db, 'products', item.productId);
+              const pSnap = await getDoc(prodRef);
+              if (pSnap.exists()) {
+                const currentStock = pSnap.data().stockCount ?? 0;
+                await updateDoc(prodRef, { stockCount: currentStock + (item.quantity || 1) });
+              }
+            } catch { }
+          }
+        }
+
         try {
           await adminSendMessageToUser(
             ord.userId, ord.userEmail,
@@ -3116,6 +3164,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminRemoveAdmin,
     adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
     adminToggleProductVisibility, adminToggleProductType, adminReorderProduct,
+    adminResetAllProductStock, adminUpdateProductStock,
     categoryConfigs, adminUpdateCategoryConfigs, adminToggleCategoryVisibility, adminReorderCategories,
     allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     allUsers, adminUpdateUserRole,

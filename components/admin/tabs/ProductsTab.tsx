@@ -56,6 +56,8 @@ export function ProductsTab({
     adminToggleProductVisibility,
     adminToggleProductType,
     adminReorderProduct,
+    adminResetAllProductStock,
+    adminUpdateProductStock,
     formatPrice,
   } = useApp();
 
@@ -63,6 +65,10 @@ export function ProductsTab({
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | 'general' | 'special'>('all');
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [movingProductId, setMovingProductId] = useState<string | null>(null);
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [stockInputVal, setStockInputVal] = useState<number>(0);
+  const [isRestocking, setIsRestocking] = useState(false);
+  const [restockSuccess, setRestockSuccess] = useState(false);
 
   const sortedCategoryConfigs = useMemo(() => {
     return [...categoryConfigs].sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
@@ -186,12 +192,51 @@ export function ProductsTab({
           </button>
         </div>
 
-        <button
-          onClick={() => setEditingProduct({ ...blankProduct(), id: '', isNew: true } as Product & { isNew: boolean })}
-          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer shrink-0"
-        >
-          <Plus className="h-4 w-4" /> Add New Product
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={isRestocking}
+            onClick={async () => {
+              if (confirm('Refill and restore standard inventory stock for all products in the database?')) {
+                setIsRestocking(true);
+                await adminResetAllProductStock(50);
+                setIsRestocking(false);
+                setRestockSuccess(true);
+                setTimeout(() => setRestockSuccess(false), 3000);
+              }
+            }}
+            className={`px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all border cursor-pointer shrink-0 ${
+              restockSuccess
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                : 'bg-zinc-900 hover:bg-zinc-850 text-slate-300 border-white/10 hover:text-white'
+            }`}
+            title="Refill stock to standard amounts across all catalog products"
+          >
+            {restockSuccess ? (
+              <>
+                <Check className="h-4 w-4 text-emerald-400" />
+                <span>Stock Refilled!</span>
+              </>
+            ) : isRestocking ? (
+              <>
+                <RefreshCw className="h-4 w-4 text-cyan-400 animate-spin" />
+                <span>Restocking...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 text-cyan-400" />
+                <span>Refill All Stock</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={() => setEditingProduct({ ...blankProduct(), id: '', isNew: true } as Product & { isNew: boolean })}
+            className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer shrink-0"
+          >
+            <Plus className="h-4 w-4" /> Add New Product
+          </button>
+        </div>
       </div>
 
       {/* 2. Category Sequence & Visibility Manager Panel */}
@@ -589,9 +634,64 @@ export function ProductsTab({
 
                       {/* Stock */}
                       <td className="p-4">
-                        <span className={`font-bold font-mono ${p.stockCount < 20 ? 'text-amber-400' : 'text-emerald-400'}`}>
-                          {p.stockCount}
-                        </span>
+                        {editingStockId === p.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              value={stockInputVal}
+                              onChange={e => setStockInputVal(Math.max(0, parseInt(e.target.value) || 0))}
+                              className="w-16 px-1.5 py-1 rounded bg-zinc-900 border border-cyan-500 text-xs text-white font-mono text-center focus:outline-none"
+                              autoFocus
+                              onKeyDown={async e => {
+                                if (e.key === 'Enter') {
+                                  await adminUpdateProductStock(p.id, stockInputVal);
+                                  setEditingStockId(null);
+                                } else if (e.key === 'Escape') {
+                                  setEditingStockId(null);
+                                }
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await adminUpdateProductStock(p.id, stockInputVal);
+                                setEditingStockId(null);
+                              }}
+                              className="p-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] cursor-pointer"
+                              title="Save Stock"
+                            >
+                              <Check className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingStockId(null)}
+                              className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 text-slate-400 text-[10px] cursor-pointer"
+                              title="Cancel"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingStockId(p.id);
+                              setStockInputVal(p.stockCount ?? 0);
+                            }}
+                            className={`group inline-flex items-center gap-1 font-bold font-mono px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                              (p.stockCount ?? 0) <= 0
+                                ? 'bg-rose-950/60 text-rose-400 border-rose-500/30 hover:border-rose-400'
+                                : (p.stockCount ?? 0) < 20
+                                ? 'bg-amber-950/60 text-amber-400 border-amber-500/30 hover:border-amber-400'
+                                : 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30 hover:border-emerald-400'
+                            }`}
+                            title="Click to quickly change inventory stock"
+                          >
+                            <span>{p.stockCount ?? 0}</span>
+                            <Edit2 className="h-2.5 w-2.5 opacity-40 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        )}
                       </td>
 
                       {/* Rating */}
