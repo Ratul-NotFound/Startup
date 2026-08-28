@@ -1263,6 +1263,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setIsAdmin(isUserAdmin);
 
+        const isVerified = fbUser.emailVerified || fbUser.providerData.some(p => p.providerId === 'google.com');
+
         // Base user profile
         const profile: CustomerProfile = {
           id: fbUser.uid,
@@ -1276,6 +1278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           preferredCurrency: 'USD',
           emailAlertsEnabled: true,
           autoRenewEnabled: true,
+          isEmailVerified: isVerified,
         };
 
         // Sync user in Firestore

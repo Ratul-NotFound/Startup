@@ -257,6 +257,7 @@ export interface CustomerProfile {
   preferredCurrency: 'USD' | 'EUR' | 'GBP' | 'CAD' | 'BDT';
   emailAlertsEnabled: boolean;
   autoRenewEnabled: boolean;
+  isEmailVerified?: boolean;
 }
 
 export interface SupportTicket {

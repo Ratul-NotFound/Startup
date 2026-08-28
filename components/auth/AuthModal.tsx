@@ -136,57 +136,46 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleVerifyOtpOrLink = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVerifyOtpOrLink = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     setError(null);
+    setSuccessMsg(null);
     const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otpInput.trim();
 
     try {
-      // 1. Check if user clicked email verification link
       if (auth.currentUser) {
+        // Force refresh user token to check if email was verified via link
         await auth.currentUser.reload();
         if (auth.currentUser.emailVerified) {
-          setSuccessMsg('Email verified successfully! Welcome to Keyoon.');
-          setTimeout(() => onClose(), 800);
+          setSuccessMsg('🎉 Email verified successfully! Welcome to Keyoon.');
+          setTimeout(() => {
+            onClose();
+          }, 800);
           return;
         }
       }
 
-      // 2. Validate 6-digit OTP code in Firestore
-      if (!cleanOtp) {
-        setError('Please enter the 6-digit verification code or click the link in your email.');
-        setLoading(false);
-        return;
-      }
-
-      const vSnap = await getDoc(doc(db, 'email_verifications', cleanEmail));
-      if (vSnap.exists()) {
-        const vData = vSnap.data();
-        if (vData.otp === cleanOtp && Date.now() < vData.expiresAt) {
-          await updateDoc(doc(db, 'email_verifications', cleanEmail), { verified: true });
-          setSuccessMsg('Code verified successfully! Welcome to Keyoon.');
-          setTimeout(() => onClose(), 800);
-          return;
-        } else if (Date.now() >= vData.expiresAt) {
-          setError('Verification code has expired. Please click "Resend Code" below.');
-          setLoading(false);
-          return;
-        } else {
-          setError('Invalid 6-digit code. Please check the code or click the email link.');
-          setLoading(false);
-          return;
+      // If not yet verified via link, check fallback OTP or prompt
+      const cleanOtp = otpInput.trim();
+      if (cleanOtp) {
+        const vSnap = await getDoc(doc(db, 'email_verifications', cleanEmail));
+        if (vSnap.exists()) {
+          const vData = vSnap.data();
+          if (vData.otp === cleanOtp && Date.now() < vData.expiresAt) {
+            await updateDoc(doc(db, 'email_verifications', cleanEmail), { verified: true });
+            setSuccessMsg('🎉 Code verified successfully! Welcome to Keyoon.');
+            setTimeout(() => onClose(), 800);
+            return;
+          } else if (Date.now() >= vData.expiresAt) {
+            setError('Verification code has expired. Please click "Resend Verification Email" below.');
+            setLoading(false);
+            return;
+          }
         }
       }
 
-      // Fallback: If OTP record not found, check if email is verified
-      if (auth.currentUser?.emailVerified) {
-        setSuccessMsg('Account verified successfully!');
-        setTimeout(() => onClose(), 800);
-      } else {
-        setError('Please enter the 6-digit code or check your inbox for the verification link.');
-      }
+      setError('Verification not detected yet. Please check your inbox (including Spam/Junk folder) and click the link in the email from Keyoon.');
     } catch (err: any) {
       console.error('Verification error:', err);
       setError(err.message || 'Failed to verify. Please try again.');
@@ -254,12 +243,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
         setUser(userProfile);
 
-        // Dispatch verification email & OTP
+        // Dispatch verification email link
         await dispatchVerification(fbUser, cleanEmail);
         setMode('verify');
-        setSuccessMsg(`Verification code & email link sent to ${cleanEmail}!`);
+        setSuccessMsg(`Verification email sent to ${cleanEmail}! Please check your inbox.`);
       } else {
-        await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+        const userCredential = await signInWithEmailAndPassword(auth, cleanEmail, cleanPassword);
+        
+        // If email/password account is not verified, enforce verification
+        if (!userCredential.user.emailVerified && userCredential.user.providerData[0]?.providerId === 'password') {
+          await dispatchVerification(userCredential.user, cleanEmail);
+          setMode('verify');
+          setError('Your email is not verified yet. We sent a fresh verification link to your inbox.');
+          setLoading(false);
+          return;
+        }
+
         setSuccessMsg('Welcome back!');
         setTimeout(() => {
           onClose();
@@ -414,34 +413,37 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
           {/* Form Router */}
           {mode === 'verify' ? (
-            <form onSubmit={handleVerifyOtpOrLink} className="space-y-4">
-              <div className="p-3.5 rounded-2xl bg-zinc-950/90 border border-white/[0.08] text-center space-y-2">
-                <p className="text-[11px] text-slate-400">
-                  Check your inbox for a verification email or enter the 6-digit security code:
-                </p>
-                <div className="relative">
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={otpInput}
-                    onChange={(e) => setOtpInput(e.target.value.replace(/[^0-9]/g, ''))}
-                    placeholder="• • • • • •"
-                    className="w-full text-center tracking-[0.4em] font-mono text-lg font-black py-3 bg-zinc-900 border border-cyan-500/40 rounded-xl text-cyan-300 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50"
-                  />
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 text-center space-y-3">
+                <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+                  <Mail className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-white">Verification Link Sent</h4>
+                  <p className="text-xs text-slate-300 font-mono font-bold bg-zinc-900 px-3 py-1.5 rounded-xl border border-white/5 inline-block max-w-full truncate">
+                    {email}
+                  </p>
+                </div>
+                <div className="text-[11px] text-slate-400 leading-relaxed text-left bg-zinc-900/60 p-3 rounded-xl border border-white/5 space-y-1">
+                  <span className="font-bold text-slate-200 block mb-1">To activate your Keyoon account:</span>
+                  <span className="block">1. Open your email inbox (check Spam/Junk if needed).</span>
+                  <span className="block">2. Click the verification link sent by Keyoon.</span>
+                  <span className="block">3. Click the confirmation button below.</span>
                 </div>
               </div>
 
               <button
-                type="submit"
+                type="button"
+                onClick={() => handleVerifyOtpOrLink()}
                 disabled={loading}
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:scale-[1.02] disabled:opacity-50 cursor-pointer"
+                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:scale-[1.02] disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 ) : (
                   <>
-                    <span>Verify & Continue</span>
-                    <ArrowRight className="h-4 w-4" />
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                    <span>I Have Clicked The Link · Confirm</span>
                   </>
                 )}
               </button>
@@ -454,7 +456,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   className="text-cyan-400 hover:underline font-bold disabled:opacity-50 flex items-center gap-1 cursor-pointer"
                 >
                   <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-                  {resendCooldown > 0 ? `Resend Code (${resendCooldown}s)` : 'Resend Code / Email'}
+                  {resendCooldown > 0 ? `Resend Email (${resendCooldown}s)` : 'Resend Verification Email'}
                 </button>
 
                 <button
@@ -469,7 +471,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   Change Email
                 </button>
               </div>
-            </form>
+            </div>
           ) : mode === 'forgot' ? (
             <form onSubmit={handleForgotPassword} className="space-y-3.5">
               <div>
