@@ -58,18 +58,18 @@ export const metadata: Metadata = {
     description: 'Instant 30s automated delivery for ChatGPT Plus, Claude Pro, Netflix 4K, Gemini Advanced, and 20+ top subscriptions with full replacement warranty.',
     images: [
       {
-        url: 'https://keyoon.com/images/One_Row_logo.png',
-        width: 1200,
-        height: 630,
-        alt: 'Keyoon Subscription Platform',
+        url: 'https://keyoon.com/images/Fabicon.png',
+        width: 1024,
+        height: 1024,
+        alt: 'Keyoon Subscription Platform Logo',
       },
     ],
   },
   twitter: {
-    card: 'summary_large_image',
+    card: 'summary',
     title: 'Keyoon — World-Class Retail Subscription Platform',
     description: 'Instant automated delivery for ChatGPT Plus, Claude Pro, Netflix 4K, Gemini Advanced with bKash, Nagad, and Rocket.',
-    images: ['https://keyoon.com/images/One_Row_logo.png'],
+    images: ['https://keyoon.com/images/Fabicon.png'],
     creator: '@keyoon',
   },
   robots: {

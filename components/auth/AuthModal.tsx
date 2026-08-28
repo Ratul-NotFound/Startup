@@ -322,10 +322,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
           {/* Modal Header */}
           <div className="text-center space-y-2 mb-6">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)] mx-auto">
-              {mode === 'forgot' ? <KeyRound className="h-5 w-5" /> : mode === 'verify' ? <ShieldCheck className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <div className="relative h-10 w-10 rounded-2xl overflow-hidden bg-zinc-950 border border-white/15 p-1 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.3)] shrink-0">
+                <img
+                  src="/images/Fabicon.png"
+                  alt="Keyoon"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+              <div className="flex items-center tracking-tight text-2xl font-black font-sans leading-none select-none">
+                <span className="text-white drop-shadow-sm">Key</span>
+                <span className="text-cyan-400">oon</span>
+              </div>
             </div>
-            <h3 className="text-2xl font-black tracking-tight text-white font-sans">
+            <h3 className="text-xl font-black tracking-tight text-white font-sans">
               {mode === 'login' ? 'Sign In to Your Account' : mode === 'signup' ? 'Create an Account' : mode === 'verify' ? 'Verify Your Email' : 'Reset Your Password'}
             </h3>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto">

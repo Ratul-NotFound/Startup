@@ -368,7 +368,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     brandName: 'Keyoon',
     brandTagline: 'Premium Digital Subscriptions',
     faviconUrl: '/images/Fabicon.png',
-    navbarLogoUrl: '/images/One_Row_logo.png',
+    navbarLogoUrl: '/images/Fabicon.png',
   });
 
   // Currency detection state — fully automatic, no user controls
@@ -1022,7 +1022,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (snap.exists()) {
         const data = snap.data() as BrandSettings;
         const validFavicon = (data.faviconUrl && !data.faviconUrl.startsWith('data:image/jpeg')) ? data.faviconUrl : '/images/Fabicon.png';
-        const validNavbarLogo = (data.navbarLogoUrl && !data.navbarLogoUrl.startsWith('data:image/jpeg')) ? data.navbarLogoUrl : '/images/One_Row_logo.png';
+        const validNavbarLogo = (data.navbarLogoUrl && !data.navbarLogoUrl.startsWith('data:image/jpeg') && !data.navbarLogoUrl.includes('One_Row_logo')) ? data.navbarLogoUrl : '/images/Fabicon.png';
 
         setBrandSettings({
           brandName: data.brandName || 'Keyoon',

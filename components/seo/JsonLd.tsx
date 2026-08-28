@@ -53,10 +53,10 @@ export const JsonLd: React.FC = () => {
         'url': 'https://keyoon.com',
         'logo': {
           '@type': 'ImageObject',
-          'url': 'https://keyoon.com/images/One_Row_logo.png',
+          'url': 'https://keyoon.com/images/Fabicon.png',
           'caption': 'Keyoon Official Logo',
         },
-        'image': 'https://keyoon.com/images/One_Row_logo.png',
+        'image': 'https://keyoon.com/images/Fabicon.png',
         'description': 'Bangladesh & worldwide premier retail digital subscription marketplace. Buy genuine ChatGPT Plus, Claude 3.5 Pro, Netflix 4K UHD, Google Gemini Advanced, YouTube Premium, Adobe Creative Cloud, and NordVPN with instant 30-second automated vault delivery and 100% replacement warranty.',
         'email': 'support@keyoon.com',
         'contactPoint': [

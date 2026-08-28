@@ -57,16 +57,23 @@ export function AdminHeader({
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-3xl bg-zinc-900/90 border border-white/[0.08] backdrop-blur-xl shadow-2xl">
       <div className="flex items-center justify-between w-full sm:w-auto">
         <div className="flex items-center gap-3">
-          {brandSettings?.faviconUrl ? (
-            <img src={brandSettings.faviconUrl} alt="Favicon Badge" className="h-11 w-11 rounded-2xl object-contain bg-zinc-950 border border-white/15 p-1 shadow-lg shrink-0" />
-          ) : (
-            <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 flex items-center justify-center shadow-lg shadow-red-950/50 shrink-0">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
-          )}
+          <div className="relative h-11 w-11 rounded-2xl overflow-hidden bg-zinc-950 border border-white/15 p-1 shadow-lg shrink-0 flex items-center justify-center">
+            <img
+              src={brandSettings?.faviconUrl || '/images/Fabicon.png'}
+              alt="Keyoon"
+              className="h-full w-full object-contain"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/images/Fabicon.png';
+              }}
+            />
+          </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-black text-white">{brandSettings?.brandName ? `${brandSettings.brandName} Command Hub` : 'Keyoon Command Hub'}</h1>
+              <div className="flex items-center tracking-tight text-lg font-black font-sans leading-tight select-none">
+                <span className="text-white">Key</span>
+                <span className="text-cyan-400">oon</span>
+                <span className="text-slate-300 ml-1.5 font-bold text-sm">Command Hub</span>
+              </div>
               {isSuperAdmin ? (
                 <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-red-950/80 border border-red-500/40 text-red-300">
                   Superadmin

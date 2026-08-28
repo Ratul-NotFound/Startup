@@ -30,7 +30,7 @@ export function HeroTab({
 }: HeroTabProps) {
   // Brand form state
   const [formFavicon, setFormFavicon] = useState(brandSettings?.faviconUrl || '/images/Fabicon.png');
-  const [formNavbarLogo, setFormNavbarLogo] = useState(brandSettings?.navbarLogoUrl || '/images/One_Row_logo.png');
+  const [formNavbarLogo, setFormNavbarLogo] = useState(brandSettings?.navbarLogoUrl || '/images/Fabicon.png');
   const [formBrandName, setFormBrandName] = useState(brandSettings?.brandName || 'Keyoon');
   const [formTagline, setFormTagline] = useState(brandSettings?.brandTagline || 'Premium Digital Subscriptions');
 
@@ -44,7 +44,7 @@ export function HeroTab({
   useEffect(() => {
     if (brandSettings) {
       setFormFavicon(brandSettings.faviconUrl || '/images/Fabicon.png');
-      setFormNavbarLogo(brandSettings.navbarLogoUrl || '/images/One_Row_logo.png');
+      setFormNavbarLogo(brandSettings.navbarLogoUrl || '/images/Fabicon.png');
       if (brandSettings.brandName) setFormBrandName(brandSettings.brandName);
       if (brandSettings.brandTagline) setFormTagline(brandSettings.brandTagline);
     }
@@ -124,8 +124,8 @@ export function HeroTab({
               type="button"
               onClick={() => {
                 setFormFavicon('/images/Fabicon.png');
-                setFormNavbarLogo('/images/One_Row_logo.png');
-                showFeedback('success', 'Reset logo inputs to transparent local PNG files (/images/Fabicon.png & /images/One_Row_logo.png)');
+                setFormNavbarLogo('/images/Fabicon.png');
+                showFeedback('success', 'Reset logo inputs to transparent local PNG file (/images/Fabicon.png)');
               }}
               className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 border border-white/10 text-xs font-bold text-slate-300 hover:text-white transition-colors cursor-pointer"
             >
