@@ -17,28 +17,27 @@ export const Footer: React.FC = () => {
           
           {/* Column 1: Brand & Status */}
           <div className="lg:col-span-2 space-y-4">
-            <Link href="/" className="flex items-center gap-3 group w-fit">
-              {brandSettings?.faviconUrl ? (
+            {/* Brand Logo with Favicon + Keyoon Typography */}
+            <Link href="/" className="flex items-center gap-3 group w-fit select-none">
+              <div className="relative h-9 w-9 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 p-0.5 group-hover:border-cyan-500/40 group-hover:scale-105 transition-all duration-300 flex items-center justify-center shrink-0">
                 <img
-                  src={brandSettings.faviconUrl}
-                  alt="Brand Badge Icon"
-                  className="h-9 w-9 rounded-xl object-contain bg-zinc-900 border border-white/10 p-1 group-hover:scale-105 transition-transform"
+                  src={brandSettings?.faviconUrl || '/images/Fabicon.png'}
+                  alt={brandSettings?.brandName || 'Keyoon'}
+                  className="h-full w-full object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/Fabicon.png';
+                  }}
                 />
-              ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white font-bold text-sm shadow-[0_0_15px_rgba(6,182,212,0.4)] group-hover:scale-105 transition-transform">
-                  <Layers className="h-5 w-5 text-white" />
-                </div>
-              )}
+              </div>
 
-              <div className="flex flex-col">
-                {brandSettings?.navbarLogoUrl ? (
-                  <img src={brandSettings.navbarLogoUrl} alt={brandSettings.brandName || 'Keyoon'} className="h-6 object-contain self-start" />
-                ) : (
-                  <span className="text-base font-bold tracking-tight text-white font-sans leading-none">
-                    {brandSettings?.brandName || 'Keyoon'}
-                  </span>
-                )}
-                <span className="text-[10px] text-zinc-500 uppercase leading-tight mt-0.5 font-medium">
+              <div className="flex flex-col leading-none">
+                <span
+                  className="text-lg font-black tracking-tight text-white group-hover:text-cyan-300 transition-colors"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {brandSettings?.brandName || 'Keyoon'}
+                </span>
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-medium mt-0.5">
                   {brandSettings?.brandTagline || 'Premium Digital Subscriptions'}
                 </span>
               </div>

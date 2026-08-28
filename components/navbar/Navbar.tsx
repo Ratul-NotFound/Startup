@@ -74,37 +74,30 @@ export const Navbar: React.FC = () => {
         >
           <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4" suppressHydrationWarning>
 
-            {/* Brand Logo & Favicon Badge */}
-            <Link href="/" className="flex items-center gap-2.5 shrink-0 group" suppressHydrationWarning>
-              {brandSettings?.navbarLogoUrl ? (
-                /* Primary Custom Navbar Logo Image */
+            {/* Brand Logo & Favicon Badge with Keyoon Typography */}
+            <Link href="/" className="flex items-center gap-2.5 shrink-0 group select-none" suppressHydrationWarning>
+              <div className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 p-0.5 group-hover:border-cyan-500/40 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.25)] transition-all duration-300 flex items-center justify-center shrink-0">
                 <img
-                  src={brandSettings.navbarLogoUrl}
-                  alt={brandSettings.brandName || 'Keyoon'}
-                  className="h-8 max-w-[220px] object-contain"
+                  src={brandSettings?.faviconUrl || '/images/Fabicon.png'}
+                  alt={brandSettings?.brandName || 'Keyoon'}
+                  className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/images/Fabicon.png';
+                  }}
                 />
-              ) : (
-                /* Fallback Icon Badge + Brand Text */
-                <>
-                  {brandSettings?.faviconUrl ? (
-                    <img
-                      src={brandSettings.faviconUrl}
-                      alt="Brand Badge Icon"
-                      className="h-8 w-8 rounded-lg object-contain bg-zinc-900 border border-white/10 p-1"
-                    />
-                  ) : (
-                    <div
-                      suppressHydrationWarning
-                      className="h-8 w-8 rounded-lg bg-zinc-900 border border-white/10 flex items-center justify-center group-hover:border-white/25 transition-colors"
-                    >
-                      <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                      </svg>
-                    </div>
-                  )}
-                  <span className="text-base font-bold tracking-tight text-white">{brandSettings?.brandName || 'Keyoon'}</span>
-                </>
-              )}
+              </div>
+
+              <div className="flex flex-col leading-none">
+                <span
+                  className="text-lg sm:text-xl font-black tracking-tight text-white group-hover:text-cyan-300 transition-colors"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {brandSettings?.brandName || 'Keyoon'}
+                </span>
+                <span className="text-[9px] uppercase tracking-widest font-bold text-zinc-500 group-hover:text-cyan-400/70 transition-colors">
+                  Digital Subscriptions
+                </span>
+              </div>
             </Link>
 
             {/* Desktop Nav */}
