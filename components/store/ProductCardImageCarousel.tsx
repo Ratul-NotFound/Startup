@@ -70,10 +70,13 @@ export const ProductCardImageCarousel: React.FC<ProductCardImageCarouselProps> =
     return () => clearInterval(timer);
   }, [imageList.length, index, isHovered, isInView, isLowEnd]);
 
+  const safeIndex = currentImageIdx % imageList.length;
+  const currentImg = imageList[safeIndex] || imageList[0];
+
   // Select dynamic transition effect based on current slide index
   const currentEffect = isLowEnd
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
-    : TRANSITION_STYLES[currentImageIdx % TRANSITION_STYLES.length];
+    : TRANSITION_STYLES[safeIndex % TRANSITION_STYLES.length];
 
   return (
     <div
@@ -85,7 +88,7 @@ export const ProductCardImageCarousel: React.FC<ProductCardImageCarouselProps> =
     >
       <AnimatePresence initial={false}>
         <motion.div
-          key={`${productName}-${currentImageIdx}`}
+          key={`${productName}-${safeIndex}`}
           initial={currentEffect.initial}
           animate={currentEffect.animate}
           exit={currentEffect.exit}
@@ -100,7 +103,7 @@ export const ProductCardImageCarousel: React.FC<ProductCardImageCarouselProps> =
           className="absolute inset-0 h-full w-full"
         >
           <img
-            src={imageList[currentImageIdx]}
+            src={currentImg}
             alt={productName}
             loading="lazy"
             decoding="async"

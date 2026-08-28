@@ -775,13 +775,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           batch.set(docRef, prod);
         }
         await batch.commit();
-      } else {
-        for (const docSnap of prodSnap.docs) {
-          const fallback = MOCK_PRODUCTS.find(p => p.id === docSnap.id);
-          if (fallback?.images) {
-            setDoc(doc(db, 'products', docSnap.id), { images: fallback.images }, { merge: true }).catch(() => {});
-          }
-        }
       }
 
       // 2. Seed coupons if empty
@@ -906,6 +899,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } as Product;
         });
         setProducts(prods);
+        setSelectedProduct(prev => {
+          if (!prev) return null;
+          return prods.find(p => p.id === prev.id) || prev;
+        });
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') {
@@ -2128,6 +2125,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminUpdateProduct = async (id: string, updates: Partial<Product>) => {
     try {
       await updateDoc(doc(db, 'products', id), updates as Record<string, unknown>);
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+      setSelectedProduct(prev => (prev && prev.id === id) ? { ...prev, ...updates } : prev);
       const fullProd = products.find(p => p.id === id);
       if (fullProd) {
         const merged = { ...fullProd, ...updates } as Product;

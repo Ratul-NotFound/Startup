@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Product } from '@/types';
 import { compressImageToDataUrl } from '@/lib/image-compression';
 import { useApp } from '@/context/AppContext';
 import {
   Package, X, ImageIcon, DollarSign, Zap, CheckCircle2, Shield, BookOpen,
-  Loader2, Upload, Sparkles, Plus, Trash2, Star, Save,
+  Loader2, Upload, Sparkles, Plus, Trash2, Star, Save, ArrowLeft, ArrowRight,
+  Layers, Film, Check, Eye,
 } from 'lucide-react';
 
 interface ProductEditorModalProps {
@@ -37,10 +38,88 @@ export function ProductEditorModal({
   const { bdtRate } = useApp();
   const productLogoInputRef = useRef<HTMLInputElement>(null);
   const productBannerInputRef = useRef<HTMLInputElement>(null);
+  const multiplePhotosInputRef = useRef<HTMLInputElement>(null);
+
+  const [isUploadingMultiple, setIsUploadingMultiple] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null);
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
 
   if (!editingProduct) return null;
 
   const isSpecial = editingProduct.productType === 'special';
+
+  // Multi-photo upload and compression handler
+  const handleMultiplePhotoUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIsUploadingMultiple(true);
+    setUploadProgress({ current: 0, total: files.length });
+
+    const newCompressedList: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      setUploadProgress({ current: i + 1, total: files.length });
+      try {
+        const compressed = await compressImageToDataUrl(file, 1200, 800, 0.80);
+        newCompressedList.push(compressed);
+      } catch (err) {
+        console.warn('Failed to compress image:', file.name, err);
+      }
+    }
+
+    if (newCompressedList.length > 0) {
+      setEditingProduct(prev => {
+        if (!prev) return null;
+        const curr = prev.images || [];
+        return { ...prev, images: [...curr, ...newCompressedList] };
+      });
+      showFeedback('success', `Uploaded & compressed ${newCompressedList.length} photos.`);
+    }
+    setIsUploadingMultiple(false);
+    setUploadProgress(null);
+    if (multiplePhotosInputRef.current) multiplePhotosInputRef.current.value = '';
+  };
+
+  const handleSetCoverPhoto = (index: number) => {
+    setEditingProduct(prev => {
+      if (!prev || !prev.images) return prev;
+      const imgs = [...prev.images];
+      const [chosen] = imgs.splice(index, 1);
+      return { ...prev, images: [chosen, ...imgs] };
+    });
+    showFeedback('success', 'Cover photo updated.');
+  };
+
+  const handleMovePhoto = (fromIndex: number, toIndex: number) => {
+    setEditingProduct(prev => {
+      if (!prev || !prev.images) return prev;
+      const imgs = [...prev.images];
+      if (toIndex < 0 || toIndex >= imgs.length) return prev;
+      const [item] = imgs.splice(fromIndex, 1);
+      imgs.splice(toIndex, 0, item);
+      return { ...prev, images: imgs };
+    });
+  };
+
+  const handleDeletePhoto = (index: number) => {
+    setEditingProduct(prev => {
+      if (!prev || !prev.images) return prev;
+      const imgs = prev.images.filter((_, i) => i !== index);
+      return { ...prev, images: imgs };
+    });
+    showFeedback('success', 'Photo removed.');
+  };
+
+  const handleAddPhotoUrl = () => {
+    if (!newPhotoUrl.trim()) return;
+    const url = newPhotoUrl.trim();
+    setEditingProduct(prev => {
+      if (!prev) return null;
+      const curr = prev.images || [];
+      return { ...prev, images: [...curr, url] };
+    });
+    setNewPhotoUrl('');
+    showFeedback('success', 'Photo URL added to gallery.');
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
@@ -143,27 +222,10 @@ export function ProductEditorModal({
 
         <input
           type="file"
-          ref={productBannerInputRef}
+          ref={multiplePhotosInputRef}
+          multiple
           accept="image/*"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            setIsCompressingProductBanner(true);
-            try {
-              const compressed = await compressImageToDataUrl(file, 1200, 800, 0.80);
-              setEditingProduct(prev => {
-                if (!prev) return null;
-                const currImages = prev.images || [];
-                return { ...prev, images: [compressed, ...currImages.filter(img => img !== compressed)] };
-              });
-              showFeedback('success', 'Banner image compressed and added to gallery.');
-            } catch {
-              showFeedback('error', 'Failed to compress banner.');
-            } finally {
-              setIsCompressingProductBanner(false);
-              if (productBannerInputRef.current) productBannerInputRef.current.value = '';
-            }
-          }}
+          onChange={(e) => handleMultiplePhotoUpload(e.target.files)}
           className="hidden"
         />
 
@@ -336,92 +398,248 @@ export function ProductEditorModal({
                 </div>
               </div>
 
-              {/* Visual Media Row */}
-              <div className="p-4 rounded-2xl bg-zinc-950 border border-white/10 space-y-3">
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider">Product Visuals &amp; Media</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                  <div className="space-y-2">
-                    <label className="text-slate-300 font-semibold block">Brand Logo</label>
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                        {editingProduct.logo ? (
-                          <img src={editingProduct.logo} alt="Logo" className="h-full w-full object-contain p-1.5" />
-                        ) : (
-                          <ImageIcon className="h-5 w-5 text-slate-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <button
-                          type="button"
-                          onClick={() => productLogoInputRef.current?.click()}
-                          disabled={isCompressingProductLogo}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-colors cursor-pointer"
-                        >
-                          {isCompressingProductLogo ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                          {isCompressingProductLogo ? 'Compressing...' : 'Upload Logo'}
-                        </button>
-                        <input
-                          type="text"
-                          value={editingProduct.logo}
-                          onChange={e => setEditingProduct(prev => prev ? { ...prev, logo: e.target.value } : null)}
-                          placeholder="Or paste image URL"
-                          className="w-full px-2.5 py-1 rounded-lg bg-zinc-900 border border-white/10 text-white text-[11px]"
-                        />
-                      </div>
-                    </div>
+              {/* Visual Media Row & Multi-Photo Upload Studio */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-zinc-950 border border-white/10 space-y-4">
+                <div className="flex items-center justify-between border-b border-white/[0.06] pb-3">
+                  <div>
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <ImageIcon className="h-4 w-4 text-cyan-400" />
+                      Product Visuals &amp; Multi-Photo Showcase Studio
+                    </h4>
+                    <p className="text-[11px] text-slate-400">Upload multiple photos/GIFs. The first photo is the main storefront banner; all photos cycle smoothly in the interactive card carousel.</p>
                   </div>
+                  <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+                    {editingProduct.images?.length || 0} Photos
+                  </span>
+                </div>
 
-                  <div className="space-y-2">
-                    <label className="text-slate-300 font-semibold block">Banner Image</label>
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-20 rounded-xl bg-zinc-900 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                        {editingProduct.images?.[0] ? (
-                          <img src={editingProduct.images[0]} alt="Banner" className="h-full w-full object-cover" />
-                        ) : (
-                          <ImageIcon className="h-5 w-5 text-slate-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 space-y-1">
-                        <button
-                          type="button"
-                          onClick={() => productBannerInputRef.current?.click()}
-                          disabled={isCompressingProductBanner}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-colors cursor-pointer"
-                        >
-                          {isCompressingProductBanner ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
-                          {isCompressingProductBanner ? 'Compressing...' : 'Upload Banner'}
-                        </button>
-                        <input
-                          type="text"
-                          value={editingProduct.images?.[0] || ''}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setEditingProduct(prev => {
-                              if (!prev) return null;
-                              const rest = (prev.images || []).slice(1);
-                              return { ...prev, images: val ? [val, ...rest] : rest };
-                            });
-                          }}
-                          placeholder="Or paste banner image URL"
-                          className="w-full px-2.5 py-1 rounded-lg bg-zinc-900 border border-white/10 text-white text-[11px]"
-                        />
-                      </div>
+                {/* 1. Brand Logo Row */}
+                <div className="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5 space-y-2">
+                  <label className="text-slate-300 font-bold text-xs flex items-center gap-1.5">
+                    <span>Brand Icon / Logo</span>
+                    <span className="text-[10px] text-slate-500 font-normal">(Square 1:1, used on avatars & checkout)</span>
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-zinc-950 border border-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                      {editingProduct.logo ? (
+                        <img src={editingProduct.logo} alt="Logo" className="h-full w-full object-contain p-1.5" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-slate-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 flex flex-col sm:flex-row items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => productLogoInputRef.current?.click()}
+                        disabled={isCompressingProductLogo}
+                        className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-colors cursor-pointer shrink-0"
+                      >
+                        {isCompressingProductLogo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                        {isCompressingProductLogo ? 'Compressing...' : 'Upload Logo'}
+                      </button>
+                      <input
+                        type="text"
+                        value={editingProduct.logo}
+                        onChange={e => setEditingProduct(prev => prev ? { ...prev, logo: e.target.value } : null)}
+                        placeholder="Or paste direct logo URL (https://...)"
+                        className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white text-xs"
+                      />
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] text-slate-400 block font-semibold">Gallery Image / GIF URLs (1 per line)</label>
-                  <textarea
-                    rows={2}
-                    value={(editingProduct.images || []).join('\n')}
-                    onChange={e => {
-                      const urls = e.target.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-                      setEditingProduct(prev => prev ? { ...prev, images: urls } : null);
-                    }}
-                    placeholder="https://images.unsplash.com/...&#10;https://i.giphy.com/..."
-                    className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono text-[11px] resize-none"
-                  />
+                {/* 2. Multi-Photo Upload Action Bar */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                    <button
+                      type="button"
+                      disabled={isUploadingMultiple}
+                      onClick={() => multiplePhotosInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white text-xs font-bold shadow-lg shadow-cyan-500/20 transition-all cursor-pointer"
+                    >
+                      {isUploadingMultiple ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      <span>{isUploadingMultiple ? `Compressing Photo ${uploadProgress?.current}/${uploadProgress?.total}...` : '📸 Upload Multiple Photos from Device'}</span>
+                    </button>
+
+                    <div className="flex items-center gap-1.5 flex-1">
+                      <input
+                        type="text"
+                        value={newPhotoUrl}
+                        onChange={e => setNewPhotoUrl(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleAddPhotoUrl())}
+                        placeholder="Paste image / GIF URL..."
+                        className="flex-1 px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white text-xs placeholder-zinc-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddPhotoUrl}
+                        className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-cyan-300 text-xs font-bold transition-colors cursor-pointer shrink-0 flex items-center gap-1"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Add URL</span>
+                      </button>
+                    </div>
+
+                    {(editingProduct.images?.length || 0) > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm('Clear all gallery images for this product?')) {
+                            setEditingProduct(prev => prev ? { ...prev, images: [] } : null);
+                            showFeedback('success', 'All gallery photos cleared.');
+                          }
+                        }}
+                        className="px-2.5 py-2 rounded-xl bg-zinc-900 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-white/5 hover:border-rose-500/30 text-xs font-medium transition-colors cursor-pointer shrink-0"
+                        title="Clear all photos"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Uploading Progress Indicator */}
+                  {isUploadingMultiple && uploadProgress && (
+                    <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center gap-3">
+                      <Loader2 className="h-4 w-4 text-cyan-400 animate-spin shrink-0" />
+                      <div className="flex-1">
+                        <div className="flex justify-between text-[11px] text-cyan-300 font-bold mb-1">
+                          <span>Processing &amp; Compressing Photos...</span>
+                          <span>{uploadProgress.current} / {uploadProgress.total}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-200"
+                            style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 3. Interactive Photo Gallery Grid */}
+                  {(editingProduct.images && editingProduct.images.length > 0) ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-2">
+                      {editingProduct.images.map((imgUrl, imgIdx) => {
+                        const isCover = imgIdx === 0;
+                        return (
+                          <div
+                            key={imgIdx}
+                            className={`group relative rounded-2xl overflow-hidden bg-zinc-900 border transition-all duration-200 flex flex-col justify-between ${
+                              isCover
+                                ? 'border-amber-500/60 ring-2 ring-amber-500/30 shadow-lg shadow-amber-500/10'
+                                : 'border-white/10 hover:border-white/20'
+                            }`}
+                          >
+                            {/* Image Thumbnail */}
+                            <div className="relative h-28 w-full bg-zinc-950 overflow-hidden">
+                              <img
+                                src={imgUrl}
+                                alt={`Photo ${imgIdx + 1}`}
+                                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80';
+                                }}
+                              />
+
+                              {/* Position Badge */}
+                              <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider backdrop-blur-md border shadow-md flex items-center gap-1 ${
+                                isCover
+                                  ? 'bg-amber-500 text-zinc-950 border-amber-400 font-extrabold'
+                                  : 'bg-black/75 text-zinc-300 border-white/10'
+                              }`}>
+                                {isCover ? (
+                                  <>
+                                    <Star className="h-2.5 w-2.5 fill-current" />
+                                    <span>Main Cover</span>
+                                  </>
+                                ) : (
+                                  <span>#{imgIdx + 1}</span>
+                                )}
+                              </span>
+                            </div>
+
+                            {/* Card Control Buttons */}
+                            <div className="p-2 bg-zinc-950/90 border-t border-white/5 flex items-center justify-between gap-1">
+                              {!isCover ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetCoverPhoto(imgIdx)}
+                                  className="px-2 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                  title="Make this the primary cover photo"
+                                >
+                                  <Star className="h-3 w-3" />
+                                  <span>Set Cover</span>
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-amber-400 font-bold px-1.5 flex items-center gap-1">
+                                  <Check className="h-3 w-3" /> Cover
+                                </span>
+                              )}
+
+                              <div className="flex items-center gap-1">
+                                {imgIdx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMovePhoto(imgIdx, imgIdx - 1)}
+                                    className="p-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                    title="Move left in sequence"
+                                  >
+                                    <ArrowLeft className="h-3 w-3" />
+                                  </button>
+                                )}
+                                {imgIdx < (editingProduct.images?.length || 0) - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMovePhoto(imgIdx, imgIdx + 1)}
+                                    className="p-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                    title="Move right in sequence"
+                                  >
+                                    <ArrowRight className="h-3 w-3" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeletePhoto(imgIdx)}
+                                  className="p-1 rounded-lg bg-zinc-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 transition-colors cursor-pointer"
+                                  title="Delete photo"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => multiplePhotosInputRef.current?.click()}
+                      className="p-6 rounded-2xl border-2 border-dashed border-white/10 hover:border-cyan-500/40 bg-zinc-900/40 hover:bg-zinc-900/70 text-center transition-all cursor-pointer space-y-2 group"
+                    >
+                      <div className="h-10 w-10 mx-auto rounded-xl bg-zinc-800 group-hover:bg-cyan-500/20 text-slate-400 group-hover:text-cyan-300 flex items-center justify-center transition-colors">
+                        <Upload className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">No photos in gallery yet</p>
+                        <p className="text-[11px] text-slate-400">Click to upload multiple images/GIFs from your device or paste URLs above.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 4. Raw Textarea Backup for Fast Bulk Pasting */}
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[11px] text-slate-400 block font-semibold">Bulk URL Editor (Optional — 1 Image/GIF URL per line)</label>
+                    <textarea
+                      rows={2}
+                      value={(editingProduct.images || []).join('\n')}
+                      onChange={e => {
+                        const urls = e.target.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                        setEditingProduct(prev => prev ? { ...prev, images: urls } : null);
+                      }}
+                      placeholder="https://images.unsplash.com/...&#10;https://i.giphy.com/..."
+                      className="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-white/10 text-white font-mono text-[11px] resize-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
