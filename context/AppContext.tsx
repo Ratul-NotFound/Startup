@@ -350,11 +350,13 @@ interface AppContextType {
   setActiveSearchQuery: (query: string) => void;
   activeCategoryFilter: string;
   setActiveCategoryFilter: (category: string) => void;
+  isInitialSyncReady: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isInitialSyncReady, setIsInitialSyncReady] = useState(false);
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -537,6 +539,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (savedOffers) {
         const parsed = JSON.parse(savedOffers);
         if (parsed && typeof parsed === 'object') setSpecialOffersSettings(parsed);
+      }
+    } catch {}
+
+    // 11. Hydrate user orders from local cache
+    try {
+      const cachedOrders = readCache<Order[]>('keyoon_cache_user_orders');
+      if (cachedOrders && Array.isArray(cachedOrders) && cachedOrders.length > 0) {
+        setOrders(cachedOrders);
       }
     } catch {}
   }, []);
@@ -1404,6 +1414,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           emailOrders.forEach(o => map.set(o.id, o));
           const list = Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           setOrders(list);
+          writeCache('keyoon_cache_user_orders', list);
+
+          // Extract and persist all claimed specials & used coupons immediately in localStorage
+          try {
+            const claimedIds: string[] = [];
+            const usedCoupons: string[] = [];
+            list.forEach(o => {
+              if (o.paymentStatus !== 'failed') {
+                o.items.forEach(i => {
+                  if (i.productId && !claimedIds.includes(i.productId)) claimedIds.push(i.productId);
+                });
+                if (o.couponCode && !usedCoupons.includes(o.couponCode.toUpperCase())) usedCoupons.push(o.couponCode.toUpperCase());
+              }
+            });
+            const existingClaimed = JSON.parse(localStorage.getItem('keyoon_claimed_specials') || '[]');
+            const mergedClaimed = Array.from(new Set([...existingClaimed, ...claimedIds]));
+            localStorage.setItem('keyoon_claimed_specials', JSON.stringify(mergedClaimed));
+
+            const existingCoupons = JSON.parse(localStorage.getItem('keyoon_used_coupons') || '[]');
+            const mergedCoupons = Array.from(new Set([...existingCoupons, ...usedCoupons]));
+            localStorage.setItem('keyoon_used_coupons', JSON.stringify(mergedCoupons));
+          } catch {}
+
+          setIsInitialSyncReady(true);
         };
 
         const unsubUserOrdersUid = onSnapshot(
@@ -1517,6 +1551,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAllSubscriptions([]);
         setAllTickets([]);
 
+        setIsInitialSyncReady(true);
+
         // Clean up user-specific listeners
         unsubscribersRef.current.forEach(u => u());
         unsubscribersRef.current = [];
@@ -1526,7 +1562,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
+    const safetySyncTimer = setTimeout(() => {
+      setIsInitialSyncReady(true);
+    }, 2200);
+
     return () => {
+      clearTimeout(safetySyncTimer);
       unsubscribeAuth();
       unsubscribersRef.current.forEach(u => u());
       adminUnsubscribersRef.current.forEach(u => u());
@@ -3326,7 +3367,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     targetReviewProduct, setTargetReviewProduct,
     completedTasksMap, markTaskCompleted, isTaskCompleted, isEntityFullyUnlocked, syncSpecialProductToDeals,
     activeSearchQuery, setActiveSearchQuery, activeCategoryFilter, setActiveCategoryFilter,
+    isInitialSyncReady,
   }), [
+    isInitialSyncReady,
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,

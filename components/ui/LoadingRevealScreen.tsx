@@ -6,42 +6,57 @@ import { Shield } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 
 export const LoadingRevealScreen: React.FC = () => {
-  const { brandSettings } = useApp();
+  const { brandSettings, isInitialSyncReady } = useApp();
   const [isVisible, setIsVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const [statusText, setStatusText] = useState('Securing connection...');
 
   useEffect(() => {
-    // Stage 1: Fast start
+    // Stage 1: Initial charging
     const t1 = setTimeout(() => {
       setProgress(40);
       setStatusText('Syncing catalog & vault...');
-    }, 250);
+    }, 280);
 
-    // Stage 2: Middle charge
+    // Stage 2: Middle charging
     const t2 = setTimeout(() => {
       setProgress(85);
       setStatusText('Preparing experience...');
-    }, 650);
-
-    // Stage 3: Complete
-    const t3 = setTimeout(() => {
-      setProgress(100);
-      setStatusText('Ready');
-    }, 1100);
-
-    // Stage 4: Trigger cinematic reveal exit (1.35s total duration)
-    const t4 = setTimeout(() => {
-      setIsVisible(false);
-    }, 1350);
+    }, 750);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
     };
   }, []);
+
+  useEffect(() => {
+    if (isInitialSyncReady) {
+      // Data and auth are fully ready, smoothly complete the progress and reveal!
+      const t3 = setTimeout(() => {
+        setProgress(100);
+        setStatusText('Ready');
+      }, 400);
+
+      const t4 = setTimeout(() => {
+        setIsVisible(false);
+      }, 950);
+
+      return () => {
+        clearTimeout(t3);
+        clearTimeout(t4);
+      };
+    } else {
+      // Fallback maximum timeout (2.2s) so loading screen never hangs on slow devices
+      const fallbackTimer = setTimeout(() => {
+        setProgress(100);
+        setStatusText('Ready');
+        setTimeout(() => setIsVisible(false), 500);
+      }, 2200);
+
+      return () => clearTimeout(fallbackTimer);
+    }
+  }, [isInitialSyncReady]);
 
   return (
     <AnimatePresence mode="wait">
