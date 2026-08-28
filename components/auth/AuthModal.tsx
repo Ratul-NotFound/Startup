@@ -47,9 +47,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     setError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
-      setSuccessMsg('Signed in successfully with Google!');
-      setTimeout(() => onClose(), 800);
+      const cred = await signInWithPopup(auth, googleProvider);
+      if (cred?.user) {
+        setSuccessMsg('Signed in successfully with Google!');
+        setTimeout(() => onClose(), 400);
+      }
     } catch (err: any) {
       const code: string = err?.code ?? '';
 
