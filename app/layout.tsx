@@ -114,7 +114,7 @@ export default function RootLayout({
         {/* Prevent phone/email detection */}
         <meta name="format-detection" content="telephone=no, email=no, address=no" />
         {/* Canonical URL */}
-        <link rel="canonical" href="https://subnexus.io" />
+        <link rel="canonical" href="https://keyoon.com" />
         {/* Fonts — preconnect first, then load with swap to prevent FOIT */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
