@@ -69,7 +69,7 @@ export const Navbar: React.FC = () => {
           suppressHydrationWarning
           className={`w-full transition-all duration-300 ${
             scrolled
-              ? 'bg-zinc-950/90 backdrop-blur-xl border-b border-white/[0.07] shadow-lg shadow-black/20'
+              ? 'nav-scrolled bg-white/92 dark:bg-zinc-950/90 backdrop-blur-xl border-b border-slate-200 dark:border-white/[0.07] shadow-sm dark:shadow-black/20'
               : 'bg-transparent border-b border-transparent'
           }`}
         >
@@ -77,7 +77,7 @@ export const Navbar: React.FC = () => {
 
             {/* Brand Logo & Favicon Badge with Two-Tone Keyoon Typography */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0 group select-none" suppressHydrationWarning>
-              <div className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl overflow-hidden bg-zinc-900 border border-white/10 p-0.5 group-hover:border-cyan-500/40 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all duration-300 flex items-center justify-center shrink-0">
+              <div className="relative h-9 w-9 sm:h-10 sm:w-10 rounded-xl overflow-hidden bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 p-0.5 group-hover:border-cyan-500/40 group-hover:shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all duration-300 flex items-center justify-center shrink-0">
                 <img
                   src={brandSettings?.faviconUrl || '/images/Fabicon.png'}
                   alt="Keyoon"
@@ -89,19 +89,20 @@ export const Navbar: React.FC = () => {
               </div>
 
               <div className="flex items-center tracking-tight text-xl sm:text-2xl font-black font-sans leading-none select-none">
-                <span className="text-white drop-shadow-sm group-hover:text-slate-100 transition-colors">Key</span>
-                <span className="text-cyan-400">oon</span>
+                <span className="text-slate-900 dark:text-white drop-shadow-sm group-hover:text-cyan-600 dark:group-hover:text-slate-100 transition-colors">Key</span>
+                <span className="text-cyan-500 dark:text-cyan-400">oon</span>
               </div>
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400">
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600 dark:text-zinc-400" suppressHydrationWarning>
               {navLinks.map(link => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`transition-colors hover:text-white ${
-                    pathname === link.href ? 'text-white font-semibold' : ''
+                  suppressHydrationWarning
+                  className={`transition-colors hover:text-slate-950 dark:hover:text-white ${
+                    pathname === link.href ? 'text-slate-950 dark:text-white font-bold' : ''
                   }`}
                 >
                   {link.label}
@@ -118,12 +119,12 @@ export const Navbar: React.FC = () => {
               {/* Cart */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative h-9 w-9 rounded-full bg-zinc-900/60 hover:bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-colors"
+                className="relative h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-zinc-900/60 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white transition-colors"
                 aria-label="Cart"
               >
                 <ShoppingBag className="h-4 w-4" />
                 {totalCartItems > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-white text-[10px] font-black text-zinc-950 px-1 shadow">
+                  <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-indigo-600 dark:bg-white text-[10px] font-black text-white dark:text-zinc-950 px-1 shadow">
                     {totalCartItems}
                   </span>
                 )}
@@ -134,35 +135,35 @@ export const Navbar: React.FC = () => {
                 <div className="relative" ref={dropdownRef} suppressHydrationWarning>
                   <button
                     onClick={() => setUserDropdownOpen(prev => !prev)}
-                    className="flex items-center gap-2 py-1.5 pl-1.5 pr-3 rounded-full bg-zinc-900 border border-white/10 hover:border-white/20 transition-all"
+                    className="flex items-center gap-2 py-1.5 pl-1.5 pr-3 rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 transition-all"
                   >
                     {/* Avatar */}
                     <img
                       src={user.avatar || avatarFallback}
                       alt={user.name}
-                      className="h-6 w-6 rounded-full object-cover ring-1 ring-white/10"
+                      className="h-6 w-6 rounded-full object-cover ring-1 ring-slate-300 dark:ring-white/10"
                       onError={e => { (e.target as HTMLImageElement).src = avatarFallback; }}
                     />
-                    <span className="text-xs font-semibold text-white max-w-[80px] truncate hidden sm:block">
+                    <span className="text-xs font-semibold text-slate-800 dark:text-white max-w-[80px] truncate hidden sm:block">
                       {user.name}
                     </span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 transition-transform duration-200 ${userDropdownOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`h-3.5 w-3.5 text-slate-500 dark:text-zinc-400 transition-transform duration-200 ${userDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
 
                   {/* Dropdown */}
                   {userDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-zinc-900 border border-white/[0.1] shadow-2xl shadow-black/40 p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150" suppressHydrationWarning>
+                    <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.1] shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150" suppressHydrationWarning>
 
                       {/* User info header */}
-                      <div className="px-3 py-2.5 border-b border-white/[0.06] mb-1" suppressHydrationWarning>
-                        <p className="text-xs font-bold text-white truncate">{user.name}</p>
-                        <p className="text-[10px] text-zinc-400 truncate mt-0.5">{user.email}</p>
+                      <div className="px-3 py-2.5 border-b border-slate-100 dark:border-white/[0.06] mb-1" suppressHydrationWarning>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-400 truncate mt-0.5">{user.email}</p>
                         {isSuperAdmin ? (
-                          <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-bold uppercase tracking-wider text-red-400 bg-red-950/60 border border-red-500/30 px-1.5 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-bold uppercase tracking-wider text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-500/30 px-1.5 py-0.5 rounded-full">
                             <Shield className="h-2.5 w-2.5" /> Superadmin
                           </span>
                         ) : isAdmin ? (
-                          <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-bold uppercase tracking-wider text-blue-400 bg-blue-950/60 border border-blue-500/30 px-1.5 py-0.5 rounded-full">
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-bold uppercase tracking-wider text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-500/30 px-1.5 py-0.5 rounded-full">
                             <Shield className="h-2.5 w-2.5" /> Admin
                           </span>
                         ) : null}
@@ -174,23 +175,23 @@ export const Navbar: React.FC = () => {
                         onClick={() => setUserDropdownOpen(false)}
                         className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                           pathname === '/dashboard'
-                            ? 'bg-white/10 text-white'
-                            : 'text-zinc-300 hover:text-white hover:bg-white/[0.05]'
+                            ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white font-semibold'
+                            : 'text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-white/[0.05]'
                         }`}
                       >
-                        <LayoutDashboard className="h-3.5 w-3.5 text-cyan-400" />
+                        <LayoutDashboard className="h-3.5 w-3.5 text-cyan-500 dark:text-cyan-400" />
                         My Dashboard
                       </Link>
 
-                      {/* Admin Panel ΓÇö ONLY for authorized admins or superadmin */}
+                      {/* Admin Panel — ONLY for authorized admins or superadmin */}
                       {(isAdmin || isSuperAdmin) && (
                         <Link
                           href="/admin"
                           onClick={() => setUserDropdownOpen(false)}
                           className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
                             pathname === '/admin'
-                              ? 'bg-red-950/60 text-red-300'
-                              : 'text-red-400 hover:bg-red-950/40 hover:text-red-300'
+                              ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-300 font-semibold'
+                              : 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-300'
                           }`}
                         >
                           <Shield className="h-3.5 w-3.5" />
@@ -198,13 +199,13 @@ export const Navbar: React.FC = () => {
                         </Link>
                       )}
 
-                      <div className="border-t border-white/[0.06] mt-1 pt-1" suppressHydrationWarning>
+                      <div className="border-t border-slate-100 dark:border-white/[0.06] mt-1 pt-1" suppressHydrationWarning>
                         <button
                           onClick={async () => {
                             setUserDropdownOpen(false);
                             await logout();
                           }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-zinc-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                         >
                           <LogOut className="h-3.5 w-3.5" />
                           Sign Out
@@ -216,7 +217,7 @@ export const Navbar: React.FC = () => {
               ) : (
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
-                  className="px-4 py-2 rounded-full bg-white text-zinc-950 hover:bg-zinc-100 text-xs font-bold transition-all shadow-sm"
+                  className="px-4 py-2 rounded-full bg-slate-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-slate-800 dark:hover:bg-zinc-100 text-xs font-bold transition-all shadow-sm"
                 >
                   Sign In
                 </button>
@@ -225,7 +226,7 @@ export const Navbar: React.FC = () => {
               {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setMobileMenuOpen(prev => !prev)}
-                className="md:hidden h-9 w-9 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center text-zinc-300 hover:text-white transition-colors"
+                className="md:hidden h-9 w-9 rounded-full bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-zinc-300 hover:text-slate-950 dark:hover:text-white transition-colors"
                 aria-label="Toggle Menu"
               >
                 {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
@@ -236,14 +237,14 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-white/[0.08] bg-zinc-950/98 backdrop-blur-xl px-6 py-5 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200" suppressHydrationWarning>
+          <div className="md:hidden border-b border-slate-200 dark:border-white/[0.08] bg-white/98 dark:bg-zinc-950/98 backdrop-blur-xl px-6 py-5 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200" suppressHydrationWarning>
             {navLinks.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center py-2.5 text-sm font-medium border-b border-white/[0.04] last:border-0 transition-colors ${
-                  pathname === link.href ? 'text-white' : 'text-zinc-400 hover:text-white'
+                className={`flex items-center py-2.5 text-sm font-medium border-b border-slate-100 dark:border-white/[0.04] last:border-0 transition-colors ${
+                  pathname === link.href ? 'text-slate-950 dark:text-white font-bold' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-white'
                 }`}
               >
                 {link.label}
@@ -251,17 +252,17 @@ export const Navbar: React.FC = () => {
             ))}
 
             {/* Theme Toggle row in Mobile Menu */}
-            <div className="pt-2 pb-1 flex items-center justify-between border-b border-white/[0.04]">
-              <span className="text-sm font-medium text-zinc-400">Theme</span>
+            <div className="pt-2 pb-1 flex items-center justify-between border-b border-slate-100 dark:border-white/[0.04]">
+              <span className="text-sm font-medium text-slate-600 dark:text-zinc-400">Theme</span>
               <ThemeToggle showLabel />
             </div>
 
-            {/* Admin link ΓÇö ONLY for admin or superadmin in mobile menu */}
+            {/* Admin link — ONLY for admin or superadmin in mobile menu */}
             {(isAdmin || isSuperAdmin) && (
               <Link
                 href="/admin"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 py-2.5 text-sm font-medium text-red-400 hover:text-red-300 border-b border-white/[0.04]"
+                className="flex items-center gap-2 py-2.5 text-sm font-medium text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 border-b border-slate-100 dark:border-white/[0.04]"
               >
                 <Shield className="h-4 w-4" />
                 Admin Control Panel
@@ -271,7 +272,7 @@ export const Navbar: React.FC = () => {
             {!firebaseUser && (
               <button
                 onClick={() => { setMobileMenuOpen(false); setIsAuthModalOpen(true); }}
-                className="w-full mt-3 py-2.5 rounded-xl bg-white text-zinc-950 font-bold text-sm"
+                className="w-full mt-3 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm"
               >
                 Sign In / Create Account
               </button>
@@ -280,7 +281,7 @@ export const Navbar: React.FC = () => {
             {firebaseUser && (
               <button
                 onClick={async () => { setMobileMenuOpen(false); await logout(); }}
-                className="w-full mt-3 py-2.5 rounded-xl bg-zinc-800 text-rose-400 font-semibold text-sm flex items-center justify-center gap-2"
+                className="w-full mt-3 py-2.5 rounded-xl bg-slate-100 dark:bg-zinc-800 text-rose-500 dark:text-rose-400 font-semibold text-sm flex items-center justify-center gap-2"
               >
                 <LogOut className="h-4 w-4" /> Sign Out
               </button>

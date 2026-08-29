@@ -110,45 +110,45 @@ export const DEFAULT_CATEGORY_CONFIGS: CategoryConfig[] = [
 export const DEFAULT_QUICK_MESSAGES: QuickMessage[] = [
   {
     id: 'qm_credentials',
-    label: '≡ƒöæ Get Credentials',
+    label: '🔑 Get Credentials',
     query: 'Where do I find my account login credentials after ordering?',
-    answer: '≡ƒöæ Hello {CUSTOMER_NAME}! Your credentials are automatically unlocked in your personal Keyoon Vault. Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.',
+    answer: '🔑 Hello {CUSTOMER_NAME}! Your credentials are automatically unlocked in your personal Keyoon Vault. Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.',
     keywords: ['credential', 'credentials', 'password', 'vault', 'login', 'account', 'email', 'pin', 'key'],
     order: 1,
     isActive: true,
   },
   {
     id: 'qm_bkash_nagad',
-    label: '≡ƒÆ│ bKash / Nagad Help',
+    label: '💳 bKash / Nagad Help',
     query: 'How do I complete payment using bKash, Nagad, or Rocket?',
-    answer: '≡ƒÆ│ Official Mobile Payment Numbers:\nΓÇó bKash: {BKASH_NUMBER}\nΓÇó Nagad: {NAGAD_NUMBER}\n\nSend the exact amount and submit your TrxID in the checkout popup for instant 2-minute verification!',
+    answer: '💳 Official Mobile Payment Numbers:\n• bKash: {BKASH_NUMBER}\n• Nagad: {NAGAD_NUMBER}\n\nSend the exact amount and submit your TrxID in the checkout popup for instant 2-minute verification!',
     keywords: ['bkash', 'nagad', 'rocket', 'upay', 'payment', 'pay', 'send money', 'trxid', 'transaction', 'cashout', 'send', 'number'],
     order: 2,
     isActive: true,
   },
   {
     id: 'qm_order_status',
-    label: 'ΓÜí Order Status',
+    label: '⚡ Order Status',
     query: 'Can you help me check the status of my latest order?',
-    answer: '≡ƒôª Latest Order: {ORDER_NUMBER}\nΓÇó Status: [{ORDER_STATUS}]\nΓÇó Items: {ORDER_ITEMS}\nΓÇó Total: {ORDER_TOTAL}\nΓÇó TrxID: {TRX_ID}\n\nInstant orders are delivered to your Vault within 30 seconds!',
+    answer: '📦 Latest Order: {ORDER_NUMBER}\n• Status: [{ORDER_STATUS}]\n• Items: {ORDER_ITEMS}\n• Total: {ORDER_TOTAL}\n• TrxID: {TRX_ID}\n\nInstant orders are delivered to your Vault within 30 seconds!',
     keywords: ['order', 'track', 'status', 'delivery', 'pending', 'deliver', 'when', 'delay', 'process'],
     order: 3,
     isActive: true,
   },
   {
     id: 'qm_warranty',
-    label: '≡ƒ¢í∩╕Å Warranty Claim',
+    label: '🛡️ Warranty Claim',
     query: 'How does the full replacement warranty work?',
-    answer: '≡ƒ¢í∩╕Å All subscriptions include a 100% Full-Term Replacement Warranty. If any login experiences an interruption, our automated monitoring engine or 24/7 support ops resolves or replaces your slot immediately.',
+    answer: '🛡️ All subscriptions include a 100% Full-Term Replacement Warranty. If any login experiences an interruption, our automated monitoring engine or 24/7 support ops resolves or replaces your slot immediately.',
     keywords: ['warranty', 'replacement', 'renew', 'not working', 'fix', 'broken', 'issue', 'expired', 'down', 'problem', 'screen limit'],
     order: 4,
     isActive: true,
   },
   {
     id: 'qm_direct_upgrade',
-    label: 'Γ£¿ Direct Email Upgrade',
+    label: '✨ Direct Email Upgrade',
     query: 'Can I upgrade my existing personal email account instead of getting a new one?',
-    answer: 'Γ£¿ Yes! For tiers marked as "Direct Upgrade" or "Custom Email", provide your email address in the checkout box, and we will apply the official premium subscription directly to your existing account without changing your password.',
+    answer: '✨ Yes! For tiers marked as "Direct Upgrade" or "Custom Email", provide your email address in the checkout box, and we will apply the official premium subscription directly to your existing account without changing your password.',
     keywords: ['upgrade', 'my email', 'personal email', 'existing account', 'custom email', 'direct', 'own account', 'invite'],
     order: 5,
     isActive: true,
@@ -777,7 +777,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountPercent: prod.specialConfig.discountPercent || (prod.specialConfig.isFreeProduct ? 100 : prod.pricingTiers[0]?.discountPercentage || 20),
         description: prod.specialConfig.campaignDescription || `Exclusive mission deal for ${prod.name}`,
         isSpecialOffer: !!prod.specialConfig.isSpecialOfferSynced,
-        offerTag: prod.specialConfig.campaignBadge || (prod.specialConfig.isFreeProduct ? '≡ƒÄü FREE GIVEAWAY' : 'ΓÜí Special Product Deal'),
+        offerTag: prod.specialConfig.campaignBadge || (prod.specialConfig.isFreeProduct ? '🎁 FREE GIVEAWAY' : '⚡ Special Product Deal'),
         offerTitle: prod.specialConfig.campaignTitle || `${prod.name} Campaign Offer`,
         offerImage: prod.logo,
         type: prod.specialConfig.isFreeProduct || prod.specialConfig.discountPercent === 100 ? 'giveaway' : 'special_deal',
@@ -819,14 +819,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const bdtRate = currencySettings.bdtRate || 125;
 
   // formatPrice: takes an amount in BDT (Bangladeshi Taka) and returns the correctly formatted string.
-  // - If the user is from Bangladesh (detectedCurrency === 'BDT'), displays directly in Bengali Taka (αº│).
+  // - If the user is from Bangladesh (detectedCurrency === 'BDT'), displays directly in Bengali Taka (৳).
   // - If the user is from another country (detectedCurrency === 'USD'), converts BDT to USD ($) using bdtRate (amount / bdtRate).
   const formatPrice = useCallback((amount: number): string => {
-    if (typeof amount !== 'number' || isNaN(amount)) return 'αº│0';
+    if (typeof amount !== 'number' || isNaN(amount)) return '৳0';
 
     if (detectedCurrency === 'BDT') {
       const inBdt = Math.round(amount);
-      return `αº│${inBdt.toLocaleString('en-BD')}`;
+      return `৳${inBdt.toLocaleString('en-BD')}`;
     }
 
     // International visitor -> convert BDT to USD ($)
@@ -2016,7 +2016,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalBdt: isFreeOrder ? 0 : (paymentProof?.totalBdt || (cartTotal * 125)),
       paymentMethod: isFreeOrder ? 'free_claim' : paymentMethod,
       paymentMethodName: isFreeOrder
-        ? (paymentProof?.paymentMethodName || '≡ƒÄü 100% Free Special Reward')
+        ? (paymentProof?.paymentMethodName || '🎁 100% Free Special Reward')
         : (paymentProof?.paymentMethodName || paymentMethod.toUpperCase()),
       paymentStatus: isFreeOrder ? 'paid' : (isBangladesh ? 'pending' : 'paid'),
       deliveryStatus: isFreeOrder ? 'processing' : (isBangladesh ? 'processing' : 'delivered'),
@@ -2494,7 +2494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ord.userId,
           ord.userEmail,
           `Order #${ord.orderNumber} Approved & Delivered`,
-          `≡ƒÄë Your payment for Order #${ord.orderNumber} (${ord.items.map(i => i.productName).join(', ')}) has been verified and approved! Your credentials have been provisioned to your Customer Dashboard Vault.`
+          `🎉 Your payment for Order #${ord.orderNumber} (${ord.items.map(i => i.productName).join(', ')}) has been verified and approved! Your credentials have been provisioned to your Customer Dashboard Vault.`
         );
       } catch {}
 
@@ -3046,7 +3046,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               targetUserId,
               targetUserEmail,
               `Auto-Renewal Successful: ${sub.productName}`,
-              `≡ƒÄë Your ${sub.productName} plan (${sub.durationLabel}) has been automatically renewed until ${new Date(newExp).toLocaleDateString()} at $${renewalAmount.toFixed(2)} (αº│${Math.round(renewalAmount * 125).toLocaleString()}). Your vault credentials remain active.`
+              `🎉 Your ${sub.productName} plan (${sub.durationLabel}) has been automatically renewed until ${new Date(newExp).toLocaleDateString()} at $${renewalAmount.toFixed(2)} (৳${Math.round(renewalAmount * 125).toLocaleString()}). Your vault credentials remain active.`
             );
           } catch { }
         } else {

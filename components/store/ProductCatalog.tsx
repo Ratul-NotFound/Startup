@@ -111,12 +111,12 @@ export const ProductCatalog: React.FC = () => {
         {/* Title in Space Grotesk Font */}
         <div className="flex items-center gap-3">
           <h2
-            className="text-2xl sm:text-3xl font-black tracking-tight text-white"
+            className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-white"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            Popular <span className="text-cyan-400">Subscriptions</span>
+            Popular <span className="text-cyan-500 dark:text-cyan-400">Subscriptions</span>
           </h2>
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/20">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/20">
             {processedProducts.length} Services
           </span>
         </div>
@@ -126,18 +126,18 @@ export const ProductCatalog: React.FC = () => {
           
           {/* Search Input */}
           <div className="relative flex-1 sm:flex-initial">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-zinc-400 pointer-events-none" />
             <input
               type="text"
               value={activeSearchQuery}
               onChange={(e) => setActiveSearchQuery(e.target.value)}
               placeholder="Search subscriptions..."
-              className="w-full sm:w-64 pl-10 pr-9 py-2.5 bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all font-sans shadow-sm"
+              className="w-full sm:w-64 pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900/90 hover:bg-slate-50 dark:hover:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-cyan-500 rounded-xl text-xs text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all font-sans shadow-sm"
             />
             {activeSearchQuery && (
               <button
                 onClick={() => setActiveSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -145,7 +145,7 @@ export const ProductCatalog: React.FC = () => {
           </div>
 
           {/* Sort Selector with Smooth Spring Sliding Pill */}
-          <div className="inline-flex items-center p-1 rounded-xl bg-zinc-900/90 border border-white/10 shrink-0 relative">
+          <div className="inline-flex items-center p-1 rounded-xl bg-slate-100 dark:bg-zinc-900/90 border border-slate-200 dark:border-white/10 shrink-0 relative">
             {sortOptions.map((opt) => {
               const active = sortBy === opt.id;
               return (
@@ -153,14 +153,14 @@ export const ProductCatalog: React.FC = () => {
                   key={opt.id}
                   onClick={() => setSortBy(opt.id as any)}
                   className={`relative px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 flex items-center gap-1.5 z-10 ${
-                    active ? 'text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                    active ? 'text-slate-950 dark:text-zinc-950' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-zinc-200'
                   }`}
                 >
                   {active && (
                     <motion.div
                       layoutId="activeSortPill"
                       transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                      className="absolute inset-0 bg-white rounded-lg shadow-md -z-10"
+                      className="absolute inset-0 bg-white rounded-lg shadow-sm -z-10"
                     />
                   )}
                   <span>{opt.icon}</span>
@@ -176,19 +176,19 @@ export const ProductCatalog: React.FC = () => {
       {/* 2. Category-Wise Horizontal Scrollable Rows with 3D Tilt & Scroll Reveal */}
       <div className="space-y-14">
         {categoryGroups.length === 0 ? (
-          <div className="py-16 text-center p-8 rounded-3xl bg-zinc-900/60 border border-white/10 space-y-4 max-w-md mx-auto">
-            <div className="h-14 w-14 rounded-2xl bg-zinc-800 border border-white/10 text-cyan-400 flex items-center justify-center mx-auto shadow-inner">
+          <div className="py-16 text-center p-8 rounded-3xl bg-slate-50 dark:bg-zinc-900/60 border border-slate-200 dark:border-white/10 space-y-4 max-w-md mx-auto">
+            <div className="h-14 w-14 rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 text-cyan-500 dark:text-cyan-400 flex items-center justify-center mx-auto shadow-inner">
               <Search className="h-7 w-7" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-white">No subscriptions found</h3>
-              <p className="text-xs text-zinc-400">
-                We couldn&apos;t find any digital services matching &quot;<span className="text-cyan-300 font-bold">{activeSearchQuery}</span>&quot;.
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white">No subscriptions found</h3>
+              <p className="text-xs text-slate-600 dark:text-zinc-400">
+                We couldn&apos;t find any digital services matching &quot;<span className="text-cyan-600 dark:text-cyan-300 font-bold">{activeSearchQuery}</span>&quot;.
               </p>
             </div>
             <button
               onClick={() => setActiveSearchQuery('')}
-              className="px-4 py-2 rounded-xl bg-white text-zinc-950 text-xs font-bold hover:bg-zinc-100 transition-colors shadow-md cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold hover:bg-slate-800 dark:hover:bg-zinc-100 transition-colors shadow-md cursor-pointer"
             >
               Clear Search Filter
             </button>
@@ -204,22 +204,22 @@ export const ProductCatalog: React.FC = () => {
             className="space-y-4 content-auto"
           >
             {/* Category Header */}
-            <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-200 dark:border-white/[0.06]">
               <div>
                 <h3
-                  className="text-xl sm:text-2xl font-bold tracking-tight text-white"
+                  className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {group.meta.label}
                 </h3>
-                <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                <p className="text-xs text-slate-600 dark:text-zinc-400 font-sans mt-0.5">
                   {group.meta.description}
                 </p>
               </div>
 
               {/* Right Controls: Service Count + Navigation Buttons */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs font-medium text-zinc-400 bg-zinc-900 px-3 py-1 rounded-full border border-white/10 hidden sm:inline-block">
+                <span className="text-xs font-medium text-slate-600 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-900 px-3 py-1 rounded-full border border-slate-200 dark:border-white/10 hidden sm:inline-block">
                   {group.products.length} {group.products.length === 1 ? 'Service' : 'Services'}
                 </span>
 
@@ -227,7 +227,7 @@ export const ProductCatalog: React.FC = () => {
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.92 }}
                   onClick={() => scrollCategory(group.id, 'left')}
-                  className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors shadow-sm"
+                  className="p-1.5 sm:p-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-slate-600 hover:text-slate-950 dark:text-zinc-400 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors shadow-sm"
                   aria-label="Scroll Left"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -236,7 +236,7 @@ export const ProductCatalog: React.FC = () => {
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.92 }}
                   onClick={() => scrollCategory(group.id, 'right')}
-                  className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors shadow-sm"
+                  className="p-1.5 sm:p-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-slate-600 hover:text-slate-950 dark:text-zinc-400 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors shadow-sm"
                   aria-label="Scroll Right"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -271,7 +271,7 @@ export const ProductCatalog: React.FC = () => {
                   >
                     <div
                       style={{ transformStyle: 'preserve-3d' }}
-                      className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900 border border-white/[0.08] hover:border-cyan-500/40 overflow-hidden transition-all duration-200 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between h-full contain-card"
+                      className="group relative rounded-2xl sm:rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] hover:border-cyan-500/40 overflow-hidden transition-all duration-200 hover:shadow-[0_20px_50px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] shadow-sm dark:shadow-none flex flex-col justify-between h-full contain-card"
                     >
                       <div>
                         {/* Responsive Animated Image Carousel with Multiple Relevant Images & Dynamic Transitions */}
@@ -290,7 +290,7 @@ export const ProductCatalog: React.FC = () => {
                             {product.productType === 'special' ? (
                               <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 flex items-center gap-1 shadow-lg shadow-amber-500/30">
                                 <Sparkles className="h-3 w-3 fill-zinc-950 animate-pulse" />
-                                <span>{product.specialConfig?.campaignBadge || 'ΓÜí Special Deal'}</span>
+                                <span>{product.specialConfig?.campaignBadge || '⚡ Special Deal'}</span>
                               </span>
                             ) : (
                               <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-black/75 backdrop-blur-md text-zinc-300 border border-white/10 shadow-lg">
@@ -327,7 +327,7 @@ export const ProductCatalog: React.FC = () => {
                           style={{ transform: 'translateZ(28px)' }}
                           className="p-3 sm:p-4"
                         >
-                          <div className="p-1 rounded-xl bg-zinc-950/80 border border-white/[0.06] grid grid-cols-4 gap-1 shadow-inner relative">
+                          <div className="p-1 rounded-xl bg-slate-100 dark:bg-zinc-950/80 border border-slate-200 dark:border-white/[0.06] grid grid-cols-4 gap-1 shadow-inner relative">
                             {product.pricingTiers.map((tier, idx) => {
                               const isSelected = idx === currentPlanIndex;
                               return (
@@ -337,15 +337,15 @@ export const ProductCatalog: React.FC = () => {
                                   onClick={() => handleSelectPlanIndex(product.id, idx)}
                                   className={`relative py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 z-10 ${
                                     isSelected
-                                      ? 'text-zinc-950'
-                                      : 'text-zinc-400 hover:text-zinc-200'
+                                      ? 'text-slate-950 dark:text-zinc-950 font-black'
+                                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-zinc-200'
                                   }`}
                                 >
                                   {isSelected && (
                                     <motion.div
                                       layoutId={`planPill-${product.id}`}
                                       transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-                                      className="absolute inset-0 bg-white rounded-lg shadow-md -z-10"
+                                      className="absolute inset-0 bg-white rounded-lg shadow-sm -z-10"
                                     />
                                   )}
                                   {tier.label.replace(' Months', 'mo').replace(' Month', 'mo').replace(' (1 Year)', 'yr')}
@@ -371,34 +371,34 @@ export const ProductCatalog: React.FC = () => {
                               transition={{ duration: 0.15 }}
                               className="flex items-baseline gap-2"
                             >
-                              <span className="text-lg sm:text-xl font-black text-white drop-shadow-sm">
+                              <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white drop-shadow-sm">
                                 {formatPrice(currentPlan.price)}
                               </span>
-                              <span className="text-xs text-zinc-500 line-through">
+                              <span className="text-xs text-slate-400 dark:text-zinc-500 line-through">
                                 {formatPrice(currentPlan.originalPrice)}
                               </span>
                             </motion.div>
                           </AnimatePresence>
 
                           {isOutOfStock ? (
-                            <span className="text-[10px] sm:text-[11px] font-bold text-rose-400 bg-rose-950/80 border border-rose-500/30 px-2 py-0.5 rounded-lg shadow-md">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/30 px-2 py-0.5 rounded-lg shadow-sm">
                               OUT OF STOCK
                             </span>
                           ) : (product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct) ? (
                             <span className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-md flex items-center gap-1 border ${
                               isSpecialOfferClaimed(product.id)
-                                ? 'bg-zinc-800 text-emerald-300 border-emerald-500/30'
-                                : 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                                ? 'bg-slate-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                                : 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/40'
                             }`}>
-                              <Sparkles className="h-3 w-3 text-amber-400" />
+                              <Sparkles className="h-3 w-3 text-amber-500 dark:text-amber-400" />
                               {isSpecialOfferClaimed(product.id)
-                                ? 'Γ£ô 1-TIME CLAIMED'
+                                ? '✓ 1-TIME CLAIMED'
                                 : product.isFreeProduct || product.specialConfig?.isFreeProduct
                                 ? '100% FREE REWARD'
                                 : 'SPECIAL DEAL'}
                             </span>
                           ) : (
-                            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-md">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-200 dark:border-emerald-500/30 px-2 py-0.5 rounded-lg shadow-sm">
                               Save {currentPlan.discountPercentage}%
                             </span>
                           )}
@@ -415,7 +415,7 @@ export const ProductCatalog: React.FC = () => {
                                 whileHover={{ scale: 1.03, z: 20 }}
                                 whileTap={{ scale: 0.96 }}
                                 onClick={() => setSelectedProduct(product)}
-                                className="w-full py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-colors border border-white/[0.06] shadow-sm cursor-pointer"
+                                className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 text-slate-700 hover:text-slate-950 dark:text-zinc-300 dark:hover:text-white text-xs font-semibold transition-colors border border-slate-200 dark:border-white/[0.06] shadow-sm cursor-pointer"
                               >
                                 View Details
                               </motion.button>

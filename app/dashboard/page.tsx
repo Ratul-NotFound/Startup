@@ -205,7 +205,7 @@ export default function CustomerDashboardPage() {
     <div className="min-h-screen py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
       {/* ─── Profile & Live Metric Banner ─────────────────────────── */}
-      <div className="rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900 border border-white/[0.08] p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+      <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 border border-slate-800 dark:border-white/[0.08] p-6 sm:p-8 relative overflow-hidden shadow-2xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -225,8 +225,8 @@ export default function CustomerDashboardPage() {
                   </span>
                 )}
               </div>
-              <p className="text-sm text-slate-400 mt-0.5">{user.email}</p>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-sm text-slate-300 mt-0.5">{user.email}</p>
+              <p className="text-[11px] text-slate-400 mt-1">
                 Member since {new Date(user.joinedDate || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </p>
             </div>
@@ -238,8 +238,8 @@ export default function CustomerDashboardPage() {
               { label: 'Total Orders', value: orders.length, color: 'text-white' },
               { label: 'Total Invested', value: totalSpentBdt > 0 ? `৳${totalSpentBdt.toLocaleString()}` : `$${totalSpentUsd.toFixed(2)}`, color: 'text-emerald-400' },
             ].map(m => (
-              <div key={m.label} className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/[0.08] text-center min-w-[100px] shadow-sm">
-                <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">{m.label}</span>
+              <div key={m.label} className="p-3.5 rounded-2xl bg-white/10 dark:bg-zinc-900/90 border border-white/15 dark:border-white/[0.08] text-center min-w-[100px] shadow-sm backdrop-blur-md">
+                <span className="text-[10px] text-slate-300 dark:text-slate-400 uppercase font-bold tracking-wider block">{m.label}</span>
                 <p className={`text-xl font-black mt-0.5 ${m.color}`}>{m.value}</p>
               </div>
             ))}
@@ -254,22 +254,22 @@ export default function CustomerDashboardPage() {
       </div>
 
       {/* ─── Dashboard Navigation Tabs ────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-white/[0.08] pb-0 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-white/[0.08] pb-0 overflow-x-auto scrollbar-none">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-3 text-xs sm:text-sm font-bold transition-all whitespace-nowrap border-b-2 -mb-px cursor-pointer ${
               activeTab === tab.id
-                ? 'border-indigo-500 text-white bg-indigo-950/20 rounded-t-xl'
-                : 'border-transparent text-slate-400 hover:text-white'
+                ? 'border-indigo-600 dark:border-indigo-500 text-indigo-600 dark:text-white bg-indigo-50 dark:bg-indigo-950/20 rounded-t-xl'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white'
             }`}
           >
             {tab.icon}
             <span>{tab.label}</span>
             {tab.count !== null && tab.count > 0 && (
               <span className={`text-[10px] px-2 py-0.2 rounded-full font-extrabold ${
-                activeTab === tab.id ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-400'
+                activeTab === tab.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-slate-400'
               }`}>
                 {tab.count}
               </span>
@@ -285,8 +285,8 @@ export default function CustomerDashboardPage() {
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-black text-white tracking-tight">Active Subscriptions & Vault</h2>
-              <p className="text-xs text-slate-400">Decrypt credentials, manage auto-renewals, launch apps, or claim warranty.</p>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Active Subscriptions & Vault</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Decrypt credentials, manage auto-renewals, launch apps, or claim warranty.</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -297,7 +297,7 @@ export default function CustomerDashboardPage() {
                   value={subSearch}
                   onChange={e => setSubSearch(e.target.value)}
                   placeholder="Search subscriptions..."
-                  className="pl-8 pr-3 py-1.5 rounded-xl bg-zinc-900 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  className="pl-8 pr-3 py-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                 />
               </div>
 
@@ -306,10 +306,10 @@ export default function CustomerDashboardPage() {
                   await refreshAllData();
                 }}
                 disabled={isSyncing}
-                className="px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-xs font-bold text-slate-300 hover:text-white flex items-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer disabled:opacity-50"
+                className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-zinc-900 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white flex items-center gap-1.5 transition-all shadow-sm shrink-0 cursor-pointer disabled:opacity-50"
                 title="Re-synchronize subscriptions and vault credentials with database"
               >
-                <RefreshCw className={`h-3.5 w-3.5 text-cyan-400 ${isSyncing ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-3.5 w-3.5 text-cyan-500 dark:text-cyan-400 ${isSyncing ? 'animate-spin' : ''}`} />
                 <span>{isSyncing ? 'Syncing...' : 'Sync Vault'}</span>
               </button>
 
@@ -335,8 +335,8 @@ export default function CustomerDashboardPage() {
                   onClick={() => setSubFilter(f.id as any)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                     subFilter === f.id
-                      ? 'bg-zinc-800 text-white border border-white/20'
-                      : 'bg-zinc-950 text-slate-400 hover:text-white border border-white/5'
+                      ? 'bg-slate-900 dark:bg-zinc-800 text-white border border-slate-900 dark:border-white/20'
+                      : 'bg-white dark:bg-zinc-950 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white border border-slate-200 dark:border-white/5'
                   }`}
                 >
                   {f.label}
@@ -346,13 +346,13 @@ export default function CustomerDashboardPage() {
           )}
 
           {filteredSubscriptions.length === 0 ? (
-            <div className="py-20 text-center space-y-4 rounded-3xl border border-white/[0.06] bg-zinc-900/40 p-8">
-              <div className="h-16 w-16 mx-auto rounded-2xl bg-zinc-800 border border-white/10 flex items-center justify-center text-slate-500">
+            <div className="py-20 text-center space-y-4 rounded-3xl border border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-zinc-900/40 p-8">
+              <div className="h-16 w-16 mx-auto rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-400">
                 <ShoppingBag className="h-8 w-8" />
               </div>
               <div className="space-y-1">
-                <p className="text-lg font-bold text-white">No subscriptions found</p>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">No subscriptions found</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
                   When you purchase a subscription or when our admins approve your TrxID, your credentials will appear here instantly.
                 </p>
               </div>
@@ -376,10 +376,10 @@ export default function CustomerDashboardPage() {
                 return (
                   <div
                     key={sub.id}
-                    className={`p-5 rounded-3xl bg-zinc-900 border flex flex-col justify-between gap-4 shadow-lg transition-all ${
+                    className={`p-5 rounded-3xl bg-white dark:bg-zinc-900 border flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition-all ${
                       isUrgent ? 'border-amber-500/40 shadow-amber-500/5' :
                       isExpired ? 'border-red-500/30 shadow-red-500/5' :
-                      'border-white/[0.08]'
+                      'border-slate-200 dark:border-white/[0.08]'
                     }`}
                   >
                     {/* Product Header */}
@@ -389,32 +389,32 @@ export default function CustomerDashboardPage() {
                           <img
                             src={sub.productLogo}
                             alt={sub.productName}
-                            className="h-12 w-12 rounded-2xl object-cover ring-1 ring-white/10 shadow-md shrink-0"
+                            className="h-12 w-12 rounded-2xl object-cover ring-1 ring-slate-200 dark:ring-white/10 shadow-md shrink-0"
                           />
                           <div>
-                            <h3 className="text-sm font-bold text-white">{sub.productName}</h3>
-                            <span className="text-[11px] text-cyan-400 font-mono font-semibold">{sub.durationLabel}</span>
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white">{sub.productName}</h3>
+                            <span className="text-[11px] text-cyan-600 dark:text-cyan-400 font-mono font-semibold">{sub.durationLabel}</span>
                           </div>
                         </div>
                         <span className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border shrink-0 ${
-                          isExpired ? 'bg-red-950/60 text-red-400 border-red-500/30' :
-                          isUrgent ? 'bg-amber-950/60 text-amber-400 border-amber-500/30' :
-                          'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
+                          isExpired ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30' :
+                          isUrgent ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-500/30' :
+                          'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
                         }`}>
                           {isExpired ? 'Expired' : isUrgent ? 'Expiring Soon' : 'Active'}
                         </span>
                       </div>
 
                       {/* Expiry Countdown & Synced Progress Bar */}
-                      <div className="space-y-2 p-3.5 rounded-2xl bg-zinc-950 border border-white/[0.05]">
+                      <div className="space-y-2 p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.05]">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400 font-medium">Subscription Health:</span>
+                          <span className="text-slate-600 dark:text-slate-400 font-medium">Subscription Health:</span>
                           <div className="flex items-center gap-1.5">
-                            <span className={`font-bold ${sub.planDuration === 'lifetime' ? 'text-emerald-400' : isExpired ? 'text-red-400' : isUrgent ? 'text-amber-400' : 'text-white'}`}>
+                            <span className={`font-bold ${sub.planDuration === 'lifetime' ? 'text-emerald-600 dark:text-emerald-400' : isExpired ? 'text-red-500 dark:text-red-400' : isUrgent ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'}`}>
                               {sub.planDuration === 'lifetime' ? '♾️ Lifetime Access' : isExpired ? 'Expired' : `${daysLeft} days remaining`}
                             </span>
                             {!isExpired && (
-                              <span className="text-[10px] font-mono text-cyan-400 font-bold px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30">
+                              <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold px-1.5 py-0.5 rounded bg-cyan-50 dark:bg-cyan-950/80 border border-cyan-200 dark:border-cyan-500/30">
                                 {sub.planDuration === 'lifetime' ? '100%' : `${percentRemaining}%`}
                               </span>
                             )}
@@ -422,7 +422,7 @@ export default function CustomerDashboardPage() {
                         </div>
 
                         {/* Accurate Dynamic Sync Bar */}
-                        <div className="w-full h-2 rounded-full bg-zinc-800/80 p-0.5 border border-white/5 overflow-hidden">
+                        <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-zinc-800/80 p-0.5 border border-slate-300 dark:border-white/5 overflow-hidden">
                           <div
                             className={`h-full rounded-full transition-all duration-500 shadow-sm ${
                               sub.planDuration === 'lifetime'
@@ -441,63 +441,63 @@ export default function CustomerDashboardPage() {
 
                         <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 font-mono">
                           <span>{sub.planDuration === 'lifetime' ? 'Expires: Never (Lifetime)' : `Expires: ${new Date(sub.expiryDate).toLocaleDateString()}`}</span>
-                          <span className="text-slate-400">{sub.planDuration?.replace('_', ' ').toUpperCase() || 'PLAN'}</span>
+                          <span className="text-slate-500 dark:text-slate-400">{sub.planDuration?.replace('_', ' ').toUpperCase() || 'PLAN'}</span>
                         </div>
                       </div>
 
                       {/* Credential Reveal Section */}
-                      <div className="rounded-2xl bg-zinc-950 border border-white/[0.06] overflow-hidden">
+                      <div className="rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.06] overflow-hidden">
                         <button
                           onClick={() => setShowCredentials(prev => ({ ...prev, [sub.id]: !prev[sub.id] }))}
-                          className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-slate-300 hover:text-white transition-colors cursor-pointer"
+                          className="w-full flex items-center justify-between px-3.5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer"
                         >
                           <span className="flex items-center gap-2">
-                            <Lock className="h-3.5 w-3.5 text-cyan-400" /> Decrypted Vault Credentials
+                            <Lock className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" /> Decrypted Vault Credentials
                           </span>
                           {showCreds ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>
 
                         {showCreds && (
-                          <div className="px-3.5 pb-3 space-y-2 border-t border-white/[0.05] pt-2.5">
+                          <div className="px-3.5 pb-3 space-y-2 border-t border-slate-200 dark:border-white/[0.05] pt-2.5">
                             {(!sub.credentials?.email && !sub.credentials?.password) ? (
-                              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+                              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs space-y-1">
                                 <div className="font-bold flex items-center gap-1.5">
-                                  <Clock className="h-3.5 w-3.5 animate-spin text-amber-400" />
+                                  <Clock className="h-3.5 w-3.5 animate-spin text-amber-500 dark:text-amber-400" />
                                   <span>Credentials Being Provisioned</span>
                                 </div>
-                                <p className="text-[11px] text-amber-200/80 leading-relaxed">
+                                <p className="text-[11px] text-amber-700 dark:text-amber-200/80 leading-relaxed">
                                   Our operations team is preparing and verifying your subscription login details. They will be dispatched directly to your email and revealed here in your vault shortly.
                                 </p>
                               </div>
                             ) : (
                               <>
                                 {sub.credentials?.email && (
-                                  <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
-                                    <span className="text-slate-400">Email:</span>
+                                  <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-white dark:bg-zinc-900/80 border border-slate-200 dark:border-transparent">
+                                    <span className="text-slate-500 dark:text-slate-400">Email:</span>
                                     <div className="flex items-center gap-1.5">
-                                      <span className="font-mono text-white select-all">{sub.credentials.email}</span>
+                                      <span className="font-mono text-slate-900 dark:text-white select-all font-semibold">{sub.credentials.email}</span>
                                       <button
                                         onClick={() => handleCopy(sub.credentials?.email || '', `${sub.id}-email`)}
-                                        className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
+                                        className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
                                         title="Copy Email"
                                       >
-                                        {copiedKey === `${sub.id}-email` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                                        {copiedKey === `${sub.id}-email` ? <Check className="h-3 w-3 text-emerald-500 dark:text-emerald-400" /> : <Copy className="h-3 w-3" />}
                                       </button>
                                     </div>
                                   </div>
                                 )}
 
                                 {sub.credentials?.password && (
-                                  <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-zinc-900/80">
-                                    <span className="text-slate-400">Password:</span>
+                                  <div className="flex items-center justify-between text-[11px] p-1.5 rounded-lg bg-white dark:bg-zinc-900/80 border border-slate-200 dark:border-transparent">
+                                    <span className="text-slate-500 dark:text-slate-400">Password:</span>
                                     <div className="flex items-center gap-1.5">
-                                      <span className="font-mono text-cyan-300 font-bold select-all">{sub.credentials.password}</span>
+                                      <span className="font-mono text-cyan-600 dark:text-cyan-300 font-bold select-all">{sub.credentials.password}</span>
                                       <button
                                         onClick={() => handleCopy(sub.credentials?.password || '', `${sub.id}-pwd`)}
-                                        className="p-1 rounded text-slate-400 hover:text-white cursor-pointer"
+                                        className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
                                         title="Copy Password"
                                       >
-                                        {copiedKey === `${sub.id}-pwd` ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                                        {copiedKey === `${sub.id}-pwd` ? <Check className="h-3 w-3 text-emerald-500 dark:text-emerald-400" /> : <Copy className="h-3 w-3" />}
                                       </button>
                                     </div>
                                   </div>
@@ -566,23 +566,23 @@ export default function CustomerDashboardPage() {
         <div className="space-y-5">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-black text-white tracking-tight">Order History & Payment Processing</h2>
-              <p className="text-xs text-slate-400">Track bKash / Nagad verification, view official receipts, and decrypt subscriptions.</p>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Order History & Payment Processing</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Track bKash / Nagad verification, view official receipts, and decrypt subscriptions.</p>
             </div>
-            <span className="text-xs text-slate-400 font-semibold">{orders.length} total orders</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">{orders.length} total orders</span>
           </div>
 
           {orders.length === 0 ? (
-            <div className="py-20 text-center space-y-4 rounded-3xl border border-white/[0.06] bg-zinc-900/40 p-8">
-              <FileText className="h-12 w-12 text-zinc-600 mx-auto" />
-              <p className="text-lg font-bold text-white">No orders recorded</p>
-              <p className="text-xs text-slate-400">Your completed purchases and TrxID submissions will appear here.</p>
+            <div className="py-20 text-center space-y-4 rounded-3xl border border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-zinc-900/40 p-8">
+              <FileText className="h-12 w-12 text-slate-400 dark:text-zinc-600 mx-auto" />
+              <p className="text-lg font-bold text-slate-900 dark:text-white">No orders recorded</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Your completed purchases and TrxID submissions will appear here.</p>
             </div>
           ) : (
-            <div className="rounded-3xl bg-zinc-900 border border-white/[0.08] overflow-hidden shadow-xl">
+            <div className="rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] overflow-hidden shadow-sm dark:shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-950 text-slate-400 uppercase font-bold border-b border-white/[0.06] text-[10px] tracking-wider">
+                  <thead className="bg-slate-50 dark:bg-zinc-950 text-slate-600 dark:text-slate-400 uppercase font-bold border-b border-slate-200 dark:border-white/[0.06] text-[10px] tracking-wider">
                     <tr>
                       <th className="p-4">Order #</th>
                       <th className="p-4">Items</th>
@@ -593,61 +593,61 @@ export default function CustomerDashboardPage() {
                       <th className="p-4 text-right">Invoice</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.04] text-slate-300">
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04] text-slate-700 dark:text-slate-300">
                     {orders.map(order => {
                       const isPending = order.paymentStatus === 'pending';
                       const isPaid = order.paymentStatus === 'paid';
                       const isDelivered = order.deliveryStatus === 'delivered';
 
                       return (
-                        <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
+                        <tr key={order.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors">
                           <td className="p-4">
-                            <div className="font-mono font-bold text-white text-xs">#{order.orderNumber}</div>
+                            <div className="font-mono font-bold text-slate-900 dark:text-white text-xs">#{order.orderNumber}</div>
                             <div className="text-[10px] text-slate-500 font-mono">{order.id}</div>
                           </td>
 
                           <td className="p-4 max-w-xs">
                             <div className="space-y-1">
                               {order.items.map((i, idx) => (
-                                <div key={idx} className="flex items-center gap-1.5 text-slate-200">
-                                  <span className="font-bold text-white">{i.quantity}x</span>
+                                <div key={idx} className="flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                                  <span className="font-bold text-slate-900 dark:text-white">{i.quantity}x</span>
                                   <span className="truncate">{i.productName}</span>
-                                  <span className="text-[10px] text-cyan-400 font-mono">({i.durationLabel})</span>
+                                  <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-mono">({i.durationLabel})</span>
                                 </div>
                               ))}
                             </div>
                           </td>
 
-                          <td className="p-4 text-slate-400">
+                          <td className="p-4 text-slate-600 dark:text-slate-400">
                             {new Date(order.createdAt).toLocaleDateString()}
                           </td>
 
                           <td className="p-4">
-                            <span className="font-bold text-white capitalize">
+                            <span className="font-bold text-slate-900 dark:text-white capitalize">
                               {order.paymentMethodName || order.paymentMethod.replace(/_/g, ' ')}
                             </span>
                             {order.senderNumber && (
-                              <span className="block text-[10px] text-slate-400 font-mono">Sender: {order.senderNumber}</span>
+                              <span className="block text-[10px] text-slate-500 dark:text-slate-400 font-mono">Sender: {order.senderNumber}</span>
                             )}
                           </td>
 
-                          <td className="p-4 font-bold text-white font-mono">
+                          <td className="p-4 font-bold text-slate-900 dark:text-white font-mono">
                             {order.totalBdt ? `৳${order.totalBdt.toLocaleString()} BDT` : `$${order.total.toFixed(2)}`}
                           </td>
 
                           <td className="p-4">
                             <div className="space-y-1">
                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase border inline-flex items-center gap-1.5 ${
-                                isDelivered ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/30' :
-                                isPaid ? 'bg-cyan-950/80 text-cyan-300 border-cyan-500/30' :
-                                isPending ? 'bg-amber-950/80 text-amber-400 border-amber-500/30 animate-pulse' :
-                                'bg-red-950/80 text-red-400 border-red-500/30'
+                                isDelivered ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' :
+                                isPaid ? 'bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-500/30' :
+                                isPending ? 'bg-amber-50 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30 animate-pulse' :
+                                'bg-red-50 dark:bg-red-950/80 text-red-700 dark:text-red-400 border-red-200 dark:border-red-500/30'
                               }`}>
                                 {isPending ? '● Verifying TrxID' : isDelivered ? '✓ Delivered & Active' : isPaid ? '⚡ Payment Verified' : order.paymentStatus}
                               </span>
 
                               {order.transactionId && (
-                                <span className="text-[10px] text-slate-400 font-mono block">
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono block">
                                   TrxID: {order.transactionId}
                                 </span>
                               )}
@@ -657,9 +657,9 @@ export default function CustomerDashboardPage() {
                           <td className="p-4 text-right">
                             <button
                               onClick={() => setViewingInvoice(order)}
-                              className="px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-xs font-bold text-slate-200 border border-white/[0.08] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-xs font-bold text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/[0.08] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                             >
-                              <FileText className="h-3.5 w-3.5 text-cyan-400" />
+                              <FileText className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
                               <span>Receipt</span>
                             </button>
                           </td>
@@ -681,21 +681,21 @@ export default function CustomerDashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Create New Ticket Form */}
           <div className="lg:col-span-5 space-y-4">
-            <div className="p-5 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-4 shadow-lg">
+            <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-lg">
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-white">Create Support Ticket</h3>
-                <span className="text-[10px] uppercase font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/20">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Create Support Ticket</h3>
+                <span className="text-[10px] uppercase font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-500/20">
                   24/7 SLA
                 </span>
               </div>
 
               <form onSubmit={handleCreateTicket} className="space-y-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 block mb-1">Inquiry Category</label>
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Inquiry Category</label>
                   <select
                     value={ticketCategory}
                     onChange={e => setTicketCategory(e.target.value as typeof ticketCategory)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   >
                     <option value="credential_issue">Login / Credential Help</option>
                     <option value="renewal_help">Warranty Claim & Renewal Help</option>
@@ -705,25 +705,25 @@ export default function CustomerDashboardPage() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 block mb-1">Subject</label>
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Subject</label>
                   <input
                     type="text"
                     value={ticketSubject}
                     onChange={e => setTicketSubject(e.target.value)}
                     placeholder="Brief description of the request…"
-                    className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-400 block mb-1">Message Details</label>
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Message Details</label>
                   <textarea
                     rows={4}
                     value={ticketMessage}
                     onChange={e => setTicketMessage(e.target.value)}
                     placeholder="Explain your question or paste relevant details..."
-                    className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-indigo-500 resize-none"
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 resize-none"
                     required={!ticketImage}
                   />
                 </div>
@@ -750,13 +750,13 @@ export default function CustomerDashboardPage() {
                   />
 
                   {ticketImage ? (
-                    <div className="flex items-center gap-2 p-2 rounded-xl bg-zinc-950 border border-white/10">
+                    <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/10">
                       <img src={ticketImage} alt="Attachment" className="h-10 w-10 object-cover rounded-lg" />
-                      <span className="flex-1 text-[10px] text-slate-400">Compressed image attached</span>
+                      <span className="flex-1 text-[10px] text-slate-500 dark:text-slate-400">Compressed image attached</span>
                       <button
                         type="button"
                         onClick={() => setTicketImage(null)}
-                        className="p-1 rounded text-slate-400 hover:text-red-400 cursor-pointer"
+                        className="p-1 rounded text-slate-400 hover:text-red-500 cursor-pointer"
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>
@@ -766,9 +766,9 @@ export default function CustomerDashboardPage() {
                       type="button"
                       disabled={isCompressingTicketImg}
                       onClick={() => ticketFileInputRef.current?.click()}
-                      className="w-full py-2 px-3 rounded-xl bg-zinc-950 hover:bg-zinc-850 border border-white/10 text-slate-300 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-950 dark:hover:bg-zinc-850 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
                     >
-                      {isCompressingTicketImg ? <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-400" /> : <ImageIcon className="h-3.5 w-3.5" />}
+                      {isCompressingTicketImg ? <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-500 dark:text-cyan-400" /> : <ImageIcon className="h-3.5 w-3.5" />}
                       <span>Attach Error Screenshot</span>
                     </button>
                   )}
@@ -787,28 +787,28 @@ export default function CustomerDashboardPage() {
 
             {/* List of user tickets */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-400">Your Ticket Threads ({tickets.length})</h4>
+              <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400">Your Ticket Threads ({tickets.length})</h4>
               {tickets.map(t => (
                 <div
                   key={t.id}
                   onClick={() => setSelectedTicketId(t.id)}
                   className={`p-3.5 rounded-2xl border cursor-pointer transition-all space-y-1 ${
                     selectedTicketId === t.id
-                      ? 'bg-indigo-950/40 border-indigo-500/50 shadow-md'
-                      : 'bg-zinc-900 border-white/[0.06] hover:bg-zinc-800'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-500/50 shadow-sm'
+                      : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/[0.06] hover:bg-slate-50 dark:hover:bg-zinc-800'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-cyan-400 font-bold">{t.ticketNumber}</span>
+                    <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">{t.ticketNumber}</span>
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
-                      t.status === 'open' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
-                      t.status === 'in_progress' ? 'bg-blue-950/60 text-blue-400 border-blue-500/30' :
-                      'bg-zinc-800 text-zinc-400 border-white/10'
+                      t.status === 'open' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' :
+                      t.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' :
+                      'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10'
                     }`}>
                       {t.status.replace('_', ' ')}
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-white truncate">{t.subject}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{t.subject}</p>
                 </div>
               ))}
             </div>
@@ -817,16 +817,16 @@ export default function CustomerDashboardPage() {
           {/* Active Ticket Conversation */}
           <div className="lg:col-span-7">
             {activeTicket ? (
-              <div className="h-[580px] rounded-3xl bg-zinc-900 border border-white/[0.08] flex flex-col shadow-xl">
-                <div className="p-4 border-b border-white/[0.06] bg-zinc-950 flex justify-between items-center rounded-t-3xl">
+              <div className="h-[580px] rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] flex flex-col shadow-sm dark:shadow-xl">
+                <div className="p-4 border-b border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-zinc-950 flex justify-between items-center rounded-t-3xl">
                   <div>
-                    <span className="text-[10px] font-mono text-cyan-400 font-bold">{activeTicket.ticketNumber}</span>
-                    <h4 className="text-sm font-bold text-white">{activeTicket.subject}</h4>
+                    <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">{activeTicket.ticketNumber}</span>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{activeTicket.subject}</h4>
                   </div>
                   <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
-                    activeTicket.status === 'open' ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30' :
-                    activeTicket.status === 'in_progress' ? 'bg-blue-950/60 text-blue-400 border-blue-500/30' :
-                    'bg-zinc-800 text-zinc-400 border-white/10'
+                    activeTicket.status === 'open' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' :
+                    activeTicket.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' :
+                    'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10'
                   }`}>
                     {activeTicket.status.replace('_', ' ')}
                   </span>
@@ -837,13 +837,13 @@ export default function CustomerDashboardPage() {
                     const isUser = msg.sender === 'user';
                     return (
                       <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                        <span className="text-[11px] text-slate-400 mb-1">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 mb-1">
                           {msg.senderName} · {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         <div className={`p-3.5 rounded-2xl max-w-sm text-xs leading-relaxed space-y-2 ${
                           isUser
                             ? 'bg-indigo-600 text-white rounded-tr-none shadow-md'
-                            : 'bg-zinc-800 text-slate-200 border border-white/[0.06] rounded-tl-none shadow-sm'
+                            : 'bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/[0.06] rounded-tl-none shadow-sm'
                         }`}>
                           {msg.imageUrl && (
                             <img src={msg.imageUrl} alt="Attachment" className="rounded-xl max-h-44 object-cover border border-white/15" />
@@ -856,12 +856,12 @@ export default function CustomerDashboardPage() {
                 </div>
 
                 {/* Reply bar with image attachment */}
-                <div className="p-3.5 bg-zinc-950 border-t border-white/[0.06] rounded-b-3xl space-y-2">
+                <div className="p-3.5 bg-slate-50 dark:bg-zinc-950 border-t border-slate-200 dark:border-white/[0.06] rounded-b-3xl space-y-2">
                   {replyImage && (
                     <div className="flex items-center gap-2 px-1">
-                      <img src={replyImage} alt="Preview" className="h-10 w-10 object-cover rounded-lg border border-white/10" />
-                      <span className="text-[10px] text-slate-400 flex-1">Image attached</span>
-                      <button onClick={() => setReplyImage(null)} className="p-1 text-slate-400 hover:text-red-400 cursor-pointer">
+                      <img src={replyImage} alt="Preview" className="h-10 w-10 object-cover rounded-lg border border-slate-200 dark:border-white/10" />
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 flex-1">Image attached</span>
+                      <button onClick={() => setReplyImage(null)} className="p-1 text-slate-400 hover:text-red-500 cursor-pointer">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
@@ -891,10 +891,10 @@ export default function CustomerDashboardPage() {
                       type="button"
                       disabled={isCompressingReplyImg}
                       onClick={() => replyFileInputRef.current?.click()}
-                      className="p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-slate-400 hover:text-white border border-white/10 transition-colors cursor-pointer"
+                      className="p-2.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
                       title="Attach image"
                     >
-                      {isCompressingReplyImg ? <Loader2 className="h-4 w-4 animate-spin text-cyan-400" /> : <ImageIcon className="h-4 w-4" />}
+                      {isCompressingReplyImg ? <Loader2 className="h-4 w-4 animate-spin text-cyan-500 dark:text-cyan-400" /> : <ImageIcon className="h-4 w-4" />}
                     </button>
 
                     <input
@@ -902,7 +902,7 @@ export default function CustomerDashboardPage() {
                       value={replyInput}
                       onChange={e => setReplyInput(e.target.value)}
                       placeholder="Type your reply to support ops…"
-                      className="flex-1 px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/[0.1] text-xs text-white focus:outline-none focus:border-indigo-500"
+                      className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                     />
                     <button
                       type="submit"
@@ -915,7 +915,7 @@ export default function CustomerDashboardPage() {
                 </div>
               </div>
             ) : (
-              <div className="h-64 rounded-3xl bg-zinc-900 border border-white/[0.08] flex items-center justify-center text-slate-500 text-sm">
+              <div className="h-64 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
                 Select a ticket thread to view messages.
               </div>
             )}
@@ -929,11 +929,11 @@ export default function CustomerDashboardPage() {
       {activeTab === 'settings' && (
         <div className="max-w-3xl space-y-6">
           <div>
-            <h2 className="text-xl font-black text-white tracking-tight">Account Settings & Customization</h2>
-            <p className="text-xs text-slate-400">Manage profile identity, notification preferences, default auto-renewal, and security.</p>
+            <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Account Settings & Customization</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Manage profile identity, notification preferences, default auto-renewal, and security.</p>
           </div>
 
-          <div className="p-6 rounded-3xl bg-zinc-900 border border-white/[0.08] space-y-6 shadow-xl">
+          <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] space-y-6 shadow-sm dark:shadow-xl">
             {/* Hidden Avatar File Input */}
             <input
               ref={avatarFileInputRef}
@@ -944,7 +944,7 @@ export default function CustomerDashboardPage() {
             />
 
             {/* User Identity Header with Upload Avatar Action */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-zinc-950/80 border border-white/[0.06]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-zinc-950/80 border border-slate-200 dark:border-white/[0.06]">
               <div className="flex items-center gap-4">
                 <div className="relative group shrink-0">
                   <img

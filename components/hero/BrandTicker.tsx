@@ -11,7 +11,7 @@ export const BrandTicker: React.FC = () => {
     {
       name: 'OpenAI',
       logo: (
-        <svg className="h-9 sm:h-11 w-auto text-zinc-200 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
+        <svg className="h-9 sm:h-11 w-auto text-slate-800 dark:text-zinc-200 group-hover:text-slate-950 dark:group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="currentColor">
           <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.259 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7466-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.8956zm16.0993 3.8558L12.5973 8.3829l2.02-1.1635a.0804.0804 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.402-.6863zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L8.907 9.2297V6.8974a.0662.0662 0 0 1 .0331-.0615L13.78 4.05a4.4992 4.4992 0 0 1 6.6708 4.6784zm-9.3986 4.7291l-2.6104-1.5052 2.6104-1.5052 2.6104 1.5052-2.6104 1.5052z" />
         </svg>
       ),
@@ -58,8 +58,16 @@ export const BrandTicker: React.FC = () => {
     {
       name: 'Spotify',
       logo: (
-        <svg className="h-9 sm:h-11 w-auto" viewBox="0 0 24 24" fill="#1ED760">
-          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.516 17.307c-.218.358-.684.474-1.042.256-2.86-1.748-6.46-2.144-10.7-1.176-.407.093-.815-.16-.908-.567-.093-.408.16-.816.568-.908 4.64-1.06 8.62-.61 11.826 1.353.358.218.474.684.256 1.042zm1.474-3.273c-.274.446-.86.588-1.306.314-3.274-2.012-8.264-2.596-12.136-1.42-.497.15-1.028-.135-1.178-.632-.15-.497.135-1.028.632-1.178 4.42-1.342 9.914-.69 13.674 1.62.446.274.588.86.314 1.306zm.126-3.41c-3.926-2.332-10.395-2.547-14.15-1.407-.603.183-1.246-.164-1.428-.767-.183-.603.164-1.246.767-1.428 4.315-1.31 11.45-1.06 15.96 1.62.544.323.722 1.03.4 1.574-.324.544-1.03.722-1.574.408z" />
+        <svg className="h-9 sm:h-11 w-auto" viewBox="0 0 24 24" fill="#1DB954">
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+        </svg>
+      ),
+    },
+    {
+      name: 'ChatGPT',
+      logo: (
+        <svg className="h-9 sm:h-11 w-auto text-emerald-500" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.259 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7466-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1683a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4947zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1683a.0757.0757 0 0 1-.071 0l-4.8303-2.7866A4.504 4.504 0 0 1 2.3408 7.8956zm16.0993 3.8558L12.5973 8.3829l2.02-1.1635a.0804.0804 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.402-.6863zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L8.907 9.2297V6.8974a.0662.0662 0 0 1 .0331-.0615L13.78 4.05a4.4992 4.4992 0 0 1 6.6708 4.6784zm-9.3986 4.7291l-2.6104-1.5052 2.6104-1.5052 2.6104 1.5052-2.6104 1.5052z" />
         </svg>
       ),
     },
@@ -72,18 +80,10 @@ export const BrandTicker: React.FC = () => {
       ),
     },
     {
-      name: 'Adobe',
-      logo: (
-        <svg className="h-8.5 sm:h-10.5 w-auto" viewBox="0 0 24 24" fill="#FF0000">
-          <path d="M13.96 4h4.48L24 20h-4.32l-2.08-5.12h-4.24l2.4-6.48zm-3.92 0L4.32 20H0L5.68 4h4.36zM12 10.88l2.56 6.8h-5.12L12 10.88z" />
-        </svg>
-      ),
-    },
-    {
       name: 'Cursor',
       logo: (
-        <div className="h-9 sm:h-11 w-9 sm:w-11 rounded-2xl bg-zinc-900 border border-zinc-700 flex items-center justify-center font-mono font-black text-lg text-cyan-400">
-          ΓîÑ
+        <div className="h-9 sm:h-11 w-9 sm:w-11 rounded-2xl bg-slate-100 dark:bg-zinc-900 border border-slate-300 dark:border-zinc-700 flex items-center justify-center font-mono font-black text-lg text-cyan-600 dark:text-cyan-400 shadow-sm">
+          ⚡
         </div>
       ),
     },
@@ -104,8 +104,8 @@ export const BrandTicker: React.FC = () => {
     <div ref={containerRef} className="relative overflow-hidden py-6 sm:py-8 bg-transparent" style={{ transform: 'translateZ(0)' }}>
       
       {/* Soft Edge Fade Masks matching page background */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 sm:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-32 bg-gradient-to-r from-slate-50 dark:from-zinc-950 to-transparent z-10" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 sm:w-32 bg-gradient-to-l from-slate-50 dark:from-zinc-950 to-transparent z-10" />
 
       {/* Hero-Sized Floating Brand Marquee */}
       <div className="overflow-hidden select-none">
@@ -116,12 +116,12 @@ export const BrandTicker: React.FC = () => {
           {marqueeItems.map((brand, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-3.5 px-5 py-2.5 rounded-2xl bg-zinc-900/85 hover:bg-zinc-900 border border-white/[0.06] hover:border-cyan-500/40 text-zinc-400 hover:text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] shrink-0 cursor-pointer group"
+              className="flex items-center gap-3.5 px-5 py-2.5 rounded-2xl bg-white dark:bg-zinc-900/85 hover:bg-slate-50 dark:hover:bg-zinc-900 border border-slate-200 dark:border-white/[0.06] hover:border-cyan-500/40 text-slate-700 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_4px_20px_rgba(6,182,212,0.15)] shadow-sm dark:shadow-none shrink-0 cursor-pointer group"
             >
-              <div className="opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-200">
+              <div className="opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-200">
                 {brand.logo}
               </div>
-              <span className="text-sm sm:text-base font-black tracking-wider text-zinc-300 group-hover:text-white transition-colors uppercase font-mono">
+              <span className="text-sm sm:text-base font-black tracking-wider text-slate-800 dark:text-zinc-300 group-hover:text-slate-950 dark:group-hover:text-white transition-colors uppercase font-mono">
                 {brand.name}
               </span>
             </div>

@@ -152,7 +152,7 @@ export const HeroBanner: React.FC = () => {
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               href="#catalog"
-              className="px-8 py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/10 font-bold text-xs tracking-wider uppercase transition-colors block"
+              className="px-8 py-3.5 rounded-xl bg-white hover:bg-slate-100 text-slate-950 border border-slate-200 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-200 dark:border-white/10 font-bold text-xs tracking-wider uppercase transition-colors block shadow-lg dark:shadow-none"
             >
               View All Plans
             </motion.a>
