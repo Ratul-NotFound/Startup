@@ -7,6 +7,12 @@
   --foreground: #f4f4f5;
 }
 
+html.light {
+  --background: #f8fafc;
+  --foreground: #09090b;
+  color-scheme: light;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
@@ -20,6 +26,7 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 /* ─── CRITICAL: prefers-reduced-motion ─────────────────────────────────
@@ -252,5 +259,110 @@ section,
     background: #ffffff !important;
     color: #000000 !important;
   }
+}
+
+/* ─── Modern Aesthetic Light Theme System ──────────────────────────────
+   Engineered for clean visual excellence, high-contrast typography, 
+   pristine snow-white cards, and soft ambient shadows */
+html.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Background overrides in Light Mode */
+html.light .bg-zinc-950,
+html.light .bg-black {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-zinc-900,
+html.light .bg-zinc-900\/95,
+html.light .bg-zinc-900\/90,
+html.light .bg-zinc-900\/80,
+html.light .bg-zinc-900\/60,
+html.light .bg-zinc-900\/40,
+html.light .bg-zinc-950\/90,
+html.light .bg-zinc-950\/80 {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-zinc-800,
+html.light .bg-zinc-800\/80,
+html.light .bg-zinc-800\/60 {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .bg-zinc-950\/98 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+}
+
+/* Borders in Light Mode */
+html.light .border-white\/10,
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.07\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/5,
+html.light .border-white\/20,
+html.light .border-white\/15 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Text Colors in Light Mode */
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-zinc-100 {
+  color: #0f172a !important;
+}
+
+html.light .text-zinc-200 {
+  color: #1e293b !important;
+}
+
+html.light .text-zinc-300 {
+  color: #334155 !important;
+}
+
+html.light .text-zinc-400 {
+  color: #64748b !important;
+}
+
+html.light .text-zinc-500 {
+  color: #94a3b8 !important;
+}
+
+/* Maintain high-contrast text on solid gradient/colored buttons & badges */
+html.light .bg-gradient-to-r .text-white,
+html.light button.bg-cyan-600,
+html.light button.bg-blue-600,
+html.light button.bg-emerald-600,
+html.light button.bg-rose-600,
+html.light [class*="bg-gradient-"] .text-white,
+html.light [class*="bg-gradient-"] span,
+html.light [class*="bg-cyan-600"] span,
+html.light [class*="bg-blue-600"] span,
+html.light [class*="bg-amber-500"] span {
+  color: #ffffff !important;
+}
+
+/* Clean ambient shadows for cards & dropdowns in Light Mode */
+html.light .shadow-2xl,
+html.light .shadow-xl,
+html.light .shadow-lg,
+html.light .contain-card {
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Scrollbar styling in Light Mode */
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 

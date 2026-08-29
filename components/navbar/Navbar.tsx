@@ -9,6 +9,7 @@ import {
   Shield, ChevronDown,
 } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
@@ -109,7 +110,10 @@ export const Navbar: React.FC = () => {
             </nav>
 
             {/* Right Actions */}
-            <div className="flex items-center gap-2.5" suppressHydrationWarning>
+            <div className="flex items-center gap-2 sm:gap-2.5" suppressHydrationWarning>
+
+              {/* Theme Toggle Button */}
+              <ThemeToggle />
 
               {/* Cart */}
               <button
@@ -245,6 +249,12 @@ export const Navbar: React.FC = () => {
                 {link.label}
               </Link>
             ))}
+
+            {/* Theme Toggle row in Mobile Menu */}
+            <div className="pt-2 pb-1 flex items-center justify-between border-b border-white/[0.04]">
+              <span className="text-sm font-medium text-zinc-400">Theme</span>
+              <ThemeToggle showLabel />
+            </div>
 
             {/* Admin link — ONLY for admin or superadmin in mobile menu */}
             {(isAdmin || isSuperAdmin) && (

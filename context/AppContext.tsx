@@ -345,7 +345,10 @@ interface AppContextType {
   adminDeleteQuickMessage: (id: string) => Promise<void>;
   adminResetQuickMessages: () => Promise<void>;
 
-  // Global UI
+  // Global UI & Theme
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
+  toggleTheme: () => void;
   activeSearchQuery: string;
   setActiveSearchQuery: (query: string) => void;
   activeCategoryFilter: string;
@@ -357,6 +360,40 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isInitialSyncReady, setIsInitialSyncReady] = useState(false);
+  const [theme, setThemeState] = useState<'dark' | 'light'>('dark');
+
+  // Load and apply theme on initial mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedTheme = (localStorage.getItem('keyoon_theme') as 'dark' | 'light') || 'dark';
+    setThemeState(savedTheme);
+    if (savedTheme === 'light') {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    }
+  }, []);
+
+  const setTheme = useCallback((newTheme: 'dark' | 'light') => {
+    setThemeState(newTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('keyoon_theme', newTheme);
+      if (newTheme === 'light') {
+        document.documentElement.classList.add('light');
+        document.documentElement.classList.remove('dark');
+      } else {
+        document.documentElement.classList.add('dark');
+        document.documentElement.classList.remove('light');
+      }
+    }
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  }, [theme, setTheme]);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -3339,6 +3376,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Without this, every setState call in AppProvider re-creates the value
   // object and forces ALL useApp() consumers to re-render simultaneously.
   const contextValue = useMemo(() => ({
+    theme, setTheme, toggleTheme,
     products, selectedProduct, setSelectedProduct,
     cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart,
     appliedCoupon, applyCoupon, removeCoupon, isItemEligibleForCoupon, isCouponAlreadyUsed, isSpecialOfferClaimed, cartSubtotal, cartDiscount, cartTotal,
@@ -3381,6 +3419,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     isInitialSyncReady,
   }), [
     isInitialSyncReady,
+    theme, setTheme, toggleTheme,
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
     user, firebaseUser, isAuthModalOpen, isAdmin, isSuperAdmin, adminList,
