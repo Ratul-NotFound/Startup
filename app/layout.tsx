@@ -18,8 +18,8 @@ import { ThemeScript } from '@/components/ui/ThemeScript';
 export const metadata: Metadata = {
   metadataBase: new URL('https://keyoon.com'),
   title: {
-    default: 'Keyoon — Premium Digital Subscriptions & Retail Marketplace | ChatGPT, Netflix, Claude, Gemini',
-    template: '%s | Keyoon — Premium Subscriptions',
+    default: 'Keyoon ΓÇö Premium Digital Subscriptions & Retail Marketplace | ChatGPT, Netflix, Claude, Gemini',
+    template: '%s | Keyoon ΓÇö Premium Subscriptions',
   },
   description: 'Buy 100% genuine digital subscriptions on Keyoon. Instant 30-second automated vault delivery for ChatGPT Plus, Claude Pro, Netflix 4K UHD, Gemini Advanced, YouTube Premium, Adobe Creative Cloud, and NordVPN with bKash, Nagad & Rocket. 100% replacement warranty.',
   keywords: [
@@ -54,8 +54,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://keyoon.com',
-    siteName: 'Keyoon — Premium Subscriptions Marketplace',
-    title: 'Keyoon — World-Class Retail Subscription Platform',
+    siteName: 'Keyoon ΓÇö Premium Subscriptions Marketplace',
+    title: 'Keyoon ΓÇö World-Class Retail Subscription Platform',
     description: 'Instant 30s automated delivery for ChatGPT Plus, Claude Pro, Netflix 4K, Gemini Advanced, and 20+ top subscriptions with full replacement warranty.',
     images: [
       {
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary',
-    title: 'Keyoon — World-Class Retail Subscription Platform',
+    title: 'Keyoon ΓÇö World-Class Retail Subscription Platform',
     description: 'Instant automated delivery for ChatGPT Plus, Claude Pro, Netflix 4K, Gemini Advanced with bKash, Nagad, and Rocket.',
     images: ['https://keyoon.com/images/Fabicon.png'],
     creator: '@keyoon',
@@ -111,7 +111,7 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <head suppressHydrationWarning>
         <JsonLd />
-        {/* Favicon & Web App Icons — Googlebot-Image & Browser compliant */}
+        {/* Favicon & Web App Icons ΓÇö Googlebot-Image & Browser compliant */}
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" type="image/png" sizes="512x512" href="/icon.png" />
         <link rel="icon" type="image/png" href="/images/Fabicon.png" />
@@ -125,14 +125,14 @@ export default function RootLayout({
         <meta name="format-detection" content="telephone=no, email=no, address=no" />
         {/* Canonical URL */}
         <link rel="canonical" href="https://keyoon.com" />
-        {/* Fonts — preconnect first, then load with swap to prevent FOIT */}
+        {/* Fonts ΓÇö preconnect first, then load with swap to prevent FOIT */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
-        {/* Theme init script – suppresses hydration warning since localStorage is client-only */}
+        {/* Theme init script ΓÇô suppresses hydration warning since localStorage is client-only */}
         <ThemeScript />
       </head>
       <body className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200 transition-colors duration-200" suppressHydrationWarning>

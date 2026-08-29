@@ -82,7 +82,7 @@ export const HeroBanner: React.FC = () => {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
           </span>
           <span>{current.tag}</span>
-          <span className="text-zinc-500">•</span>
+          <span className="text-zinc-500">ΓÇó</span>
           <span className="text-zinc-300">FULL WARRANTY INCLUDED</span>
         </div>
 
@@ -152,7 +152,7 @@ export const HeroBanner: React.FC = () => {
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.96 }}
               href="#catalog"
-              className="px-8 py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 dark:bg-zinc-900 dark:hover:bg-zinc-800 dark:text-zinc-200 border border-slate-200 dark:border-white/10 font-bold text-xs tracking-wider uppercase transition-colors block shadow-md"
+              className="px-8 py-3.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/10 font-bold text-xs tracking-wider uppercase transition-colors block"
             >
               View All Plans
             </motion.a>

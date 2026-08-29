@@ -22,7 +22,7 @@ import {
   deleteDoc, query, where, orderBy, onSnapshot, writeBatch, arrayUnion,
 } from 'firebase/firestore';
 
-// ─── localStorage TTL Cache Helper ───────────────────────────────────
+// ΓöÇΓöÇΓöÇ localStorage TTL Cache Helper ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 // Saves Firestore reads and hydrates state instantly to eliminate content flashes
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -50,7 +50,7 @@ export const bustCache = (...keys: string[]): void => {
   keys.forEach(k => { try { localStorage.removeItem(k); } catch { } });
 };
 
-// ─── Superadmin emails ───────────────────────────────────────────────
+// ΓöÇΓöÇΓöÇ Superadmin emails ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export const SUPERADMIN_EMAILS = ['m.h.ratul18@gmail.com', 'admin@keyoon.com'];
 export const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
 
@@ -60,7 +60,7 @@ export const isSuperadminEmail = (email?: string | null): boolean => {
   return SUPERADMIN_EMAILS.includes(clean);
 };
 
-// ─── Default Special Offers & Exclusive Deals Settings ─────────────
+// ΓöÇΓöÇΓöÇ Default Special Offers & Exclusive Deals Settings ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export const DEFAULT_SPECIAL_OFFERS_SETTINGS: SpecialOffersSettings = {
   isSectionHidden: false,
   badgeTitle: 'Special Offers & Promo Hub',
@@ -68,7 +68,7 @@ export const DEFAULT_SPECIAL_OFFERS_SETTINGS: SpecialOffersSettings = {
   sectionSubtitle: 'Swipe or scroll to claim promo codes, giveaways, and exclusive subscription discounts.',
 };
 
-// ─── Default Category Configuration ────────────────────────────────
+// ΓöÇΓöÇΓöÇ Default Category Configuration ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 export const DEFAULT_CATEGORY_CONFIGS: CategoryConfig[] = [
   {
     id: 'ai',
@@ -110,45 +110,45 @@ export const DEFAULT_CATEGORY_CONFIGS: CategoryConfig[] = [
 export const DEFAULT_QUICK_MESSAGES: QuickMessage[] = [
   {
     id: 'qm_credentials',
-    label: '🔑 Get Credentials',
+    label: '≡ƒöæ Get Credentials',
     query: 'Where do I find my account login credentials after ordering?',
-    answer: '🔑 Hello {CUSTOMER_NAME}! Your credentials are automatically unlocked in your personal Keyoon Vault. Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.',
+    answer: '≡ƒöæ Hello {CUSTOMER_NAME}! Your credentials are automatically unlocked in your personal Keyoon Vault. Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.',
     keywords: ['credential', 'credentials', 'password', 'vault', 'login', 'account', 'email', 'pin', 'key'],
     order: 1,
     isActive: true,
   },
   {
     id: 'qm_bkash_nagad',
-    label: '💳 bKash / Nagad Help',
+    label: '≡ƒÆ│ bKash / Nagad Help',
     query: 'How do I complete payment using bKash, Nagad, or Rocket?',
-    answer: '💳 Official Mobile Payment Numbers:\n• bKash: {BKASH_NUMBER}\n• Nagad: {NAGAD_NUMBER}\n\nSend the exact amount and submit your TrxID in the checkout popup for instant 2-minute verification!',
+    answer: '≡ƒÆ│ Official Mobile Payment Numbers:\nΓÇó bKash: {BKASH_NUMBER}\nΓÇó Nagad: {NAGAD_NUMBER}\n\nSend the exact amount and submit your TrxID in the checkout popup for instant 2-minute verification!',
     keywords: ['bkash', 'nagad', 'rocket', 'upay', 'payment', 'pay', 'send money', 'trxid', 'transaction', 'cashout', 'send', 'number'],
     order: 2,
     isActive: true,
   },
   {
     id: 'qm_order_status',
-    label: '⚡ Order Status',
+    label: 'ΓÜí Order Status',
     query: 'Can you help me check the status of my latest order?',
-    answer: '📦 Latest Order: {ORDER_NUMBER}\n• Status: [{ORDER_STATUS}]\n• Items: {ORDER_ITEMS}\n• Total: {ORDER_TOTAL}\n• TrxID: {TRX_ID}\n\nInstant orders are delivered to your Vault within 30 seconds!',
+    answer: '≡ƒôª Latest Order: {ORDER_NUMBER}\nΓÇó Status: [{ORDER_STATUS}]\nΓÇó Items: {ORDER_ITEMS}\nΓÇó Total: {ORDER_TOTAL}\nΓÇó TrxID: {TRX_ID}\n\nInstant orders are delivered to your Vault within 30 seconds!',
     keywords: ['order', 'track', 'status', 'delivery', 'pending', 'deliver', 'when', 'delay', 'process'],
     order: 3,
     isActive: true,
   },
   {
     id: 'qm_warranty',
-    label: '🛡️ Warranty Claim',
+    label: '≡ƒ¢í∩╕Å Warranty Claim',
     query: 'How does the full replacement warranty work?',
-    answer: '🛡️ All subscriptions include a 100% Full-Term Replacement Warranty. If any login experiences an interruption, our automated monitoring engine or 24/7 support ops resolves or replaces your slot immediately.',
+    answer: '≡ƒ¢í∩╕Å All subscriptions include a 100% Full-Term Replacement Warranty. If any login experiences an interruption, our automated monitoring engine or 24/7 support ops resolves or replaces your slot immediately.',
     keywords: ['warranty', 'replacement', 'renew', 'not working', 'fix', 'broken', 'issue', 'expired', 'down', 'problem', 'screen limit'],
     order: 4,
     isActive: true,
   },
   {
     id: 'qm_direct_upgrade',
-    label: '✨ Direct Email Upgrade',
+    label: 'Γ£¿ Direct Email Upgrade',
     query: 'Can I upgrade my existing personal email account instead of getting a new one?',
-    answer: '✨ Yes! For tiers marked as "Direct Upgrade" or "Custom Email", provide your email address in the checkout box, and we will apply the official premium subscription directly to your existing account without changing your password.',
+    answer: 'Γ£¿ Yes! For tiers marked as "Direct Upgrade" or "Custom Email", provide your email address in the checkout box, and we will apply the official premium subscription directly to your existing account without changing your password.',
     keywords: ['upgrade', 'my email', 'personal email', 'existing account', 'custom email', 'direct', 'own account', 'invite'],
     order: 5,
     isActive: true,
@@ -452,7 +452,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     navbarLogoUrl: '/images/Fabicon.png',
   });
 
-  // Currency detection state — fully automatic, no user controls
+  // Currency detection state ΓÇö fully automatic, no user controls
   const DEFAULT_CURRENCY_SETTINGS: CurrencySettings = {
     bdtEnabled: true,
     bdtCountries: ['BD'],
@@ -635,7 +635,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (nextType === 'special' && (!prod.specialConfig || !prod.specialConfig.tasks || prod.specialConfig.tasks.length === 0)) {
       updates.specialConfig = {
         campaignTitle: `${prod.name} Special Campaign Deal`,
-        campaignBadge: '⚡ Flash Mission Deal',
+        campaignBadge: 'ΓÜí Flash Mission Deal',
         campaignDescription: 'Complete quick community tasks below to unlock exclusive discounted pricing!',
         unlockedCouponCode: '',
         discountPercent: prod.pricingTiers[0]?.discountPercentage || 20,
@@ -714,7 +714,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Interactive Social & Review Task Verification System ───────────
+  // ΓöÇΓöÇΓöÇ Interactive Social & Review Task Verification System ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const [completedTasksMap, setCompletedTasksMap] = useState<Record<string, Record<string, boolean>>>({});
 
   useEffect(() => {
@@ -777,7 +777,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         discountPercent: prod.specialConfig.discountPercent || (prod.specialConfig.isFreeProduct ? 100 : prod.pricingTiers[0]?.discountPercentage || 20),
         description: prod.specialConfig.campaignDescription || `Exclusive mission deal for ${prod.name}`,
         isSpecialOffer: !!prod.specialConfig.isSpecialOfferSynced,
-        offerTag: prod.specialConfig.campaignBadge || (prod.specialConfig.isFreeProduct ? '🎁 FREE GIVEAWAY' : '⚡ Special Product Deal'),
+        offerTag: prod.specialConfig.campaignBadge || (prod.specialConfig.isFreeProduct ? '≡ƒÄü FREE GIVEAWAY' : 'ΓÜí Special Product Deal'),
         offerTitle: prod.specialConfig.campaignTitle || `${prod.name} Campaign Offer`,
         offerImage: prod.logo,
         type: prod.specialConfig.isFreeProduct || prod.specialConfig.discountPercent === 100 ? 'giveaway' : 'special_deal',
@@ -819,14 +819,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const bdtRate = currencySettings.bdtRate || 125;
 
   // formatPrice: takes an amount in BDT (Bangladeshi Taka) and returns the correctly formatted string.
-  // - If the user is from Bangladesh (detectedCurrency === 'BDT'), displays directly in Bengali Taka (৳).
+  // - If the user is from Bangladesh (detectedCurrency === 'BDT'), displays directly in Bengali Taka (αº│).
   // - If the user is from another country (detectedCurrency === 'USD'), converts BDT to USD ($) using bdtRate (amount / bdtRate).
   const formatPrice = useCallback((amount: number): string => {
-    if (typeof amount !== 'number' || isNaN(amount)) return '৳0';
+    if (typeof amount !== 'number' || isNaN(amount)) return 'αº│0';
 
     if (detectedCurrency === 'BDT') {
       const inBdt = Math.round(amount);
-      return `৳${inBdt.toLocaleString('en-BD')}`;
+      return `αº│${inBdt.toLocaleString('en-BD')}`;
     }
 
     // International visitor -> convert BDT to USD ($)
@@ -895,15 +895,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Separate ref for admin-wide global listeners (never cleared on user sub updates)
   const adminUnsubscribersRef = useRef<(() => void)[]>([]);
 
-  // ─── Analytics init ────────────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Analytics init ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => { initAnalytics(); }, []);
 
-  // ─── Handle Google redirect sign-in result ─────────────────────────
+  // ΓöÇΓöÇΓöÇ Handle Google redirect sign-in result ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
-          // User just came back from Google redirect — onAuthStateChanged will
+          // User just came back from Google redirect ΓÇö onAuthStateChanged will
           // fire and set the user automatically, nothing else needed here.
           console.log('[Auth] Redirect sign-in successful:', result.user.email);
         }
@@ -916,8 +916,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
   }, []);
 
-  // ─── Auto-seed Firestore if empty on startup ──────────────────────
-  // Guard: skip ALL Firestore reads if already seeded (saves ~7 reads × N visitors/day)
+  // ΓöÇΓöÇΓöÇ Auto-seed Firestore if empty on startup ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // Guard: skip ALL Firestore reads if already seeded (saves ~7 reads ├ù N visitors/day)
   const SEED_FLAG = 'keyoon_db_seeded_v1';
 
   const seedFirestoreIfEmpty = useCallback(async () => {
@@ -959,7 +959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // ─── Global Data Listeners ────────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Global Data Listeners ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   // REAL-TIME (onSnapshot): products, coupons, payment_methods (100% database-driven)
   // CACHED (getDoc/getDocs + 10-min localStorage TTL): everything else
   useEffect(() => {
@@ -1016,7 +1016,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     });
 
-    // 2. REAL-TIME: coupons (discount codes — validity must be instant)
+    // 2. REAL-TIME: coupons (discount codes ΓÇö validity must be instant)
     const unsubCoupons = onSnapshot(collection(db, 'coupons'), (snapshot) => {
       if (!snapshot.empty) {
         const cps = snapshot.docs.map(d => d.data() as Coupon);
@@ -1035,7 +1035,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Coupons listener error:', err);
     });
 
-    // 3. REAL-TIME: payment methods (bKash/Nagad numbers — customers use these to send money)
+    // 3. REAL-TIME: payment methods (bKash/Nagad numbers ΓÇö customers use these to send money)
     const unsubPaymentMethods = onSnapshot(collection(db, 'payment_methods'), (snapshot) => {
       if (!snapshot.empty) {
         const pms = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as BangladeshPaymentMethod));
@@ -1054,7 +1054,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Payment methods listener error:', err);
     });
 
-    // ── CACHED one-time reads for static/rarely-changing data ─────────
+    // ΓöÇΓöÇ CACHED one-time reads for static/rarely-changing data ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     // Each uses a 10-minute localStorage TTL cache.
     // Admin writes bust the cache so the next visitor always gets fresh data.
 
@@ -1214,7 +1214,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [seedFirestoreIfEmpty]);
 
-  // ─── IP-based currency detection on mount (runs once per session) ────
+  // ΓöÇΓöÇΓöÇ IP-based currency detection on mount (runs once per session) ΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
     // 1. Instant synchronous check (0ms)
     try {
@@ -1262,7 +1262,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [currencySettings]);
 
-  // ─── Real-time Admin Data Listeners ─────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Real-time Admin Data Listeners ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const setupAdminRealtimeListeners = useCallback(() => {
     // Clear ONLY previous admin-wide listeners (never touch user-specific ones)
     adminUnsubscribersRef.current.forEach(u => u());
@@ -1326,12 +1326,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     adminUnsubscribersRef.current.push(unsubActivityLogs);
   }, []);
 
-  // ─── Auth state listener & User-specific live listeners ─────────────
+  // ΓöÇΓöÇΓöÇ Auth state listener & User-specific live listeners ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
     // Handle Google redirect sign-in result on page load
     // (signInWithRedirect returns here after Google OAuth completes)
     getRedirectResult(auth).catch(() => {
-      // Silently ignore — user may not have come from a redirect
+      // Silently ignore ΓÇö user may not have come from a redirect
     });
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
@@ -1526,7 +1526,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         setIsAuthModalOpen(false);
       } else {
-        // Signed out — clear everything
+        // Signed out ΓÇö clear everything
         setIsSuperAdmin(false);
         setIsAdmin(false);
         setUser(INITIAL_USER_PROFILE);
@@ -1562,7 +1562,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [setupAdminRealtimeListeners]);
 
-  // ─── Reactive Sync for Logged-In User Data ────────────────────────
+  // ΓöÇΓöÇΓöÇ Reactive Sync for Logged-In User Data ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
     if (!firebaseUser?.email) return;
     const myEmail = (firebaseUser.email || '').toLowerCase().trim();
@@ -1599,7 +1599,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [allOrders, allSubscriptions, allTickets, firebaseUser?.email, firebaseUser?.uid, user.id]);
 
-  // ─── Manual Refresh All Data ──────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Manual Refresh All Data ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const refreshAllData = useCallback(async () => {
     setIsSyncing(true);
     try {
@@ -1692,7 +1692,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [isAdmin, isSuperAdmin, firebaseUser?.email, firebaseUser?.uid]);
 
-  // ─── Cart persistence ──────────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Cart persistence ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   useEffect(() => {
     try {
       const saved = localStorage.getItem('keyoon_cart') || localStorage.getItem('subnexus_cart');
@@ -1818,7 +1818,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const cartDiscount = appliedCoupon ? (eligibleSubtotal * appliedCoupon.discountPercent) / 100 : 0;
   const cartTotal = Math.max(0, cartSubtotal - cartDiscount);
 
-  // ─── Cart actions ──────────────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Cart actions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const addToCart = (product: Product, selectedPlan: PlanPricing, customEmail?: string) => {
     if ((product.stockCount ?? 0) <= 0) {
       return; // Do not allow adding out-of-stock products
@@ -1921,7 +1921,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeCoupon = () => setAppliedCoupon(null);
 
-  // ─── Checkout ──────────────────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Checkout ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const processCheckout = async (
     paymentMethod: PaymentMethod,
     customEmail?: string,
@@ -2016,7 +2016,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       totalBdt: isFreeOrder ? 0 : (paymentProof?.totalBdt || (cartTotal * 125)),
       paymentMethod: isFreeOrder ? 'free_claim' : paymentMethod,
       paymentMethodName: isFreeOrder
-        ? (paymentProof?.paymentMethodName || '🎁 100% Free Special Reward')
+        ? (paymentProof?.paymentMethodName || '≡ƒÄü 100% Free Special Reward')
         : (paymentProof?.paymentMethodName || paymentMethod.toUpperCase()),
       paymentStatus: isFreeOrder ? 'paid' : (isBangladesh ? 'pending' : 'paid'),
       deliveryStatus: isFreeOrder ? 'processing' : (isBangladesh ? 'processing' : 'delivered'),
@@ -2141,7 +2141,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newOrder;
   };
 
-  // ─── User Profile management ───────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ User Profile management ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const updateUserProfile = async (updates: Partial<CustomerProfile>) => {
     const updated = { ...user, ...updates };
     setUser(updated);
@@ -2160,7 +2160,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Subscription management ───────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Subscription management ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const toggleAutoRenew = async (subId: string) => {
     const sub = subscriptions.find(s => s.id === subId) || allSubscriptions.find(s => s.id === subId);
     if (!sub) return;
@@ -2184,7 +2184,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch { }
   };
 
-  // ─── Admin Team Management (Add/Remove Admins) ──────────────────────
+  // ΓöÇΓöÇΓöÇ Admin Team Management (Add/Remove Admins) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminAddAdmin = async (email: string, name?: string): Promise<{ success: boolean; message: string }> => {
     const cleanEmail = email.toLowerCase().trim();
     if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -2248,7 +2248,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: Product CRUD ───────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Admin: Product CRUD ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminCreateProduct = async (product: Omit<Product, 'id'>): Promise<string> => {
     const id = generateRandomId('prod');
     const newProduct: Product = { ...product, id };
@@ -2330,7 +2330,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: Order management & Verification ───────────────────────
+  // ΓöÇΓöÇΓöÇ Admin: Order management & Verification ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminUpdateOrderStatus = async (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => {
     try {
       await updateDoc(doc(db, 'orders', orderId), { paymentStatus, deliveryStatus });
@@ -2494,7 +2494,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           ord.userId,
           ord.userEmail,
           `Order #${ord.orderNumber} Approved & Delivered`,
-          `🎉 Your payment for Order #${ord.orderNumber} (${ord.items.map(i => i.productName).join(', ')}) has been verified and approved! Your credentials have been provisioned to your Customer Dashboard Vault.`
+          `≡ƒÄë Your payment for Order #${ord.orderNumber} (${ord.items.map(i => i.productName).join(', ')}) has been verified and approved! Your credentials have been provisioned to your Customer Dashboard Vault.`
         );
       } catch {}
 
@@ -2545,8 +2545,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           await adminSendMessageToUser(
             ord.userId, ord.userEmail,
-            `Order #${ord.orderNumber} — Payment Rejected`,
-            `❌ Your order #${ord.orderNumber} could not be verified. Reason: ${reason}. Please contact support or resubmit with correct payment details.`
+            `Order #${ord.orderNumber} ΓÇö Payment Rejected`,
+            `Γ¥î Your order #${ord.orderNumber} could not be verified. Reason: ${reason}. Please contact support or resubmit with correct payment details.`
           );
         } catch {}
       }
@@ -2555,7 +2555,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: Payment Methods CRUD ───────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Admin: Payment Methods CRUD ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminCreatePaymentMethod = async (pm: Omit<BangladeshPaymentMethod, 'id' | 'updatedAt'>): Promise<string> => {
     const id = generateRandomId('pm');
     const newPm: BangladeshPaymentMethod = {
@@ -2638,7 +2638,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: User management ────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Admin: User management ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminUpdateUserRole = async (userId: string, role: 'customer' | 'admin') => {
     const currentUid = firebaseUser?.uid || user.id;
     if (userId === currentUid && role === 'customer') {
@@ -2801,7 +2801,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: Coupon CRUD ────────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Admin: Coupon CRUD ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminCreateCoupon = async (coupon: Coupon) => {
     const cleanCode = coupon.code.toUpperCase();
     const cleanCoupon = { ...coupon, code: cleanCode };
@@ -2832,7 +2832,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin: Ticket management ──────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Admin: Ticket management ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminReplyToTicket = async (ticketId: string, message: string, imageUrl?: string) => {
     const msg = {
       id: generateRandomId('msg'),
@@ -2907,7 +2907,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return ticketId;
   };
 
-  // ─── User: Create ticket ───────────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ User: Create ticket ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const createSupportTicket = (
     subject: string,
     category: SupportTicket['category'],
@@ -2962,7 +2962,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch { }
   };
 
-  // ─── Admin simulation utilities ────────────────────────────────────
+  // ΓöÇΓöÇΓöÇ Admin simulation utilities ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const toggleUserRole = () => setUser(prev => ({ ...prev, role: prev.role === 'customer' ? 'admin' : 'customer' }));
 
   const sendTestEmail = (recipient: string, templateType: EmailNotification['templateType']) => {
@@ -3046,7 +3046,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               targetUserId,
               targetUserEmail,
               `Auto-Renewal Successful: ${sub.productName}`,
-              `🎉 Your ${sub.productName} plan (${sub.durationLabel}) has been automatically renewed until ${new Date(newExp).toLocaleDateString()} at $${renewalAmount.toFixed(2)} (৳${Math.round(renewalAmount * 125).toLocaleString()}). Your vault credentials remain active.`
+              `≡ƒÄë Your ${sub.productName} plan (${sub.durationLabel}) has been automatically renewed until ${new Date(newExp).toLocaleDateString()} at $${renewalAmount.toFixed(2)} (αº│${Math.round(renewalAmount * 125).toLocaleString()}). Your vault credentials remain active.`
             );
           } catch { }
         } else {
@@ -3063,7 +3063,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               targetUserId,
               targetUserEmail,
               `Plan Expired: ${sub.productName}`,
-              `⚠️ Your ${sub.productName} plan has expired. Enable Auto-Renew or add a new plan to keep your vault access active.`
+              `ΓÜá∩╕Å Your ${sub.productName} plan has expired. Enable Auto-Renew or add a new plan to keep your vault access active.`
             );
           } catch { }
         }
@@ -3082,7 +3082,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               targetUserId,
               targetUserEmail,
               `Auto-Renewal Notice: ${sub.productName}`,
-              `⏰ Your ${sub.productName} plan will expire in ${Math.ceil(diffDays)} days. Auto-Renew is currently ${sub.autoRenew ? 'ENABLED' : 'DISABLED'}.`
+              `ΓÅ░ Your ${sub.productName} plan will expire in ${Math.ceil(diffDays)} days. Auto-Renew is currently ${sub.autoRenew ? 'ENABLED' : 'DISABLED'}.`
             );
           } catch { }
         }
@@ -3101,7 +3101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Customer Reviews System Methods ──────────────────────────────
+  // ΓöÇΓöÇΓöÇ Customer Reviews System Methods ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const addReview = async (reviewData: Omit<Review, 'id' | 'createdAt' | 'likes' | 'likedBy'>): Promise<string> => {
     const revId = generateRandomId('rev');
     const newRev: Review = {
@@ -3257,7 +3257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin Hero Slides Dynamic Customization ────────────────────────
+  // ΓöÇΓöÇΓöÇ Admin Hero Slides Dynamic Customization ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminCreateHeroSlide = async (slideData: Omit<HeroSlide, 'id'>): Promise<string> => {
     const slideId = generateRandomId('hero');
     const newSlide: HeroSlide = {
@@ -3299,7 +3299,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         title: 'Unlock Infinite Possibilities with Premium Subscriptions',
         sub: 'Automated 30-second vault delivery for ChatGPT Plus, Claude, Netflix 4K, and 20+ services with full replacement warranty.',
         bgImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80',
-        tag: '⚡ INSTANT VAULT DELIVERY',
+        tag: 'ΓÜí INSTANT VAULT DELIVERY',
         order: 1,
       },
     ];
@@ -3319,7 +3319,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Admin Quick Messages & Bot Auto-Replies CRUD ───────────────────
+  // ΓöÇΓöÇΓöÇ Admin Quick Messages & Bot Auto-Replies CRUD ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminCreateQuickMessage = async (qmData: Omit<QuickMessage, 'id'>): Promise<string> => {
     const qmId = generateRandomId('qm');
     const newQm: QuickMessage = {
@@ -3372,7 +3372,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // ─── Memoize context value to prevent all-consumer re-renders ────────
+  // ΓöÇΓöÇΓöÇ Memoize context value to prevent all-consumer re-renders ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   // Without this, every setState call in AppProvider re-creates the value
   // object and forces ALL useApp() consumers to re-render simultaneously.
   const contextValue = useMemo(() => ({

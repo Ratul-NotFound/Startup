@@ -99,9 +99,9 @@ export const CustomerReviewsSection: React.FC = () => {
               <Star className="h-3.5 w-3.5 fill-amber-400" />
               <span className="font-bold text-white text-sm">{averageRating}</span>
             </div>
-            <span>·</span>
+            <span>┬╖</span>
             <span>Based on {reviews.length} ratings</span>
-            <span>·</span>
+            <span>┬╖</span>
             <span className="text-emerald-400 font-semibold flex items-center gap-1">
               <ShieldCheck className="h-3.5 w-3.5" /> 100% Real Buyers
             </span>
@@ -115,7 +115,7 @@ export const CustomerReviewsSection: React.FC = () => {
             <button
               type="button"
               onClick={() => scroll('left')}
-              className="btn-details-secondary p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 transition-colors shadow-sm cursor-pointer"
+              className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 transition-colors shadow-sm cursor-pointer"
               title="Scroll Left"
             >
               <ChevronLeft className="h-4 w-4" />
@@ -123,7 +123,7 @@ export const CustomerReviewsSection: React.FC = () => {
             <button
               type="button"
               onClick={() => scroll('right')}
-              className="btn-details-secondary p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 transition-colors shadow-sm cursor-pointer"
+              className="p-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 transition-colors shadow-sm cursor-pointer"
               title="Scroll Right"
             >
               <ChevronRight className="h-4 w-4" />
@@ -138,7 +138,7 @@ export const CustomerReviewsSection: React.FC = () => {
               setTargetReviewProduct(null);
               setIsWriteReviewOpen(true);
             }}
-            className="px-4 py-2 rounded-xl bg-zinc-950 text-white hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-white text-zinc-950 hover:bg-zinc-100 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
           >
             <MessageSquarePlus className="h-3.5 w-3.5" />
             <span>Write a Review</span>
@@ -155,8 +155,8 @@ export const CustomerReviewsSection: React.FC = () => {
               onClick={() => setActiveCategory(cat.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 activeCategory === cat.id
-                  ? 'bg-zinc-900 text-white dark:bg-zinc-800 dark:text-white border border-slate-300 dark:border-white/20 shadow-sm'
-                  : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-900/80 border border-transparent'
+                  ? 'bg-zinc-800 text-white border border-white/20 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/80 border border-transparent'
               }`}
             >
               {cat.label}
@@ -169,8 +169,8 @@ export const CustomerReviewsSection: React.FC = () => {
           onClick={() => setStarFilter(starFilter === 5 ? 'all' : 5)}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
             starFilter === 5
-              ? 'bg-amber-400/10 text-amber-500 dark:text-amber-400 border border-amber-400/30'
-              : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-white/5'
+              ? 'bg-amber-400/10 text-amber-400 border border-amber-400/30'
+              : 'text-zinc-400 hover:text-zinc-200 bg-zinc-900 border border-white/5'
           }`}
         >
           <Star className="h-3 w-3 fill-current" />
@@ -198,7 +198,7 @@ export const CustomerReviewsSection: React.FC = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.22 }}
-                  className="contain-card w-[290px] sm:w-[320px] shrink-0 snap-start p-4 rounded-2xl bg-zinc-900/95 border border-white/10 hover:border-cyan-500/30 transition-all duration-300 flex flex-col justify-between space-y-3"
+                  className="w-[290px] sm:w-[320px] shrink-0 snap-start p-4 rounded-2xl bg-zinc-900/95 border border-white/10 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(6,182,212,0.12)] flex flex-col justify-between space-y-3 contain-card"
                 >
                   <div className="space-y-2.5">
                     {/* Top Row: User Avatar, Name, Verified & Star Rating */}
@@ -209,7 +209,7 @@ export const CustomerReviewsSection: React.FC = () => {
                           alt={rev.userName}
                           loading="lazy"
                           decoding="async"
-                          className="h-7 w-7 rounded-full object-cover border border-slate-200 dark:border-white/10 shrink-0"
+                          className="h-7 w-7 rounded-full object-cover border border-white/10 shrink-0"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.userName || 'Customer')}&background=06b6d4&color=fff&size=100`;
@@ -217,12 +217,12 @@ export const CustomerReviewsSection: React.FC = () => {
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1">
-                            <span className="font-bold text-xs text-[var(--text-primary)] truncate">{rev.userName}</span>
+                            <span className="font-bold text-xs text-white truncate">{rev.userName}</span>
                             {rev.verifiedPurchase && (
-                              <span className="text-[10px] text-emerald-500 font-semibold shrink-0">✓</span>
+                              <span className="text-[10px] text-emerald-400 font-semibold shrink-0">Γ£ô</span>
                             )}
                           </div>
-                          <span className="text-[10px] text-[var(--text-muted)] block leading-tight">{getRelativeTime(rev.createdAt)}</span>
+                          <span className="text-[10px] text-zinc-500 block leading-tight">{getRelativeTime(rev.createdAt)}</span>
                         </div>
                       </div>
 
@@ -231,27 +231,27 @@ export const CustomerReviewsSection: React.FC = () => {
                         {[1, 2, 3, 4, 5].map((s) => (
                           <Star
                             key={s}
-                            className={`h-3 w-3 ${s <= rev.rating ? 'fill-amber-400' : 'text-zinc-300 dark:text-zinc-700'}`}
+                            className={`h-3 w-3 ${s <= rev.rating ? 'fill-amber-400' : 'text-zinc-700'}`}
                           />
                         ))}
                       </div>
                     </div>
 
                     {/* Product Chip */}
-                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/80 border border-slate-200 dark:border-white/5 text-[10px] text-slate-700 dark:text-zinc-300 max-w-full truncate">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-zinc-800/80 border border-white/5 text-[10px] text-zinc-300 max-w-full truncate">
                       {rev.productLogo && (
                         <img src={rev.productLogo} alt={rev.productName} loading="lazy" decoding="async" className="h-3 w-3 rounded object-cover shrink-0" />
                       )}
                       <span className="font-semibold truncate">{rev.productName}</span>
                       {rev.planDuration && (
-                        <span className="text-zinc-400 dark:text-zinc-500 text-[9px] shrink-0">· {rev.planDuration}</span>
+                        <span className="text-zinc-500 text-[9px] shrink-0">┬╖ {rev.planDuration}</span>
                       )}
                     </div>
 
                     {/* Review Title & Comment */}
                     <div className="space-y-0.5">
-                      <h4 className="text-xs font-bold text-[var(--text-primary)] line-clamp-1 leading-snug">{rev.title}</h4>
-                      <p className="text-[11px] text-[var(--text-secondary)] line-clamp-2 leading-relaxed">{rev.comment}</p>
+                      <h4 className="text-xs font-bold text-white line-clamp-1 leading-snug">{rev.title}</h4>
+                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">{rev.comment}</p>
                     </div>
                   </div>
 
