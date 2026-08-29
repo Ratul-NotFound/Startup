@@ -271,7 +271,7 @@ export const ProductCatalog: React.FC = () => {
                   >
                     <div
                       style={{ transformStyle: 'preserve-3d' }}
-                      className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900 border border-white/[0.08] hover:border-cyan-500/40 overflow-hidden transition-all duration-200 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between h-full"
+                      className="group relative rounded-2xl sm:rounded-3xl bg-zinc-900 border border-white/[0.08] hover:border-cyan-500/40 overflow-hidden transition-all duration-200 hover:shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col justify-between h-full contain-card"
                     >
                       <div>
                         {/* Responsive Animated Image Carousel with Multiple Relevant Images & Dynamic Transitions */}

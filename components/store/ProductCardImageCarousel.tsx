@@ -27,19 +27,18 @@ export const ProductCardImageCarousel: React.FC<ProductCardImageCarouselProps> =
     ? images
     : ['https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'];
 
-  // Gentle auto-cycle only when hovered or spread out
+  // Gentle auto-cycle: Only when actively hovered or when on high-tier device
   useEffect(() => {
-    if (imageList.length <= 1 || !isInView) return;
+    if (imageList.length <= 1 || !isInView || isLowEnd) return;
 
-    // Cycle on hover, or slowly when in view (spread timers so they don't fire at once)
-    const intervalTime = isHovered ? 2200 : (6000 + (index % 5) * 800);
+    const intervalTime = isHovered ? 2200 : (7000 + (index % 5) * 1000);
 
     const timer = setInterval(() => {
       setCurrentImageIdx((prev) => (prev + 1) % imageList.length);
     }, intervalTime);
 
     return () => clearInterval(timer);
-  }, [imageList.length, index, isHovered, isInView]);
+  }, [imageList.length, index, isHovered, isInView, isLowEnd]);
 
   const safeIndex = currentImageIdx % imageList.length;
   const currentImg = imageList[safeIndex] || imageList[0];
@@ -52,34 +51,51 @@ export const ProductCardImageCarousel: React.FC<ProductCardImageCarouselProps> =
       className="relative h-36 sm:h-44 w-full overflow-hidden bg-zinc-950 select-none group/img"
       style={{ transform: 'translateZ(0)' }}
     >
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={`${productName}-${safeIndex}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.35, ease: 'easeInOut' }}
-          style={{
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-          }}
-          className="absolute inset-0 h-full w-full"
-        >
+      {isLowEnd ? (
+        <div className="absolute inset-0 h-full w-full">
           <img
             src={currentImg}
             alt={productName}
             loading="lazy"
             decoding="async"
             referrerPolicy="no-referrer"
-            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+            className="h-full w-full object-cover"
             onError={(e) => {
               (e.target as HTMLImageElement).src =
                 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80';
             }}
           />
-        </motion.div>
-      </AnimatePresence>
+        </div>
+      ) : (
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={`${productName}-${safeIndex}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            style={{
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+            }}
+            className="absolute inset-0 h-full w-full"
+          >
+            <img
+              src={currentImg}
+              alt={productName}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300 ease-out"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src =
+                  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80';
+              }}
+            />
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       {/* Dark Gradient Vignette Overlay for readability */}
       <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 via-zinc-900/35 to-black/60 pointer-events-none z-10" />

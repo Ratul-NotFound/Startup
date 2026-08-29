@@ -198,7 +198,7 @@ export const CustomerReviewsSection: React.FC = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.22 }}
-                  className="w-[290px] sm:w-[320px] shrink-0 snap-start p-4 rounded-2xl bg-zinc-900/95 border border-white/10 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(6,182,212,0.12)] flex flex-col justify-between space-y-3"
+                  className="w-[290px] sm:w-[320px] shrink-0 snap-start p-4 rounded-2xl bg-zinc-900/95 border border-white/10 hover:border-cyan-500/30 transition-all duration-300 hover:shadow-[0_8px_30px_rgba(6,182,212,0.12)] flex flex-col justify-between space-y-3 contain-card"
                 >
                   <div className="space-y-2.5">
                     {/* Top Row: User Avatar, Name, Verified & Star Rating */}

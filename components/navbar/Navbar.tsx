@@ -24,10 +24,10 @@ export const Navbar: React.FC = () => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Scroll detection
+  // Scroll detection (passive listener so it never blocks touch/scroll)
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 15);
-    window.addEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 

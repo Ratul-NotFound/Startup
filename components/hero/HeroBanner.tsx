@@ -6,9 +6,11 @@ import { ArrowRight, Zap } from 'lucide-react';
 import { MagneticButton } from '@/components/ui/MagneticButton';
 import { useApp } from '@/context/AppContext';
 import { HeroSlide } from '@/types';
+import { useIsLowEndDevice } from '@/hooks/useIsLowEndDevice';
 
 export const HeroBanner: React.FC = () => {
   const { heroSlides } = useApp();
+  const isLowEnd = useIsLowEndDevice();
   const containerRef = useRef<HTMLElement>(null);
   const isInView = useInView(containerRef, { margin: '150px 0px 150px 0px', once: false });
   const [activeSlide, setActiveSlide] = useState(0);
@@ -42,7 +44,7 @@ export const HeroBanner: React.FC = () => {
           <div
             key={slide.id || idx}
             suppressHydrationWarning
-            className={`absolute inset-0 w-full h-full transition-opacity duration-700 ease-in-out ${
+            className={`absolute inset-0 w-full h-full transition-opacity ${isLowEnd ? 'duration-300' : 'duration-700'} ease-in-out ${
               idx === (activeSlide % slides.length) ? 'opacity-100' : 'opacity-0'
             }`}
           >
@@ -91,12 +93,15 @@ export const HeroBanner: React.FC = () => {
           <AnimatePresence mode="wait">
             <motion.p
               key={`sub-${activeSlide}`}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: isLowEnd ? 0 : 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="text-2xl sm:text-4xl text-cyan-400 drop-shadow-[0_0_25px_rgba(6,182,212,0.7)] select-none font-bold"
-              style={{ fontFamily: "'Caveat', cursive" }}
+              exit={{ opacity: 0, y: isLowEnd ? 0 : -8 }}
+              transition={{ duration: isLowEnd ? 0.2 : 0.35, ease: 'easeOut' }}
+              className="text-2xl sm:text-4xl text-cyan-400 select-none font-bold"
+              style={{
+                fontFamily: "'Caveat', cursive",
+                textShadow: isLowEnd ? '0 2px 10px rgba(6,182,212,0.5)' : undefined,
+              }}
             >
               {current.sub}
             </motion.p>
@@ -110,12 +115,15 @@ export const HeroBanner: React.FC = () => {
           <AnimatePresence mode="wait">
             <motion.h1
               key={`title-${activeSlide}`}
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: isLowEnd ? 0 : 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -14 }}
-              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-              className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-white drop-shadow-[0_10px_35px_rgba(0,0,0,0.9)] max-w-4xl mx-auto leading-[1.1]"
-              style={{ fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif" }}
+              exit={{ opacity: 0, y: isLowEnd ? 0 : -10 }}
+              transition={{ duration: isLowEnd ? 0.22 : 0.38, ease: 'easeOut' }}
+              className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight text-white max-w-4xl mx-auto leading-[1.1]"
+              style={{
+                fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
+                textShadow: '0 4px 20px rgba(0,0,0,0.8)',
+              }}
             >
               {current.title}
             </motion.h1>

@@ -66,17 +66,50 @@ section,
   contain-intrinsic-size: 1px 500px;
 }
 
-/* ─── Backdrop blur: limit to desktop only ──────────────────────────────
-   backdrop-filter is EXTREMELY expensive on mobile GPUs */
+/* ─── Low-End Device Mode (4GB RAM, Dual/Quad-Core Phones & Mobile) ─────
+   Disables expensive GPU shader passes, shadow recalculations, and
+   enforces content-visibility containment for 60-120 FPS buttery smooth scrolling */
+.low-end-device,
 @media (max-width: 768px) {
+  /* 1. Disable expensive real-time GPU Gaussian blur on low-end */
   .backdrop-blur-xl,
   .backdrop-blur-lg,
   .backdrop-blur-md,
-  .backdrop-blur-sm {
+  .backdrop-blur-sm,
+  .backdrop-blur {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    /* Use solid fallback color instead */
-    background-color: rgba(24, 24, 27, 0.92) !important;
+    background-color: rgba(18, 18, 23, 0.96) !important;
+  }
+
+  /* 2. Strip multi-stop dynamic box shadows that lag budget GPUs */
+  .shadow-2xl,
+  .shadow-xl,
+  .shadow-lg,
+  [class*="hover:shadow-"] {
+    box-shadow: none !important;
+  }
+
+  /* 3. Stop continuous ambient keyframe animations to free CPU cycles */
+  .animate-pulse-glow,
+  .animate-float-slow,
+  .animate-shimmer-text {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /* 4. Enforce render containment on cards */
+  .contain-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 340px;
+    contain: layout style paint;
+  }
+
+  /* 5. Force GPU Compositor on scrolling containers */
+  .overflow-x-auto,
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
   }
 }
 
