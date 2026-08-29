@@ -35,9 +35,6 @@ export function PaymentsTab({
   const [editBdtRate, setEditBdtRate] = useState(currencySettings.bdtRate);
   const [isSavingCurrency, setIsSavingCurrency] = useState(false);
 
-  // Preview calculation: $10 USD at current rate
-  const previewBdt = Math.round(10 * editBdtRate);
-
   const handleSaveCurrencySettings = async () => {
     const countryCodes = editBdtCountries
       .split(',')
@@ -72,24 +69,24 @@ export function PaymentsTab({
     <div className="space-y-8">
 
       {/* ─── Currency Detection Settings Card ─── */}
-      <div className="p-5 rounded-3xl bg-gradient-to-br from-zinc-900 to-zinc-950 border border-cyan-500/20 space-y-5">
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-cyan-500/20 space-y-5 shadow-sm dark:shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-2xl bg-cyan-950/60 border border-cyan-500/30 flex items-center justify-center shrink-0">
-            <Globe className="h-4.5 w-4.5 text-cyan-400" />
+          <div className="h-9 w-9 rounded-2xl bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-500/30 flex items-center justify-center shrink-0">
+            <Globe className="h-4.5 w-4.5 text-cyan-600 dark:text-cyan-400" />
           </div>
           <div>
-            <h2 className="text-base font-black text-white">Currency Detection Settings</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="text-base font-black text-slate-900 dark:text-white">Currency Detection Settings</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
               Automatically shows prices in BDT (৳) or USD ($) based on visitor IP country. Users see nothing — it&apos;s fully automatic.
             </p>
           </div>
         </div>
 
         {/* Master toggle */}
-        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-950 border border-white/5">
+        <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/5">
           <div>
-            <p className="text-sm font-bold text-white">BDT Auto-Detection</p>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-sm font-bold text-slate-900 dark:text-white">BDT Auto-Detection</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
               {editBdtEnabled
                 ? 'Visitors from BDT countries see prices in ৳ BDT'
                 : 'All visitors see prices in $ USD (disabled)'}
@@ -102,9 +99,9 @@ export function PaymentsTab({
             title={editBdtEnabled ? 'Click to disable BDT' : 'Click to enable BDT'}
           >
             {editBdtEnabled ? (
-              <ToggleRight className="h-8 w-8 text-cyan-400" />
+              <ToggleRight className="h-8 w-8 text-cyan-600 dark:text-cyan-400" />
             ) : (
-              <ToggleLeft className="h-8 w-8 text-zinc-600" />
+              <ToggleLeft className="h-8 w-8 text-slate-400 dark:text-zinc-600" />
             )}
           </button>
         </div>
@@ -112,7 +109,7 @@ export function PaymentsTab({
         {/* Country codes & rate inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
               BDT Countries (ISO codes)
             </label>
             <input
@@ -121,7 +118,7 @@ export function PaymentsTab({
               onChange={(e) => setEditBdtCountries(e.target.value)}
               placeholder="BD, NP, LK"
               disabled={!editBdtEnabled}
-              className="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white text-sm font-mono placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm font-mono placeholder-slate-400 dark:placeholder-zinc-600 focus:outline-none focus:border-cyan-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             />
             <p className="text-[10px] text-slate-500">
               Comma-separated 2-letter ISO codes. Visitors with matching IP country see ৳ BDT prices.
@@ -129,11 +126,11 @@ export function PaymentsTab({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
               Exchange Rate (BDT per USD)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">1 USD =</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 dark:text-slate-400">1 USD =</span>
               <input
                 type="number"
                 min="1"
@@ -142,9 +139,9 @@ export function PaymentsTab({
                 value={editBdtRate}
                 onChange={(e) => setEditBdtRate(Number(e.target.value))}
                 disabled={!editBdtEnabled}
-                className="w-full pl-16 pr-12 py-2.5 rounded-xl bg-zinc-950 border border-white/10 text-white text-sm font-mono focus:outline-none focus:border-cyan-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="w-full pl-16 pr-12 py-2.5 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white text-sm font-mono focus:outline-none focus:border-cyan-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">৳ BDT</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 dark:text-emerald-400">৳ BDT</span>
             </div>
             <p className="text-[10px] text-slate-500">
               Current rate applied to all product prices shown to BDT visitors.
@@ -154,15 +151,15 @@ export function PaymentsTab({
 
         {/* Live preview */}
         {editBdtEnabled && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950/80 border border-white/5 flex-wrap">
-            <div className="text-xs text-slate-400 font-bold">Live Conversion Example:</div>
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-zinc-950/80 border border-slate-200 dark:border-white/5 flex-wrap">
+            <div className="text-xs text-slate-600 dark:text-slate-400 font-bold">Live Conversion Example:</div>
             <div className="flex items-center gap-2 text-xs">
-              <span className="font-black text-emerald-400 font-mono text-sm">৳500 BDT (Admin Base Price)</span>
-              <span className="text-slate-500">→</span>
-              <span className="text-cyan-300 font-mono font-bold">${(500 / (editBdtRate || 125)).toFixed(2)} USD</span>
+              <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono text-sm">৳500 BDT (Admin Base Price)</span>
+              <span className="text-slate-400 dark:text-slate-500">→</span>
+              <span className="text-cyan-600 dark:text-cyan-300 font-mono font-bold">${(500 / (editBdtRate || 125)).toFixed(2)} USD</span>
             </div>
-            <div className="ml-auto text-[10px] text-slate-400">
-              BD visitors see <strong className="text-emerald-400">৳500</strong> · Other countries see <strong className="text-cyan-400">${(500 / (editBdtRate || 125)).toFixed(2)}</strong>
+            <div className="ml-auto text-[10px] text-slate-600 dark:text-slate-400">
+              BD visitors see <strong className="text-emerald-600 dark:text-emerald-400">৳500</strong> · Other countries see <strong className="text-cyan-600 dark:text-cyan-400">${(500 / (editBdtRate || 125)).toFixed(2)}</strong>
             </div>
           </div>
         )}
@@ -172,7 +169,7 @@ export function PaymentsTab({
           type="button"
           onClick={handleSaveCurrencySettings}
           disabled={isSavingCurrency}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-bold text-xs transition-colors shadow-md cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed text-white font-bold text-xs transition-colors shadow-md cursor-pointer"
         >
           {isSavingCurrency ? (
             <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -187,8 +184,8 @@ export function PaymentsTab({
       <div className="space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-black text-white">Bangladesh Payment Gateways</h2>
-            <p className="text-xs text-slate-400">Configure bKash, Nagad, Rocket numbers, QR codes, and BDT exchange rates.</p>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white">Bangladesh Payment Gateways</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Configure bKash, Nagad, Rocket numbers, QR codes, and BDT exchange rates.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -197,7 +194,7 @@ export function PaymentsTab({
                 await adminResetPaymentMethods();
                 showFeedback('success', 'Reset payment methods to defaults.');
               }}
-              className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-slate-300 text-xs font-bold border border-white/10 transition-colors cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-white/10 transition-colors cursor-pointer shadow-sm"
             >
               Reset Default Methods
             </button>
@@ -216,7 +213,7 @@ export function PaymentsTab({
                 color: '#e2136e',
                 isNew: true,
               })}
-              className="px-4 py-2 rounded-xl bg-white text-zinc-950 font-bold text-xs hover:bg-zinc-100 transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-950 font-bold text-xs transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" /> Add Payment Gateway
             </button>
@@ -228,63 +225,63 @@ export function PaymentsTab({
           {paymentMethods.map(pm => (
             <div
               key={pm.id}
-              className="p-5 rounded-3xl bg-zinc-900 border border-white/10 space-y-4 relative flex flex-col justify-between"
+              className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/10 space-y-4 relative flex flex-col justify-between shadow-sm dark:shadow-md"
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="h-3 w-3 rounded-full" style={{ backgroundColor: pm.color || '#06b6d4' }} />
-                    <h3 className="font-bold text-sm text-white">{pm.name}</h3>
+                    <h3 className="font-bold text-sm text-slate-900 dark:text-white">{pm.name}</h3>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       (pm.showQrCode ?? true)
-                        ? 'bg-cyan-950/80 text-cyan-400 border border-cyan-500/30'
-                        : 'bg-zinc-800 text-slate-500'
+                        ? 'bg-cyan-50 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/30'
+                        : 'bg-slate-100 dark:bg-zinc-800 text-slate-500'
                     }`}>
                       {(pm.showQrCode ?? true) ? 'QR On' : 'QR Off'}
                     </span>
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                       pm.isActive
-                        ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-zinc-800 text-slate-500'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30'
+                        : 'bg-slate-100 dark:bg-zinc-800 text-slate-500'
                     }`}>
                       {pm.isActive ? 'Active' : 'Disabled'}
                     </span>
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-zinc-950 border border-white/5 space-y-2 text-xs">
+                <div className="p-3 rounded-2xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/5 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Account Number:</span>
-                    <span className="font-mono font-bold text-white">{pm.accountNumber}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Account Number:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">{pm.accountNumber}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Account Type:</span>
-                    <span className="font-bold text-cyan-400">{pm.accountType}</span>
+                    <span className="text-slate-500 dark:text-slate-400">Account Type:</span>
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400">{pm.accountType}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400">Exchange Rate:</span>
-                    <span className="font-mono font-bold text-emerald-400">1 USD = ৳{pm.bdtRate} BDT</span>
+                    <span className="text-slate-500 dark:text-slate-400">Exchange Rate:</span>
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">1 USD = ৳{pm.bdtRate} BDT</span>
                   </div>
                 </div>
 
                 {pm.qrCodeImage && (
                   <div className={`flex items-center gap-3 p-3 rounded-2xl border transition-opacity ${
                     (pm.showQrCode ?? true)
-                      ? 'bg-zinc-950/80 border-white/5 opacity-100'
-                      : 'bg-zinc-950/40 border-white/5 opacity-50'
+                      ? 'bg-slate-50 dark:bg-zinc-950/80 border-slate-200 dark:border-white/5 opacity-100'
+                      : 'bg-slate-50/50 dark:bg-zinc-950/40 border-slate-200 dark:border-white/5 opacity-50'
                   }`}>
                     <div
                       onClick={() => setPreviewScreenshotUrl(pm.qrCodeImage!)}
-                      className="h-20 w-20 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center shadow-md cursor-pointer hover:scale-105 transition-transform"
+                      className="h-20 w-20 rounded-xl bg-white border border-slate-200 dark:border-transparent p-1.5 shrink-0 flex items-center justify-center shadow-sm cursor-pointer hover:scale-105 transition-transform"
                       title="Click to view full size QR"
                     >
                       <img src={pm.qrCodeImage} alt="QR Code" className="h-full w-full object-contain" />
                     </div>
-                    <div className="text-[11px] text-slate-400 leading-relaxed space-y-1">
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+                        <span className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">
                           Scannable QR Code
                         </span>
                         <span className="text-[9px] font-semibold text-slate-500">
@@ -297,14 +294,14 @@ export function PaymentsTab({
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/5 text-xs">
                 <div className="flex items-center gap-3">
                   <button
                     onClick={async () => {
                       await adminUpdatePaymentMethod(pm.id, { isActive: !pm.isActive });
                       showFeedback('success', `Payment method ${pm.isActive ? 'disabled' : 'activated'}.`);
                     }}
-                    className="text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer"
                   >
                     {pm.isActive ? 'Turn Off' : 'Turn On'}
                   </button>
@@ -315,7 +312,7 @@ export function PaymentsTab({
                       await adminUpdatePaymentMethod(pm.id, { showQrCode: nextQrState });
                       showFeedback('success', `QR Code ${nextQrState ? 'enabled' : 'hidden'} for ${pm.name}.`);
                     }}
-                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-1"
+                    className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors cursor-pointer flex items-center gap-1"
                   >
                     <QrCode className="h-3 w-3" />
                     <span>{(pm.showQrCode ?? true) ? 'Hide QR' : 'Show QR'}</span>
@@ -325,7 +322,7 @@ export function PaymentsTab({
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setEditingPaymentMethod(pm)}
-                    className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-slate-300 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
                     title="Edit method"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
@@ -337,7 +334,7 @@ export function PaymentsTab({
                         showFeedback('success', 'Payment method deleted.');
                       }
                     }}
-                    className="p-1.5 rounded-lg bg-zinc-800 hover:bg-red-950 text-slate-400 hover:text-red-400 transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-red-50 dark:bg-zinc-800 dark:hover:bg-red-950 text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 transition-colors cursor-pointer"
                     title="Delete method"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

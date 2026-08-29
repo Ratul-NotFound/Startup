@@ -275,3 +275,165 @@ html.light ::-webkit-scrollbar-thumb {
 html.light ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ─── Admin Portal Light Theme Overrides ─────────────────────────────── */
+html.light .admin-portal .bg-zinc-900,
+html.light .admin-portal .bg-zinc-900\/90,
+html.light .admin-portal .bg-zinc-900\/95,
+html.light .admin-portal .bg-zinc-900\/80,
+html.light .admin-portal .bg-zinc-900\/60,
+html.light .admin-portal .bg-zinc-900\/50,
+html.light .admin-portal .bg-zinc-900\/40 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light .admin-portal .bg-zinc-950,
+html.light .admin-portal .bg-zinc-950\/90,
+html.light .admin-portal .bg-zinc-950\/80,
+html.light .admin-portal .bg-zinc-950\/60,
+html.light .admin-portal .bg-zinc-950\/40 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .admin-portal .bg-zinc-800,
+html.light .admin-portal .bg-zinc-800\/90,
+html.light .admin-portal .bg-zinc-800\/80,
+html.light .admin-portal .bg-zinc-800\/60 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+html.light .admin-portal .bg-zinc-800:hover,
+html.light .admin-portal .bg-zinc-800\/80:hover {
+  background-color: #e2e8f0 !important;
+}
+
+html.light .admin-portal h1,
+html.light .admin-portal h2,
+html.light .admin-portal h3,
+html.light .admin-portal h4 {
+  color: #0f172a !important;
+}
+
+html.light .admin-portal .text-white {
+  color: #0f172a !important;
+}
+
+/* Ensure buttons with solid colored backgrounds keep their white text */
+html.light .admin-portal .bg-indigo-600 .text-white,
+html.light .admin-portal .bg-indigo-600,
+html.light .admin-portal .bg-cyan-600 .text-white,
+html.light .admin-portal .bg-cyan-600,
+html.light .admin-portal .bg-emerald-600 .text-white,
+html.light .admin-portal .bg-emerald-600,
+html.light .admin-portal .bg-rose-600 .text-white,
+html.light .admin-portal .bg-rose-600,
+html.light .admin-portal .bg-red-600 .text-white,
+html.light .admin-portal .bg-red-600,
+html.light .admin-portal .bg-blue-600 .text-white,
+html.light .admin-portal .bg-blue-600,
+html.light .admin-portal .bg-slate-900,
+html.light .admin-portal .bg-slate-900 .text-white,
+html.light .admin-portal button.bg-indigo-600,
+html.light .admin-portal button.bg-cyan-600,
+html.light .admin-portal button.bg-emerald-600,
+html.light .admin-portal button.bg-red-600,
+html.light .admin-portal button.bg-slate-900 {
+  color: #ffffff !important;
+}
+
+html.light .admin-portal .text-slate-400,
+html.light .admin-portal .text-zinc-400 {
+  color: #64748b !important;
+}
+
+html.light .admin-portal .text-slate-500,
+html.light .admin-portal .text-zinc-500 {
+  color: #64748b !important;
+}
+
+html.light .admin-portal .border-white\/10,
+html.light .admin-portal .border-white\/\[0\.08\],
+html.light .admin-portal .border-white\/\[0\.06\],
+html.light .admin-portal .border-white\/\[0\.05\],
+html.light .admin-portal .border-white\/\[0\.04\],
+html.light .admin-portal .border-white\/5 {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .admin-portal input:not([type="checkbox"]):not([type="radio"]),
+html.light .admin-portal textarea,
+html.light .admin-portal select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light .admin-portal input::placeholder,
+html.light .admin-portal textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html.light .admin-portal table thead {
+  background-color: #f8fafc !important;
+  border-bottom-color: #e2e8f0 !important;
+}
+
+html.light .admin-portal table thead th {
+  color: #475569 !important;
+}
+
+html.light .admin-portal table tbody tr {
+  border-bottom-color: #f1f5f9 !important;
+}
+
+html.light .admin-portal table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+html.light .admin-portal table tbody td {
+  color: #334155 !important;
+}
+
+/* Modals in Admin Portal when rendered in Light Mode */
+html.light .fixed.inset-0 .bg-zinc-900,
+html.light .fixed.inset-0 .bg-zinc-950 {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .fixed.inset-0 .bg-zinc-950\/80,
+html.light .fixed.inset-0 .bg-zinc-950\/90 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .fixed.inset-0 input:not([type="checkbox"]):not([type="radio"]),
+html.light .fixed.inset-0 textarea,
+html.light .fixed.inset-0 select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light .fixed.inset-0 .text-white {
+  color: #0f172a !important;
+}
+
+html.light .fixed.inset-0 .text-slate-400,
+html.light .fixed.inset-0 .text-zinc-400 {
+  color: #64748b !important;
+}
+
+html.light .fixed.inset-0 .border-white\/10,
+html.light .fixed.inset-0 .border-white\/\[0\.08\],
+html.light .fixed.inset-0 .border-white\/\[0\.06\],
+html.light .fixed.inset-0 .border-white\/5 {
+  border-color: #e2e8f0 !important;
+}
+

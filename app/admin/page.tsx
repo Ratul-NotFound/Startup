@@ -441,7 +441,7 @@ export default function AdminPortalPage() {
   }
 
   return (
-    <div className="min-h-screen py-6 max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 space-y-6">
+    <div className="admin-portal min-h-screen py-6 max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 space-y-6">
 
       {/* Admin Top Header Bar */}
       <AdminHeader
