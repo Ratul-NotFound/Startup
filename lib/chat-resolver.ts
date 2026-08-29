@@ -55,9 +55,8 @@ export function interpolateDynamicVariables(text: string, ctx: DynamicChatContex
 
   result = result.replace(/\{CUSTOMER_NAME\}/gi, ctx.user?.name || 'Customer');
   result = result.replace(/\{CUSTOMER_EMAIL\}/gi, ctx.user?.email || 'customer@service.com');
-  result = result.replace(/\{ACTIVE_SUBS_COUNT\}/gi, String(ctx.subscriptions.filter(s => s.status === 'active').length));
-  result = result.replace(/\{ACTIVE_SERVICES\}/gi, activeServicesList);
   result = result.replace(/\{STORE_NAME\}/gi, 'Keyoon');
+  result = result.replace(/subnexus/gi, 'Keyoon');
 
   return result;
 }

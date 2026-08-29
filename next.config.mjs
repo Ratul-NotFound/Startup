@@ -87,7 +87,7 @@ const nextConfig = {
               // Connect: Firebase, Google APIs, Google Analytics
               "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com https://www.google.com https://keyoon.com https://www.keyoon.com",
               // Frames: Google sign-in popup & auth handlers
-              "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://subnexus.vercel.app https://keyoon.com https://www.keyoon.com",
+              "frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://keyoon.com https://www.keyoon.com",
               // Block all object embeds
               "object-src 'none'",
               // Block all base-tag overrides

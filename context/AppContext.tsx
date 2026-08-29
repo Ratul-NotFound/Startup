@@ -827,7 +827,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const logId = generateRandomId('log');
     const newLog: AdminActivityLog = {
       id: logId,
-      adminEmail: firebaseUser?.email || 'admin@subnexus.com',
+      adminEmail: firebaseUser?.email || 'admin@keyoon.com',
       adminName: user?.name || 'Admin Officer',
       action,
       category,
@@ -2966,7 +2966,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const renewalOrderId = generateRandomId('ord_renew');
           const renewalOrderNumber = `RNW-${Math.floor(100000 + Math.random() * 900000)}`;
           const targetUserId = sub.userId || user.id || 'usr_auto';
-          const targetUserEmail = sub.userEmail || user.email || 'customer@subnexus.com';
+          const targetUserEmail = sub.userEmail || user.email || 'customer@keyoon.com';
 
           const renewalAmount = sub.renewalPrice ?? (sub.pricePaid > 0 ? sub.pricePaid : 9.99);
 
@@ -3019,7 +3019,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch { }
 
           const targetUserId = sub.userId || user.id || 'usr_auto';
-          const targetUserEmail = sub.userEmail || user.email || 'customer@subnexus.com';
+          const targetUserEmail = sub.userEmail || user.email || 'customer@keyoon.com';
 
           try {
             adminSendMessageToUser(
@@ -3038,7 +3038,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           } catch { }
 
           const targetUserId = sub.userId || user.id || 'usr_auto';
-          const targetUserEmail = sub.userEmail || user.email || 'customer@subnexus.com';
+          const targetUserEmail = sub.userEmail || user.email || 'customer@keyoon.com';
 
           try {
             adminSendMessageToUser(

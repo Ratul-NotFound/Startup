@@ -168,7 +168,7 @@ export default function CustomerDashboardPage() {
 
   const handleClaimWarranty = (sub: typeof subscriptions[0]) => {
     const subject = `Warranty Claim: ${sub.productName}`;
-    const initialMsg = `Hi SubNexus Team, I am requesting a warranty replacement check for my ${sub.productName} plan (${sub.durationLabel}).`;
+    const initialMsg = `Hi Keyoon Team, I am requesting a warranty replacement check for my ${sub.productName} plan (${sub.durationLabel}).`;
     const t = createSupportTicket(subject, 'renewal_help', initialMsg);
     setSelectedTicketId(t.id);
     setActiveTab('support');

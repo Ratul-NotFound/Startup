@@ -615,7 +615,7 @@ export const INITIAL_TICKETS: SupportTicket[] = [
       {
         id: 'msg_2',
         sender: 'agent',
-        senderName: 'SubNexus Bot Ops',
+        senderName: 'Keyoon Bot Ops',
         content: 'Hello Alex! Absolutely. We can allocate a dedicated 5-seat workspace from our enterprise pool at $32.99/mo. Let us know if you want us to provision it.',
         timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       },
@@ -664,7 +664,7 @@ export const MOCK_REVIEWS: Review[] = [
     productLogo: '/images/cards/claude-pro.jpg',
     rating: 5,
     title: 'Claude 3.5 Sonnet is a game changer for our engineering team',
-    comment: 'The Artifacts UI and 200k context window are indispensable. SubNexus automated renewals have made subscription management zero maintenance. Customer service replies in minutes.',
+    comment: 'The Artifacts UI and 200k context window are indispensable. Keyoon automated renewals have made subscription management zero maintenance. Customer service replies in minutes.',
     verifiedPurchase: true,
     createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
     likes: 29,

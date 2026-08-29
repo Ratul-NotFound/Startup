@@ -168,7 +168,7 @@ export function TicketsTab({
                   {activeTicket.messages.map(msg => {
                     const isAgent = msg.sender === 'agent';
                     const avatarUrl = isAgent
-                      ? 'https://ui-avatars.com/api/?name=SubNexus+Ops&background=2563eb&color=fff'
+                      ? 'https://ui-avatars.com/api/?name=Keyoon+Ops&background=2563eb&color=fff'
                       : activeCust.avatar;
 
                     return (
