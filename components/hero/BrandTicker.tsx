@@ -104,8 +104,8 @@ export const BrandTicker: React.FC = () => {
     <div ref={containerRef} className="relative overflow-hidden py-6 sm:py-8 bg-transparent" style={{ transform: 'translateZ(0)' }}>
       
       {/* Soft Edge Fade Masks matching page background */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-32 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 sm:w-32 bg-gradient-to-l from-zinc-950 to-transparent z-10" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-24 sm:w-32 bg-gradient-to-r from-[var(--bg-primary)] to-transparent z-10" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-24 sm:w-32 bg-gradient-to-l from-[var(--bg-primary)] to-transparent z-10" />
 
       {/* Hero-Sized Floating Brand Marquee */}
       <div className="overflow-hidden select-none">
@@ -116,7 +116,7 @@ export const BrandTicker: React.FC = () => {
           {marqueeItems.map((brand, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-3.5 px-5 py-2.5 rounded-2xl bg-zinc-900/85 hover:bg-zinc-900 border border-white/[0.06] hover:border-cyan-500/40 text-zinc-400 hover:text-white transition-all duration-200 hover:scale-105 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] shrink-0 cursor-pointer group"
+              className="marquee-brand-pill flex items-center gap-3.5 px-5 py-2.5 rounded-2xl bg-zinc-900/85 hover:bg-zinc-900 border border-white/[0.06] hover:border-cyan-500/40 text-zinc-400 hover:text-white transition-all duration-200 hover:scale-105 shrink-0 cursor-pointer group"
             >
               <div className="opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-200">
                 {brand.logo}

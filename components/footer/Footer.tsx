@@ -9,7 +9,7 @@ export const Footer: React.FC = () => {
   const { brandSettings } = useApp();
 
   return (
-    <footer className="border-t border-white/[0.08] bg-zinc-950 text-xs text-zinc-400 pt-16 pb-12">
+    <footer className="border-t border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-zinc-950 text-xs text-zinc-500 dark:text-zinc-400 pt-16 pb-12 transition-colors">
       <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 space-y-12">
         
         {/* Main Grid */}
@@ -31,27 +31,27 @@ export const Footer: React.FC = () => {
               </div>
 
               <div className="flex items-center tracking-tight text-xl font-black font-sans leading-none select-none">
-                <span className="text-white drop-shadow-sm group-hover:text-slate-100 transition-colors">Key</span>
-                <span className="text-cyan-400">oon</span>
+                <span className="text-[var(--text-primary)] transition-colors">Key</span>
+                <span className="text-cyan-500 dark:text-cyan-400">oon</span>
               </div>
             </Link>
 
-            <p className="text-xs text-zinc-400 leading-relaxed max-w-sm">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed max-w-sm">
               Your trusted marketplace for authentic digital subscriptions. Enjoy instant delivery in under 30 seconds, encrypted private accounts, and 100% full-term replacement warranty.
             </p>
 
             {/* Live Status Pill */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-white/10 text-[11px] text-zinc-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-200/70 dark:bg-zinc-900 border border-slate-300 dark:border-white/10 text-[11px] text-slate-700 dark:text-zinc-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <span>99.98% System Uptime</span>
-              <span className="text-zinc-600">•</span>
-              <span className="text-emerald-400 font-semibold">Instant Delivery Online</span>
+              <span className="text-zinc-400 dark:text-zinc-600">•</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Instant Delivery Online</span>
             </div>
           </div>
 
           {/* Column 2: Categories */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold tracking-wider uppercase text-white font-sans">
+            <h4 className="text-xs font-bold tracking-wider uppercase text-[var(--text-primary)] font-sans">
               Categories
             </h4>
             <ul className="space-y-2.5 text-xs text-zinc-400 font-medium">

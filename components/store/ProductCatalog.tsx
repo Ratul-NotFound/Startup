@@ -111,12 +111,12 @@ export const ProductCatalog: React.FC = () => {
         {/* Title in Space Grotesk Font */}
         <div className="flex items-center gap-3">
           <h2
-            className="text-2xl sm:text-3xl font-black tracking-tight text-white"
+            className="catalog-section-title text-2xl sm:text-3xl font-black tracking-tight text-white"
             style={{ fontFamily: "'Space Grotesk', sans-serif" }}
           >
-            Popular <span className="text-cyan-400">Subscriptions</span>
+            Popular <span className="text-cyan-500 dark:text-cyan-400">Subscriptions</span>
           </h2>
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/20">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-cyan-50 text-cyan-700 border border-cyan-200 dark:bg-cyan-950/80 dark:text-cyan-300 dark:border-cyan-500/20">
             {processedProducts.length} Services
           </span>
         </div>
@@ -132,7 +132,7 @@ export const ProductCatalog: React.FC = () => {
               value={activeSearchQuery}
               onChange={(e) => setActiveSearchQuery(e.target.value)}
               placeholder="Search subscriptions..."
-              className="w-full sm:w-64 pl-10 pr-9 py-2.5 bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all font-sans shadow-sm"
+              className="theme-input w-full sm:w-64 pl-10 pr-9 py-2.5 bg-zinc-900/90 hover:bg-zinc-900 border border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all font-sans shadow-sm"
             />
             {activeSearchQuery && (
               <button
@@ -145,15 +145,15 @@ export const ProductCatalog: React.FC = () => {
           </div>
 
           {/* Sort Selector with Smooth Spring Sliding Pill */}
-          <div className="inline-flex items-center p-1 rounded-xl bg-zinc-900/90 border border-white/10 shrink-0 relative">
+          <div className="plan-capsule-container inline-flex items-center p-1 rounded-xl bg-zinc-900/90 border border-white/10 shrink-0 relative">
             {sortOptions.map((opt) => {
               const active = sortBy === opt.id;
               return (
                 <button
                   key={opt.id}
                   onClick={() => setSortBy(opt.id as any)}
-                  className={`relative px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 flex items-center gap-1.5 z-10 ${
-                    active ? 'text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                  className={`plan-capsule-button relative px-3 py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 flex items-center gap-1.5 z-10 ${
+                    active ? 'is-active text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
                   {active && (
@@ -207,12 +207,12 @@ export const ProductCatalog: React.FC = () => {
             <div className="flex items-center justify-between gap-4 pb-2 border-b border-white/[0.06]">
               <div>
                 <h3
-                  className="text-xl sm:text-2xl font-bold tracking-tight text-white"
+                  className="catalog-section-title text-xl sm:text-2xl font-bold tracking-tight text-white"
                   style={{ fontFamily: "'Space Grotesk', sans-serif" }}
                 >
                   {group.meta.label}
                 </h3>
-                <p className="text-xs text-zinc-400 font-sans mt-0.5">
+                <p className="catalog-section-sub text-xs text-zinc-400 font-sans mt-0.5">
                   {group.meta.description}
                 </p>
               </div>
@@ -227,7 +227,7 @@ export const ProductCatalog: React.FC = () => {
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.92 }}
                   onClick={() => scrollCategory(group.id, 'left')}
-                  className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors shadow-sm"
+                  className="btn-details-secondary p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors shadow-sm"
                   aria-label="Scroll Left"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -236,7 +236,7 @@ export const ProductCatalog: React.FC = () => {
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.92 }}
                   onClick={() => scrollCategory(group.id, 'right')}
-                  className="p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors shadow-sm"
+                  className="btn-details-secondary p-1.5 sm:p-2 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-white/10 transition-colors shadow-sm"
                   aria-label="Scroll Right"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -327,7 +327,7 @@ export const ProductCatalog: React.FC = () => {
                           style={{ transform: 'translateZ(28px)' }}
                           className="p-3 sm:p-4"
                         >
-                          <div className="p-1 rounded-xl bg-zinc-950/80 border border-white/[0.06] grid grid-cols-4 gap-1 shadow-inner relative">
+                          <div className="plan-capsule-container p-1 rounded-xl bg-zinc-950/80 border border-white/[0.06] grid grid-cols-4 gap-1 shadow-inner relative">
                             {product.pricingTiers.map((tier, idx) => {
                               const isSelected = idx === currentPlanIndex;
                               return (
@@ -335,9 +335,9 @@ export const ProductCatalog: React.FC = () => {
                                   key={tier.duration}
                                   type="button"
                                   onClick={() => handleSelectPlanIndex(product.id, idx)}
-                                  className={`relative py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 z-10 ${
+                                  className={`plan-capsule-button relative py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 z-10 ${
                                     isSelected
-                                      ? 'text-zinc-950'
+                                      ? 'is-active text-zinc-950'
                                       : 'text-zinc-400 hover:text-zinc-200'
                                   }`}
                                 >
@@ -371,10 +371,10 @@ export const ProductCatalog: React.FC = () => {
                               transition={{ duration: 0.15 }}
                               className="flex items-baseline gap-2"
                             >
-                              <span className="text-lg sm:text-xl font-black text-white drop-shadow-sm">
+                              <span className="catalog-price-val text-lg sm:text-xl font-black text-white drop-shadow-sm">
                                 {formatPrice(currentPlan.price)}
                               </span>
-                              <span className="text-xs text-zinc-500 line-through">
+                              <span className="catalog-original-price text-xs text-zinc-500 line-through">
                                 {formatPrice(currentPlan.originalPrice)}
                               </span>
                             </motion.div>
@@ -415,7 +415,7 @@ export const ProductCatalog: React.FC = () => {
                                 whileHover={{ scale: 1.03, z: 20 }}
                                 whileTap={{ scale: 0.96 }}
                                 onClick={() => setSelectedProduct(product)}
-                                className="w-full py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-colors border border-white/[0.06] shadow-sm cursor-pointer"
+                                className="btn-details-secondary w-full py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-800 text-zinc-300 hover:text-white text-xs font-semibold transition-colors border border-white/[0.06] shadow-sm cursor-pointer"
                               >
                                 View Details
                               </motion.button>

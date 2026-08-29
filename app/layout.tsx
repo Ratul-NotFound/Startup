@@ -131,6 +131,12 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap"
           rel="stylesheet"
         />
+        {/* Theme Pre-Hydration to prevent FOUC */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('keyoon_theme')||'dark';if(t==='light'){document.documentElement.classList.add('light');document.documentElement.classList.remove('dark');}else{document.documentElement.classList.add('dark');document.documentElement.classList.remove('light');}}catch(e){}})();`,
+          }}
+        />
         {/* Pre-hydration filter for browser extensions injecting arbitrary attributes like bis_skin_checked */}
         <script
           dangerouslySetInnerHTML={{
@@ -138,7 +144,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen bg-zinc-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200" suppressHydrationWarning>
+      <body className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col justify-between selection:bg-blue-600/30 selection:text-cyan-200 transition-colors duration-200" suppressHydrationWarning>
         <HydrationGuard />
         <AppProvider>
           <ScrollProgress />

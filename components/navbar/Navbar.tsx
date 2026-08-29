@@ -69,7 +69,7 @@ export const Navbar: React.FC = () => {
           suppressHydrationWarning
           className={`w-full transition-all duration-300 ${
             scrolled
-              ? 'bg-zinc-950/90 backdrop-blur-xl border-b border-white/[0.07] shadow-lg shadow-black/20'
+              ? 'nav-scrolled bg-zinc-950/90 backdrop-blur-xl border-b border-white/[0.07] shadow-lg shadow-black/20'
               : 'bg-transparent border-b border-transparent'
           }`}
         >
@@ -89,19 +89,19 @@ export const Navbar: React.FC = () => {
               </div>
 
               <div className="flex items-center tracking-tight text-xl sm:text-2xl font-black font-sans leading-none select-none">
-                <span className="text-white drop-shadow-sm group-hover:text-slate-100 transition-colors">Key</span>
-                <span className="text-cyan-400">oon</span>
+                <span className="text-[var(--text-primary)] transition-colors">Key</span>
+                <span className="text-cyan-500 dark:text-cyan-400">oon</span>
               </div>
             </Link>
 
             {/* Desktop Nav */}
-            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400">
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-[var(--text-secondary)]">
               {navLinks.map(link => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`transition-colors hover:text-white ${
-                    pathname === link.href ? 'text-white font-semibold' : ''
+                  className={`transition-colors hover:text-[var(--text-primary)] ${
+                    pathname === link.href ? 'text-[var(--text-primary)] font-bold' : ''
                   }`}
                 >
                   {link.label}
