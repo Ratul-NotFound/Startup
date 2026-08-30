@@ -755,7 +755,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const upper = code.toUpperCase();
     setCoupons(prev => prev.map(c => c.code === upper ? { ...c, ...updates } : c));
     try {
-      await updateDoc(doc(db, 'coupons', upper), updates as Record<string, unknown>);
+      await setDoc(doc(db, 'coupons', upper), cleanFirestoreData(updates), { merge: true });
     } catch (err) {
       console.error('adminUpdateCoupon error:', err);
     }
@@ -864,16 +864,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       try {
         const existingSnap = await getDoc(dealDocRef);
-        if (!existingSnap.exists()) {
-          await setDoc(dealDocRef, {
-            ...dealData,
-            maxUses: 1000,
-            usedCount: 0,
-            orderIndex: 0,
-          });
-        } else {
-          await updateDoc(dealDocRef, dealData as Record<string, unknown>);
-        }
+        await setDoc(dealDocRef, cleanFirestoreData({
+          ...dealData,
+          maxUses: 1000,
+          usedCount: 0,
+          orderIndex: 0,
+        }), { merge: true });
         // Update local coupons state immediately
         setCoupons(prev => {
           const idx = prev.findIndex(c => c.code.toUpperCase() === dealCode);
@@ -2273,16 +2269,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Update user stats in Firestore for instant payment
       try {
         const userRef = doc(db, 'users', user.id);
-        await updateDoc(userRef, {
+        await setDoc(userRef, {
           lifetimeSpend: (user.lifetimeSpend || 0) + (isFreeOrder ? 0 : cartTotal),
           activeSubscriptionsCount: (user.activeSubscriptionsCount || 0) + generatedSubIds.length,
-        });
+        }, { merge: true });
       } catch { }
     }
 
     // Write order to Firestore & propagate error if saving fails
     try {
-      await setDoc(doc(db, 'orders', orderId), cleanFirestoreData(newOrder));
+      await setDoc(doc(db, 'orders', orderId), cleanFirestoreData(newOrder), { merge: true });
       if (isFreeOrder) {
         await logAdminActivity('FREE_ORDER_CLAIMED', 'orders', `Free subscription claimed for ${newOrder.items.map(i => i.productName).join(', ')}`, orderId);
       }
@@ -2300,10 +2296,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         const couponRef = doc(db, 'coupons', appliedCoupon.code);
         const userIdentifier = currentUid || accountEmail || targetClaimEmail;
-        await updateDoc(couponRef, {
+        await setDoc(couponRef, {
           usedCount: (appliedCoupon.usedCount || 0) + 1,
           usedByUsers: arrayUnion(userIdentifier),
-        }).catch(() => {});
+        }, { merge: true }).catch(() => {});
       }
 
       // Record claimed special products in LocalStorage
@@ -2326,7 +2322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (pSnap.exists()) {
             const currentStock = pSnap.data().stockCount ?? 100;
             const newStock = Math.max(0, currentStock - item.quantity);
-            await updateDoc(prodRef, { stockCount: newStock });
+            await setDoc(prodRef, { stockCount: newStock }, { merge: true });
           }
         } catch { }
       }
@@ -2349,14 +2345,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (firebaseUser?.uid) {
       try {
         const userRef = doc(db, 'users', firebaseUser.uid);
-        await updateDoc(userRef, updates as Record<string, unknown>);
-      } catch {
-        try {
-          const userRef = doc(db, 'users', firebaseUser.uid);
-          await setDoc(userRef, updated, { merge: true });
-        } catch (err) {
-          console.error('Error updating user profile in Firestore:', err);
-        }
+        await setDoc(userRef, cleanFirestoreData(updated), { merge: true });
+      } catch (err) {
+        console.error('Error updating user profile in Firestore:', err);
       }
     }
   };
@@ -2369,7 +2360,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, autoRenew: newAutoRenew } : s));
     setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, autoRenew: newAutoRenew } : s));
     try {
-      await updateDoc(doc(db, 'subscriptions', subId), { autoRenew: newAutoRenew });
+      await setDoc(doc(db, 'subscriptions', subId), { autoRenew: newAutoRenew }, { merge: true });
     } catch { }
   };
 
@@ -2381,7 +2372,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' } : s));
     setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' } : s));
     try {
-      await updateDoc(doc(db, 'subscriptions', subId), { expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' });
+      await setDoc(doc(db, 'subscriptions', subId), { expiryDate: newExp, warrantyValidUntil: newExp, status: 'active' }, { merge: true });
     } catch { }
   };
 
@@ -2537,7 +2528,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ΓöÇΓöÇΓöÇ Admin: Order management & Verification ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const adminUpdateOrderStatus = async (orderId: string, paymentStatus: Order['paymentStatus'], deliveryStatus: Order['deliveryStatus']) => {
     try {
-      await updateDoc(doc(db, 'orders', orderId), { paymentStatus, deliveryStatus });
+      await setDoc(doc(db, 'orders', orderId), { paymentStatus, deliveryStatus }, { merge: true });
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentStatus, deliveryStatus } : o));
     } catch (err) {
       console.error('adminUpdateOrderStatus error:', err);
@@ -2548,7 +2539,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminVerifyPayment = async (orderId: string) => {
     try {
       const now = new Date().toISOString();
-      await updateDoc(doc(db, 'orders', orderId), { paymentVerifiedAt: now, verifiedBy: user.email || 'Admin' });
+      await setDoc(doc(db, 'orders', orderId), { paymentVerifiedAt: now, verifiedBy: user.email || 'Admin' }, { merge: true });
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentVerifiedAt: now } : o));
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, paymentVerifiedAt: now } : o));
     } catch (err) {
@@ -2650,13 +2641,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
 
       try {
-        await updateDoc(orderRef, {
+        await setDoc(orderRef, cleanFirestoreData({
           paymentStatus: 'paid',
           deliveryStatus: 'delivered',
           generatedSubscriptionIds: generatedSubIds,
           verifiedAt: new Date().toISOString(),
           verifiedBy: user.email || 'Admin',
-        });
+        }), { merge: true });
       } catch (err) {
         console.error('Error updating order doc:', err);
       }
@@ -2667,10 +2658,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const usrSnap = await getDoc(usrRef);
         if (usrSnap.exists()) {
           const uData = usrSnap.data();
-          await updateDoc(usrRef, {
+          await setDoc(usrRef, {
             lifetimeSpend: (uData.lifetimeSpend || 0) + ord.total,
             activeSubscriptionsCount: (uData.activeSubscriptionsCount || 0) + generatedSubIds.length,
-          });
+          }, { merge: true });
         }
       } catch {}
 
@@ -2726,7 +2717,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         verifiedAt: new Date().toISOString(),
         verifiedBy: user.email || 'Admin',
       };
-      await updateDoc(doc(db, 'orders', orderId), updates);
+      await setDoc(doc(db, 'orders', orderId), cleanFirestoreData(updates), { merge: true });
       setAllOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updates } : o));
       // Notify customer
@@ -2740,7 +2731,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const pSnap = await getDoc(prodRef);
               if (pSnap.exists()) {
                 const currentStock = pSnap.data().stockCount ?? 0;
-                await updateDoc(prodRef, { stockCount: currentStock + (item.quantity || 1) });
+                await setDoc(prodRef, { stockCount: currentStock + (item.quantity || 1) }, { merge: true });
               }
             } catch { }
           }
@@ -2897,15 +2888,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminUpdateSubscription = async (id: string, updates: Partial<UserSubscription>) => {
     const hasRealCreds = updates.credentials &&
       (updates.credentials.email || updates.credentials.password);
-    const cleanUpdates = {
+    const cleanUpdates = cleanFirestoreData({
       ...updates,
       ...(updates.userEmail ? { userEmail: updates.userEmail.toLowerCase().trim() } : {}),
       ...(hasRealCreds ? { credentialsConfigured: true } : {}),
-    };
+    });
     setAllSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...cleanUpdates } : s));
     setSubscriptions(prev => prev.map(s => s.id === id ? { ...s, ...cleanUpdates } : s));
     try {
-      await updateDoc(doc(db, 'subscriptions', id), cleanUpdates as Record<string, unknown>);
+      await setDoc(doc(db, 'subscriptions', id), cleanUpdates, { merge: true });
     } catch (err) {
       console.error('adminUpdateSubscription error:', err);
     }
@@ -2929,10 +2920,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const subRef = doc(db, 'subscriptions', subId);
       const subSnap = await getDoc(subRef);
       const existing = subSnap.exists() ? (subSnap.data() as UserSubscription).credentials : {};
-      await updateDoc(subRef, {
+      await setDoc(subRef, cleanFirestoreData({
         credentials: { ...existing, ...credentials },
         ...(hasRealCreds ? { credentialsConfigured: true } : {}),
-      });
+      }), { merge: true });
     } catch (err) {
       console.error('adminUpdateSubscriptionCredentials error:', err);
     }
@@ -2942,7 +2933,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAllSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, status } : s));
     setSubscriptions(prev => prev.map(s => s.id === subId ? { ...s, status } : s));
     try {
-      await updateDoc(doc(db, 'subscriptions', subId), { status });
+      await setDoc(doc(db, 'subscriptions', subId), cleanFirestoreData({ status }), { merge: true });
     } catch (err) {
       console.error('adminUpdateSubscriptionStatus error:', err);
     }
@@ -3052,11 +3043,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const snap = await getDoc(doc(db, 'support_tickets', ticketId));
       if (snap.exists()) {
         const data = snap.data() as SupportTicket;
-        await updateDoc(doc(db, 'support_tickets', ticketId), {
+        await setDoc(doc(db, 'support_tickets', ticketId), cleanFirestoreData({
           status: 'in_progress',
           updatedAt: msg.timestamp,
           messages: [...data.messages, msg],
-        });
+        }), { merge: true });
       }
     } catch (err) {
       console.error('adminReplyToTicket error:', err);
@@ -3065,7 +3056,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const adminCloseTicket = async (ticketId: string) => {
     try {
-      await updateDoc(doc(db, 'support_tickets', ticketId), { status: 'closed' });
+      await setDoc(doc(db, 'support_tickets', ticketId), { status: 'closed' }, { merge: true });
     } catch (err) {
       console.error('adminCloseTicket error:', err);
     }
@@ -3159,10 +3150,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const snap = await getDoc(doc(db, 'support_tickets', ticketId));
       if (snap.exists()) {
         const data = snap.data() as SupportTicket;
-        await updateDoc(doc(db, 'support_tickets', ticketId), {
+        await setDoc(doc(db, 'support_tickets', ticketId), cleanFirestoreData({
           updatedAt: msg.timestamp,
           messages: [...data.messages, msg],
-        });
+        }), { merge: true });
       }
     } catch { }
   };
@@ -3521,7 +3512,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     for (const sub of targetSubs) {
       const newExp = new Date(new Date(sub.expiryDate).getTime() - days * 86400000).toISOString();
       const newStatus = new Date(newExp).getTime() < Date.now() ? 'expired' : 'active';
-      try { updateDoc(doc(db, 'subscriptions', sub.id), { expiryDate: newExp, status: newStatus }); } catch { }
+      try { setDoc(doc(db, 'subscriptions', sub.id), { expiryDate: newExp, status: newStatus }, { merge: true }); } catch { }
     }
   };
 
@@ -3562,7 +3553,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
-      await setDoc(doc(db, 'reviews', revId), newRev);
+      await setDoc(doc(db, 'reviews', revId), cleanFirestoreData(newRev), { merge: true });
     } catch (err) {
       console.warn('[Firestore] Error adding review to firestore:', err);
     }
@@ -3594,7 +3585,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const newLikedBy = alreadyLiked
           ? (data.likedBy || []).filter(id => id !== currentUserId)
           : [...(data.likedBy || []), currentUserId];
-        await updateDoc(revRef, { likes: newLikes, likedBy: newLikedBy });
+        await setDoc(revRef, cleanFirestoreData({ likes: newLikes, likedBy: newLikedBy }), { merge: true });
       }
     } catch (err) {
       console.warn('[Firestore] Error toggling review like:', err);
@@ -3701,7 +3692,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminUpdateHeroSlide = async (id: string, updates: Partial<HeroSlide>) => {
     setHeroSlides(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
     try {
-      await updateDoc(doc(db, 'hero_slides', id), updates);
+      await setDoc(doc(db, 'hero_slides', id), cleanFirestoreData(updates), { merge: true });
     } catch (err) {
       console.warn('[Firestore] Admin hero slide update error:', err);
     }
@@ -3755,7 +3746,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminUpdateQuickMessage = async (id: string, updates: Partial<QuickMessage>) => {
     setQuickMessages(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
     try {
-      await updateDoc(doc(db, 'quick_messages', id), updates);
+      await setDoc(doc(db, 'quick_messages', id), cleanFirestoreData(updates), { merge: true });
     } catch (err) {
       console.warn('[Firestore] Admin quick message update error:', err);
     }
