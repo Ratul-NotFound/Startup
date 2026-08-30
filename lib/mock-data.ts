@@ -54,12 +54,8 @@ export const MOCK_COUPONS: Coupon[] = [
     offerTag: '🔥 বিশেষ কম্বো অফার',
     offerTitle: 'নেটফ্লিক্স একদম ফ্রি! Gemini Pro ১৮ মাস মাত্র ৳১৩০!',
     offerImage: '/images/offers/netflix-gemini-special.jpg',
-    type: 'giveaway',
-    linkedProductId: 'gemini-advanced',
+    type: 'discount',
     orderIndex: 0,
-    requiredTasks: [
-      { id: 'task_tg', label: 'Join Official Telegram Channel', url: 'https://t.me/+2lQ2b-bIoI00NzA9', isRequired: true },
-    ],
   },
   {
     code: 'NEXUS20',
@@ -230,9 +226,9 @@ export const MOCK_PRODUCTS: Product[] = [
     name: 'Netflix 4K UHD',
     slug: 'netflix-4k-uhd',
     category: 'streaming',
-    orderIndex: 0,
-    tagline: '৪K আল্ট্রা এইচডি • Gemini Pro অফারের সাথে ১০০% ফ্রি!',
-    description: 'Watch all films and series in 4K HDR with dedicated PIN-locked profile. বিশেষ মেগা অফারে Gemini Pro এর সাথে সম্পূর্ণ ফ্রিতে বুঝে নিন!',
+    orderIndex: 2,
+    tagline: '৪K আল্ট্রা এইচডি • আল্টিমেট স্ট্রিমিং ও ডেডিকেটেড প্রোফাইল',
+    description: 'Watch all films and series in 4K HDR with dedicated PIN-locked profile.',
     logo: '/images/cards/netflix.svg',
     images: [
       '/images/offers/netflix-gemini-special.jpg',

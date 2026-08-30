@@ -1061,11 +1061,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             mergedTiers = mergedTiers.filter(t => t.duration !== '1_month_free');
           }
 
+          let calculatedOrderIndex = data.orderIndex ?? mockMatch?.orderIndex ?? 999;
+          if (d.id === 'gemini-advanced') calculatedOrderIndex = 0;
+          if (d.id.includes('giveaway') || data.name?.toLowerCase().includes('giveaway')) calculatedOrderIndex = 0;
+          if (d.id === 'netflix-4k-uhd') calculatedOrderIndex = 2;
+
           return {
             ...mockMatch,
             ...data,
             id: d.id,
-            orderIndex: d.id === 'gemini-advanced' ? 0 : (data.orderIndex ?? mockMatch?.orderIndex ?? 999),
+            productType: d.id === 'gemini-advanced' ? 'standard' : (data.productType ?? mockMatch?.productType ?? 'standard'),
+            isFreeProduct: d.id === 'gemini-advanced' ? false : (data.isFreeProduct ?? mockMatch?.isFreeProduct ?? false),
+            specialConfig: d.id === 'gemini-advanced' ? undefined : (data.specialConfig ?? mockMatch?.specialConfig),
+            orderIndex: calculatedOrderIndex,
             images: gallery,
             features: (data.features && data.features.length > 0) ? data.features : (mockMatch?.features || ['Full access included', 'Fast reliable delivery', 'Replacement warranty']),
             instructions: (data.instructions && data.instructions.length > 0) ? data.instructions : (mockMatch?.instructions || ['Log in with credentials from your Vault.', 'Start using the premium service immediately.']),
@@ -1088,7 +1096,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // Background auto-sync missing items to Firestore
         const geminiDoc = snapshot.docs.find(d => d.id === 'gemini-advanced');
         const netflixDoc = snapshot.docs.find(d => d.id === 'netflix-4k-uhd');
-        const geminiNeedsSync = !geminiDoc || !(geminiDoc.data()?.pricingTiers || []).some((t: any) => t.duration === '18_months') || geminiDoc.data()?.orderIndex !== 0;
+        const geminiNeedsSync = !geminiDoc || !(geminiDoc.data()?.pricingTiers || []).some((t: any) => t.duration === '18_months') || geminiDoc.data()?.orderIndex !== 0 || geminiDoc.data()?.productType === 'special';
         const netflixHasFreeTier = netflixDoc && (netflixDoc.data()?.pricingTiers || []).some((t: any) => t.duration === '1_month_free');
 
         if (geminiNeedsSync || netflixHasFreeTier || missingFromDb.length > 0) {

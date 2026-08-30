@@ -588,8 +588,12 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
                   whileHover={{ scale: 1.04 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => {
-                    const el = document.getElementById('catalog');
-                    el?.scrollIntoView({ behavior: 'smooth' });
+                    const geminiProd = products.find(p => p.id === 'gemini-advanced');
+                    if (geminiProd) setSelectedProduct(geminiProd);
+                    else {
+                      const el = document.getElementById('catalog');
+                      el?.scrollIntoView({ behavior: 'smooth' });
+                    }
                   }}
                   className="px-7 sm:px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-2 border-cyan-400 font-black text-sm tracking-wide transition-all flex items-center gap-2 shadow-[0_0_30px_rgba(37,99,235,0.6)] cursor-pointer"
                 >

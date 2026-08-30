@@ -75,15 +75,14 @@ export const ProductModal: React.FC = () => {
   }, [selectedProduct, linkedCoupon]);
 
   const isSpecialProduct = useMemo(() => {
-    if (!selectedProduct) return false;
+    if (!selectedProduct || selectedProduct.id === 'gemini-advanced') return false;
     return (
       selectedProduct.productType === 'special' ||
       specialTasks.length > 0 ||
       !!selectedProduct.specialConfig ||
-      !!selectedProduct.isFreeProduct ||
-      !!linkedCoupon
+      !!selectedProduct.isFreeProduct
     );
-  }, [selectedProduct, specialTasks, linkedCoupon]);
+  }, [selectedProduct, specialTasks]);
 
   useEffect(() => {
     if (selectedProduct) {

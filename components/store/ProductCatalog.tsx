@@ -76,7 +76,21 @@ export const ProductCatalog: React.FC = () => {
         const catProducts = processedProducts.filter((p) => p.category === meta.id);
         // If viewing in default popular mode, respect in-category admin product sequence
         if (sortBy === 'popular') {
-          catProducts.sort((a, b) => (a.orderIndex ?? 999) - (b.orderIndex ?? 999));
+          catProducts.sort((a, b) => {
+            // Netflix (Giveaway) is ALWAYS at the 1st position in Streaming
+            if (meta.id === 'streaming') {
+              const aIsGiveaway = a.name.toLowerCase().includes('giveaway') || a.id.includes('giveaway');
+              const bIsGiveaway = b.name.toLowerCase().includes('giveaway') || b.id.includes('giveaway');
+              if (aIsGiveaway && !bIsGiveaway) return -1;
+              if (!aIsGiveaway && bIsGiveaway) return 1;
+            }
+            // Gemini Pro is ALWAYS at the 1st position in AI
+            if (meta.id === 'ai') {
+              if (a.id === 'gemini-advanced') return -1;
+              if (b.id === 'gemini-advanced') return 1;
+            }
+            return (a.orderIndex ?? 999) - (b.orderIndex ?? 999);
+          });
         }
         return {
           id: meta.id,
@@ -391,7 +405,7 @@ export const ProductCatalog: React.FC = () => {
                             <span className="text-[10px] sm:text-[11px] font-bold text-rose-500 bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-500/30 px-2 py-0.5 rounded-lg shadow-sm">
                               OUT OF STOCK
                             </span>
-                          ) : (product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct) ? (
+                          ) : (product.id !== 'gemini-advanced' && (product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct)) ? (
                             <span className={`text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-lg shadow-md flex items-center gap-1 border ${
                               isSpecialOfferClaimed(product.id)
                                 ? 'bg-slate-100 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
@@ -412,7 +426,7 @@ export const ProductCatalog: React.FC = () => {
                         </div>
 
                         {(() => {
-                          const isSpecial = product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct;
+                          const isSpecial = product.id !== 'gemini-advanced' && (product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct);
                           const isFree = currentPlan.price === 0 || (isSpecial && (product.isFreeProduct || product.specialConfig?.isFreeProduct));
                           const isClaimed = isSpecial && isSpecialOfferClaimed(product.id);
 
