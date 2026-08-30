@@ -5,7 +5,7 @@ import { useApp } from '@/context/AppContext';
 import {
   TrendingUp, DollarSign, Users, Package, Tag, Headphones, ShoppingBag,
   BarChart2, MessageSquare, Lock, Star, Sparkles, CreditCard, UserCheck,
-  CheckCircle2, AlertCircle, RefreshCw, Gift, Activity,
+  CheckCircle2, AlertCircle, RefreshCw, Gift, Activity, Loader2,
 } from 'lucide-react';
 import { Product, Coupon, UserSubscription, Order, BangladeshPaymentMethod, SupportTicket, HeroSlide, QuickMessage, AdminActivityLog } from '@/types';
 
@@ -39,7 +39,7 @@ import { ScreenshotPreviewModal } from '@/components/admin/modals/ScreenshotPrev
 
 export default function AdminPortalPage() {
   const {
-    firebaseUser, isAdmin, isSuperAdmin, setIsAuthModalOpen,
+    firebaseUser, isAdmin, isSuperAdmin, setIsAuthModalOpen, isAuthChecking,
     products, adminCreateProduct, adminUpdateProduct, adminDeleteProduct,
     allOrders, adminUpdateOrderStatus, adminApproveAndDeliverOrder, adminVerifyPayment, adminRejectOrder,
     allUsers, adminUpdateUserRole,
@@ -47,6 +47,7 @@ export default function AdminPortalPage() {
     coupons, adminCreateCoupon, adminDeleteCoupon,
     paymentMethods, adminCreatePaymentMethod, adminUpdatePaymentMethod, adminDeletePaymentMethod, adminResetPaymentMethods,
     allTickets, adminReplyToTicket, adminCloseTicket, adminSendMessageToUser,
+    allChatThreads,
     adminList, adminAddAdmin, adminRemoveAdmin,
     financialMetrics, triggerRenewalCronSimulation, fastForwardSimulationDays,
     refreshAllData, isSyncing,
@@ -377,7 +378,7 @@ export default function AdminPortalPage() {
 
   // Navigation Items with Counters
   const pendingOrdersCount = allOrders.filter(o => o.paymentStatus === 'pending').length;
-  const openTicketsCount = allTickets.filter(t => t.status !== 'closed').length;
+  const unreadChatCount = allChatThreads.reduce((acc, t) => acc + (t.unreadCountAdmin || 0), 0);
 
   const navSections: NavSection[] = [
     {
@@ -404,11 +405,20 @@ export default function AdminPortalPage() {
       items: [
         { id: 'subscriptions', label: 'Vault Subscriptions & Logins', icon: <Lock className="h-4 w-4 text-cyan-400" />, count: allSubscriptions.length },
         { id: 'users', label: 'Customer Accounts', icon: <Users className="h-4 w-4" />, count: allUsers.length },
-        { id: 'tickets', label: 'Support Queue & DM', icon: <Headphones className="h-4 w-4" />, count: openTicketsCount, isUrgent: openTicketsCount > 0 },
+        { id: 'tickets', label: 'Live Messenger Hub', icon: <Headphones className="h-4 w-4 text-cyan-400" />, count: unreadChatCount, isUrgent: unreadChatCount > 0 },
         { id: 'admins', label: 'Administrator Access', icon: <UserCheck className="h-4 w-4 text-red-400" />, count: adminList.length },
       ],
     },
   ];
+
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-10 w-10 text-cyan-400 animate-spin" />
+        <p className="text-xs text-slate-300 font-semibold tracking-wide">Validating Admin Clearance...</p>
+      </div>
+    );
+  }
 
   if (!firebaseUser) {
     return (

@@ -38,15 +38,16 @@ export default function HomePage() {
         </Scroll3DReveal>
       </div>
 
-      {/* 4. Subscription Product Vault */}
+      {/* 4. Subscription Product Vault / Pricing */}
       <div id="catalog" className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 scroll-mt-24" suppressHydrationWarning>
+        <div id="pricing" className="scroll-mt-24" />
         <Scroll3DReveal direction="up" delay={0.08}>
           <ProductCatalog />
         </Scroll3DReveal>
       </div>
 
       {/* 5. Customer Reviews Section */}
-      <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 content-auto" suppressHydrationWarning>
+      <div id="reviews" className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 content-auto scroll-mt-24" suppressHydrationWarning>
         <Scroll3DReveal direction="up" delay={0.08}>
           <CustomerReviewsSection />
         </Scroll3DReveal>

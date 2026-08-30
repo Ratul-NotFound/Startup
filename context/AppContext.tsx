@@ -6,11 +6,14 @@ import {
   Order, SupportTicket, FinancialMetric, EmailNotification, PlanPricing, PaymentMethod,
   AdminMember, Review, BangladeshPaymentMethod, HeroSlide, QuickMessage, AdminActivityLog, BrandSettings, CurrencySettings,
   CategoryConfig, SubscriptionCategory, SpecialOffersSettings,
+  ChatMessage, ChatMessageMetadata, CustomerChatThread,
 } from '@/types';
 import { detectVisitorCountry, getInstantCountryCode } from '@/lib/geo-currency';
 import {
   INITIAL_USER_PROFILE,
   INITIAL_FINANCIAL_METRICS,
+  MOCK_HERO_SLIDES,
+  MOCK_PRODUCTS,
 } from '@/lib/mock-data';
 import { generateOrderNumber, generateRandomId, generateMockCredentials } from '@/lib/utils';
 import { auth, db, initAnalytics } from '@/lib/firebase';
@@ -21,8 +24,28 @@ import {
   doc, setDoc, getDoc, collection, getDocs, addDoc, updateDoc,
   deleteDoc, query, where, orderBy, onSnapshot, writeBatch, arrayUnion,
 } from 'firebase/firestore';
+import { playMicroClickSound, playMessageDingSound } from '@/lib/sound-effects';
 
-// ΓöÇΓöÇΓöÇ localStorage TTL Cache Helper ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+/**
+ * Sanitizes an object before writing to Firestore, eliminating any undefined values recursively
+ */
+export function cleanFirestoreData<T>(data: T): T {
+  if (data === null || data === undefined) return null as unknown as T;
+  if (typeof data !== 'object') return data;
+  if (data instanceof Date) return data.toISOString() as unknown as T;
+  if (Array.isArray(data)) {
+    return data.map(item => cleanFirestoreData(item)) as unknown as T;
+  }
+  const cleaned: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      cleaned[key] = cleanFirestoreData(value);
+    }
+  }
+  return cleaned as T;
+}
+
+// ─── localStorage TTL Cache Helper ─────────────────────────────────────────
 // Saves Firestore reads and hydrates state instantly to eliminate content flashes
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -51,7 +74,7 @@ export const bustCache = (...keys: string[]): void => {
 };
 
 // ΓöÇΓöÇΓöÇ Superadmin emails ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
-export const SUPERADMIN_EMAILS = ['m.h.ratul18@gmail.com', 'admin@keyoon.com'];
+export const SUPERADMIN_EMAILS = ['m.h.ratul18@gmail.com', 'admin@keyoon.com', 'rubab2712@gmail.com'];
 export const SUPERADMIN_EMAIL = 'm.h.ratul18@gmail.com';
 
 export const isSuperadminEmail = (email?: string | null): boolean => {
@@ -110,46 +133,46 @@ export const DEFAULT_CATEGORY_CONFIGS: CategoryConfig[] = [
 export const DEFAULT_QUICK_MESSAGES: QuickMessage[] = [
   {
     id: 'qm_credentials',
-    label: '🔑 Get Credentials',
+    label: '🔑 Get Credentials / পাসওয়ার্ড',
     query: 'Where do I find my account login credentials after ordering?',
-    answer: '🔑 Hello {CUSTOMER_NAME}! Your credentials are automatically unlocked in your personal Keyoon Vault. Click the "Vault" button in the top navigation bar or go to your customer dashboard to copy your email, password, and PIN.',
-    keywords: ['credential', 'credentials', 'password', 'vault', 'login', 'account', 'email', 'pin', 'key'],
+    answer: '🔑 প্রিয় {CUSTOMER_NAME}!\nঅর্ডার কমপ্লিট হওয়ার সাথে সাথেই আপনার অ্যাকাউন্টের ইমেইল, পাসওয়ার্ড ও পিন আপনার ব্যক্তিগত Keyoon Vault-এ আনলক হয়ে যায়।\n\nওয়েবসাইটের উপরের মেনুতে "Customer Vault" এ ক্লিক করুন অথবা ড্যাশবোর্ডে গিয়ে আপনার লগইন তথ্য ও পাসওয়ার্ড দেখে নিন।\n\n(Credentials are automatically unlocked in your personal Keyoon Vault. Click "Customer Vault" in the top bar to view your credentials.)',
+    keywords: ['credential', 'credentials', 'password', 'vault', 'login', 'account', 'email', 'pin', 'key', 'পাসওয়ার্ড', 'লগইন', 'আইডি', 'কোড', 'পিন', 'ভল্ট', 'পাসওয়ার্ড পাচ্ছি না', 'ইউজারনেম'],
     order: 1,
     isActive: true,
   },
   {
     id: 'qm_bkash_nagad',
-    label: '💳 bKash / Nagad Help',
+    label: '💳 bKash / Nagad / পেমেন্ট',
     query: 'How do I complete payment using bKash, Nagad, or Rocket?',
-    answer: '💳 Official Mobile Payment Numbers:\n• bKash: {BKASH_NUMBER}\n• Nagad: {NAGAD_NUMBER}\n\nSend the exact amount and submit your TrxID in the checkout popup for instant 2-minute verification!',
-    keywords: ['bkash', 'nagad', 'rocket', 'upay', 'payment', 'pay', 'send money', 'trxid', 'transaction', 'cashout', 'send', 'number'],
+    answer: '💳 কিউনের অফিশিয়াল মোবাইল পেমেন্ট নাম্বার:\n• বিকাশ (bKash): {BKASH_NUMBER}\n• নগদ (Nagad): {NAGAD_NUMBER}\n• রকেট (Rocket): {ROCKET_NUMBER}\n\nসঠিক টাকা সেন্ড মানি বা পেমেন্ট করে চেকআউট পপআপে আপনার TrxID সাবমিট করুন। ১-২ মিনিটের মধ্যে স্বয়ংক্রিয়ভাবে ভেরিফাই হয়ে যাবে!',
+    keywords: ['bkash', 'nagad', 'rocket', 'upay', 'payment', 'pay', 'send money', 'trxid', 'transaction', 'cashout', 'send', 'number', 'বিকাশ', 'নগদ', 'রকেট', 'পেমেন্ট', 'টাকা', 'নাম্বার', 'সেন্ড মানি', 'ট্রানজেকশন'],
     order: 2,
     isActive: true,
   },
   {
     id: 'qm_order_status',
-    label: '⚡ Order Status',
+    label: '⚡ Order Status / অর্ডার ট্র্যাক',
     query: 'Can you help me check the status of my latest order?',
-    answer: '📦 Latest Order: {ORDER_NUMBER}\n• Status: [{ORDER_STATUS}]\n• Items: {ORDER_ITEMS}\n• Total: {ORDER_TOTAL}\n• TrxID: {TRX_ID}\n\nInstant orders are delivered to your Vault within 30 seconds!',
-    keywords: ['order', 'track', 'status', 'delivery', 'pending', 'deliver', 'when', 'delay', 'process'],
+    answer: '📦 সর্বশেষ অর্ডার তথ্য: {ORDER_NUMBER}\n• স্ট্যাটাস: [{ORDER_STATUS}]\n• প্রোডাক্ট: {ORDER_ITEMS}\n• মোট বিল: {ORDER_TOTAL}\n• TrxID: {TRX_ID}\n\nসাধারণত ৩০ সেকেন্ড থেকে ২ মিনিটের মধ্যে অর্ডার ডেলিভারি সম্পন্ন হয়ে যায়!',
+    keywords: ['order', 'track', 'status', 'delivery', 'pending', 'deliver', 'when', 'delay', 'process', 'অর্ডার', 'কখন পাবো', 'দেরি', 'ডেলিভারি', 'স্ট্যাটাস', 'পেন্ডিং', 'কতক্ষণ লাগবে'],
     order: 3,
     isActive: true,
   },
   {
     id: 'qm_warranty',
-    label: '🛡️ Warranty Claim',
+    label: '🛡️ Warranty Claim / ওয়ারেন্টি',
     query: 'How does the full replacement warranty work?',
-    answer: '🛡️ All subscriptions include a 100% Full-Term Replacement Warranty. If any login experiences an interruption, our automated monitoring engine or 24/7 support ops resolves or replaces your slot immediately.',
-    keywords: ['warranty', 'replacement', 'renew', 'not working', 'fix', 'broken', 'issue', 'expired', 'down', 'problem', 'screen limit'],
+    answer: '🛡️ কিউনের প্রতিটি সাবস্ক্রিপশনে রয়েছে ১০০% ফুল-টার্ম রিপ্লেসমেন্ট ওয়ারেন্টি।\nলগইনে যেকোনো টেকনিক্যাল সমস্যা, স্ক্রিন লিমিট বা পাসওয়ার্ড ত্রুটি দেখা দিলে আমাদের ২৪/৭ সাপোর্ট টিম তাৎক্ষণিকভাবে আপনার অ্যাকাউন্ট ফিক্স অথবা নতুন স্লট দিয়ে রিপ্লেস করে দেবে।',
+    keywords: ['warranty', 'replacement', 'renew', 'not working', 'fix', 'broken', 'issue', 'expired', 'down', 'problem', 'screen limit', 'ওয়ারেন্টি', 'কাজ করছে না', 'সমস্যা', 'লক', 'পাসওয়ার্ড ভুল', 'রিপ্লেসমেন্ট', 'নষ্ট', 'স্ক্রিন লিমিট'],
     order: 4,
     isActive: true,
   },
   {
     id: 'qm_direct_upgrade',
-    label: '✨ Direct Email Upgrade',
+    label: '✨ Direct Email Upgrade / আপগ্রেড',
     query: 'Can I upgrade my existing personal email account instead of getting a new one?',
-    answer: '✨ Yes! For tiers marked as "Direct Upgrade" or "Custom Email", provide your email address in the checkout box, and we will apply the official premium subscription directly to your existing account without changing your password.',
-    keywords: ['upgrade', 'my email', 'personal email', 'existing account', 'custom email', 'direct', 'own account', 'invite'],
+    answer: '✨ হ্যাঁ! যেসকল প্যাকেজে "Direct Upgrade" অথবা "Custom Email" উল্লেখ আছে, সেখানে চেকআউট বক্সে আপনার ব্যক্তিগত ইমেইল দিলে আপনার পাসওয়ার্ড পরিবর্তন ছাড়াই আমরা আপনার নিজস্ব ইমেইলে অফিশিয়াল প্রিমিয়াম অ্যাক্টিভেট করে দেবো।',
+    keywords: ['upgrade', 'my email', 'personal email', 'existing account', 'custom email', 'direct', 'own account', 'invite', 'আপগ্রেড', 'আমার ইমেইল', 'পার্সোনাল ইমেইল', 'ইনভাইট', 'নিজস্ব অ্যাকাউন্ট'],
     order: 5,
     isActive: true,
   },
@@ -318,6 +341,19 @@ interface AppContextType {
   createSupportTicket: (subject: string, category: SupportTicket['category'], initialMessage: string, imageUrl?: string) => SupportTicket;
   replyToTicket: (ticketId: string, content: string, sender: 'user' | 'agent', imageUrl?: string) => void;
 
+  // Unified Messenger Chat System
+  isChatOpen: boolean;
+  setIsChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  userChatThread: CustomerChatThread | null;
+  allChatThreads: CustomerChatThread[];
+  activeChatThreadId: string | null;
+  setActiveChatThreadId: (id: string | null) => void;
+  openChatWithContext: (initialMessage?: string, metadata?: ChatMessageMetadata) => void;
+  sendChatMessage: (content: string, imageUrl?: string, metadata?: ChatMessageMetadata, targetThreadId?: string) => Promise<void>;
+  markChatThreadRead: (threadId: string, by: 'admin' | 'user') => Promise<void>;
+  setChatTypingStatus: (threadId: string, sender: 'user' | 'agent', isTyping: boolean) => Promise<void>;
+  isAuthChecking: boolean;
+
   // Reviews System
   reviews: Review[];
   addReview: (reviewData: Omit<Review, 'id' | 'createdAt' | 'likes' | 'likedBy'>) => Promise<string>;
@@ -394,7 +430,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTheme(theme === 'dark' ? 'light' : 'dark');
   }, [theme, setTheme]);
 
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = readCache<Product[]>('keyoon_cache_products');
+      if (cached && cached.length > 0) {
+        const geminiMock = MOCK_PRODUCTS.find(p => p.id === 'gemini-advanced');
+        const netflixMock = MOCK_PRODUCTS.find(p => p.id === 'netflix-4k-uhd');
+        const updated = cached.map(p => {
+          if (p.id === 'gemini-advanced' && geminiMock) {
+            return { ...p, orderIndex: 0, pricingTiers: geminiMock.pricingTiers, name: geminiMock.name };
+          }
+          if (p.id === 'netflix-4k-uhd' && netflixMock) {
+            return { ...p, pricingTiers: netflixMock.pricingTiers };
+          }
+          return p;
+        });
+        return updated;
+      }
+    }
+    return MOCK_PRODUCTS;
+  });
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   // Cart
@@ -415,9 +470,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [heroSlides, setHeroSlides] = useState<HeroSlide[]>(() => {
     if (typeof window !== 'undefined') {
       const cached = readCache<HeroSlide[]>('keyoon_cache_hero_slides');
-      if (cached && cached.length > 0) return cached;
+      if (cached && cached.length > 0) {
+        // Ensure new default slides like hero_special_offer are present
+        const cachedIds = new Set(cached.map(c => c.id));
+        const missing = MOCK_HERO_SLIDES.filter(s => !cachedIds.has(s.id));
+        return [...cached, ...missing].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      }
     }
-    return [];
+    return MOCK_HERO_SLIDES;
   });
 
   // Quick Messages & Bot Auto-Replies State
@@ -425,18 +485,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Auth & Roles
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminList, setAdminList] = useState<AdminMember[]>([]);
 
   // User data
-  const [user, setUser] = useState<CustomerProfile>(INITIAL_USER_PROFILE);
+  const [user, setUser] = useState<CustomerProfile>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('keyoon_cached_user');
+        if (cached) return JSON.parse(cached);
+      } catch {}
+    }
+    return INITIAL_USER_PROFILE;
+  });
   const [subscriptions, setSubscriptions] = useState<UserSubscription[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [latestOrder, setLatestOrder] = useState<Order | null>(null);
   const [activeVaultSub, setActiveVaultSub] = useState<UserSubscription | null>(null);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+
+  // Unified Messenger Chat System State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [userChatThread, setUserChatThread] = useState<CustomerChatThread | null>(null);
+  const [allChatThreads, setAllChatThreads] = useState<CustomerChatThread[]>([]);
+  const [activeChatThreadId, setActiveChatThreadId] = useState<string | null>(null);
 
   // Admin data (all users' data)
   const [allOrders, setAllOrders] = useState<Order[]>([]);
@@ -966,46 +1041,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     seedFirestoreIfEmpty();
 
     // 1. REAL-TIME: products (100% pure database-driven)
-    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+    const unsubProducts = onSnapshot(collection(db, 'products'), async (snapshot) => {
       if (!snapshot.empty) {
         const prods = snapshot.docs.map(d => {
           const data = d.data() as Product;
+          const mockMatch = MOCK_PRODUCTS.find(mp => mp.id === d.id);
           const gallery = (data.images && data.images.length > 0)
             ? data.images
-            : [data.logo || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'];
+            : (mockMatch?.images || [data.logo || '/images/Fabicon.png']);
+
+          // Merge latest tiers if Firestore has older mock format
+          let mergedTiers = data.pricingTiers || [];
+          if (d.id === 'gemini-advanced' && mockMatch) {
+            if (!mergedTiers.some(t => t.duration === '18_months')) {
+              mergedTiers = mockMatch.pricingTiers;
+            }
+          }
+          if (d.id === 'netflix-4k-uhd') {
+            mergedTiers = mergedTiers.filter(t => t.duration !== '1_month_free');
+          }
 
           return {
+            ...mockMatch,
             ...data,
             id: d.id,
+            orderIndex: d.id === 'gemini-advanced' ? 0 : (data.orderIndex ?? mockMatch?.orderIndex ?? 999),
             images: gallery,
-            features: (data.features && data.features.length > 0) ? data.features : ['Full access included', 'Fast reliable delivery', 'Replacement warranty'],
-            instructions: (data.instructions && data.instructions.length > 0) ? data.instructions : ['Log in with credentials from your Vault.', 'Start using the premium service immediately.'],
+            features: (data.features && data.features.length > 0) ? data.features : (mockMatch?.features || ['Full access included', 'Fast reliable delivery', 'Replacement warranty']),
+            instructions: (data.instructions && data.instructions.length > 0) ? data.instructions : (mockMatch?.instructions || ['Log in with credentials from your Vault.', 'Start using the premium service immediately.']),
             specs: {
-              screens: data.specs?.screens ?? 1,
-              quality: data.specs?.quality || 'Ultra High Definition',
-              warranty: data.specs?.warranty || 'Full Period Replacement Warranty',
-              platforms: (data.specs?.platforms && data.specs.platforms.length > 0) ? data.specs.platforms : ['Web', 'iOS', 'Android', 'macOS', 'Windows'],
-              region: data.specs?.region || 'Global / Region-free',
+              screens: data.specs?.screens ?? mockMatch?.specs?.screens ?? 1,
+              quality: data.specs?.quality || mockMatch?.specs?.quality || 'Ultra High Definition',
+              warranty: data.specs?.warranty || mockMatch?.specs?.warranty || 'Full Period Replacement Warranty',
+              platforms: (data.specs?.platforms && data.specs.platforms.length > 0) ? data.specs.platforms : (mockMatch?.specs?.platforms || ['Web', 'iOS', 'Android', 'macOS', 'Windows']),
+              region: data.specs?.region || mockMatch?.specs?.region || 'Global / Region-free',
             },
-            pricingTiers: data.pricingTiers || [],
+            pricingTiers: mergedTiers,
           } as Product;
         });
 
-        // Only trigger state update if content actually changed to avoid layout shift / glitch
-        setProducts(prev => {
-          if (
-            prev.length === prods.length &&
-            prev.every((p, idx) => p.id === prods[idx]?.id && p.updatedAt === prods[idx]?.updatedAt && p.name === prods[idx]?.name && p.stockCount === prods[idx]?.stockCount)
-          ) {
-            return prev;
+        // Ensure missing mock products (if any) are appended
+        const existingIds = new Set(prods.map(p => p.id));
+        const missingFromDb = MOCK_PRODUCTS.filter(mp => !existingIds.has(mp.id));
+        const allProds = [...prods, ...missingFromDb];
+
+        // Background auto-sync missing items to Firestore
+        const geminiDoc = snapshot.docs.find(d => d.id === 'gemini-advanced');
+        const netflixDoc = snapshot.docs.find(d => d.id === 'netflix-4k-uhd');
+        const geminiNeedsSync = !geminiDoc || !(geminiDoc.data()?.pricingTiers || []).some((t: any) => t.duration === '18_months') || geminiDoc.data()?.orderIndex !== 0;
+        const netflixHasFreeTier = netflixDoc && (netflixDoc.data()?.pricingTiers || []).some((t: any) => t.duration === '1_month_free');
+
+        if (geminiNeedsSync || netflixHasFreeTier || missingFromDb.length > 0) {
+          try {
+            const batch = writeBatch(db);
+            const geminiMock = MOCK_PRODUCTS.find(p => p.id === 'gemini-advanced');
+            const netflixMock = MOCK_PRODUCTS.find(p => p.id === 'netflix-4k-uhd');
+            if (geminiNeedsSync && geminiMock) {
+              batch.set(doc(db, 'products', 'gemini-advanced'), cleanFirestoreData(geminiMock), { merge: true });
+            }
+            if (netflixHasFreeTier && netflixMock) {
+              batch.set(doc(db, 'products', 'netflix-4k-uhd'), cleanFirestoreData(netflixMock), { merge: true });
+            }
+            for (const m of missingFromDb) {
+              batch.set(doc(db, 'products', m.id), cleanFirestoreData(m));
+            }
+            await batch.commit();
+          } catch (err) {
+            console.warn('[Firestore] Product sync update error:', err);
           }
-          return prods;
-        });
-        writeCache('keyoon_cache_products', prods);
+        }
+
+        setProducts(allProds);
+        writeCache('keyoon_cache_products', allProds);
 
         setSelectedProduct(prev => {
           if (!prev) return null;
-          return prods.find(p => p.id === prev.id) || prev;
+          return allProds.find(p => p.id === prev.id) || prev;
         });
 
         setIsInitialSyncReady(true);
@@ -1075,13 +1186,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     // 5. REAL-TIME: hero slides (100% database-driven)
-    const unsubHero = onSnapshot(collection(db, 'hero_slides'), (snapshot) => {
+    const unsubHero = onSnapshot(collection(db, 'hero_slides'), async (snapshot) => {
       if (!snapshot.empty) {
-        const slides = snapshot.docs
-          .map(d => ({ ...d.data(), id: d.id } as HeroSlide))
-          .sort((a, b) => (a.order || 0) - (b.order || 0));
-        setHeroSlides(slides);
-        writeCache('keyoon_cache_hero_slides', slides);
+        const firestoreSlides = snapshot.docs
+          .map(d => ({ ...d.data(), id: d.id } as HeroSlide));
+
+        // Check if any default slide (e.g. hero_special_offer) is missing from Firestore
+        const existingIds = new Set(firestoreSlides.map(s => s.id));
+        const missingDefaults = MOCK_HERO_SLIDES.filter(s => !existingIds.has(s.id));
+
+        if (missingDefaults.length > 0) {
+          try {
+            const batch = writeBatch(db);
+            for (const s of missingDefaults) {
+              batch.set(doc(db, 'hero_slides', s.id), cleanFirestoreData(s));
+            }
+            await batch.commit();
+          } catch (err) {
+            console.warn('[Firestore] Auto-seeding missing hero slides error:', err);
+          }
+        }
+
+        const combined = [...firestoreSlides, ...missingDefaults]
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+        setHeroSlides(combined);
+        writeCache('keyoon_cache_hero_slides', combined);
+      } else {
+        setHeroSlides(MOCK_HERO_SLIDES);
+        try {
+          const batch = writeBatch(db);
+          for (const s of MOCK_HERO_SLIDES) {
+            batch.set(doc(db, 'hero_slides', s.id), cleanFirestoreData(s));
+          }
+          await batch.commit();
+        } catch {}
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Hero slides listener error:', err);
@@ -1324,6 +1463,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAdminActivityLogs(logs);
     });
     adminUnsubscribersRef.current.push(unsubActivityLogs);
+
+    // All customer chat threads listener (real-time Messenger inbox)
+    const unsubChats = onSnapshot(collection(db, 'chats'), (snapshot) => {
+      const threads = snapshot.docs
+        .map(d => ({ ...d.data(), id: d.id } as CustomerChatThread))
+        .sort((a, b) =>
+          new Date(b.updatedAt || b.lastMessageTimestamp).getTime() -
+          new Date(a.updatedAt || a.lastMessageTimestamp).getTime()
+        );
+      setAllChatThreads(threads);
+    }, (err) => {
+      if (err?.code !== 'permission-denied') console.warn('[Firestore] Chats listener note:', err);
+    });
+    adminUnsubscribersRef.current.push(unsubChats);
   }, []);
 
   // ΓöÇΓöÇΓöÇ Auth state listener & User-specific live listeners ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -1376,10 +1529,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const userRef = doc(db, 'users', fbUser.uid);
           const snap = await getDoc(userRef);
+          let finalProfile = profile;
           if (snap.exists()) {
             const data = snap.data() as CustomerProfile;
             const updatedRole = isUserAdmin ? 'admin' : (data.role || 'customer');
-            setUser({ ...profile, ...data, role: updatedRole });
+            finalProfile = { ...profile, ...data, role: updatedRole };
+            setUser(finalProfile);
             if (data.role !== updatedRole) {
               await updateDoc(userRef, { role: updatedRole });
             }
@@ -1387,8 +1542,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             await setDoc(userRef, profile);
             setUser(profile);
           }
+          try { localStorage.setItem('keyoon_cached_user', JSON.stringify(finalProfile)); } catch {}
         } catch {
           setUser(profile);
+          try { localStorage.setItem('keyoon_cached_user', JSON.stringify(profile)); } catch {}
         }
 
         // Live User Orders Listener (matches UID and Email)
@@ -1510,13 +1667,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           );
         }
 
+        // Clean up previous user-specific listeners before attaching new ones
+        unsubscribersRef.current.forEach(u => u());
+        unsubscribersRef.current = [];
+
+        // Live User Chat Thread Listener
+        const unsubUserChat = onSnapshot(doc(db, 'chats', fbUser.uid), (docSnap) => {
+          if (docSnap.exists()) {
+            setUserChatThread({ ...docSnap.data(), id: docSnap.id } as CustomerChatThread);
+          }
+        }, (err) => {
+          if (err?.code !== 'permission-denied') console.warn('[Firestore] User chat listener note:', err);
+        });
+
         unsubscribersRef.current.push(
           unsubUserOrdersUid,
           unsubUserOrdersEmail,
           unsubUserSubsUid,
           unsubUserSubsEmail,
           unsubUserTicketsUid,
-          unsubUserTicketsEmail
+          unsubUserTicketsEmail,
+          unsubUserChat
         );
 
         // If admin or superadmin, activate full real-time database listeners
@@ -1525,20 +1696,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         setIsAuthModalOpen(false);
+        setIsAuthChecking(false);
       } else {
-        // Signed out ΓÇö clear everything
+        // Signed out — clear everything
         setIsSuperAdmin(false);
         setIsAdmin(false);
         setUser(INITIAL_USER_PROFILE);
+        try { localStorage.removeItem('keyoon_cached_user'); } catch {}
         setOrders([]);
         setSubscriptions([]);
         setTickets([]);
+        setUserChatThread(null);
+        setAllChatThreads([]);
         setAllOrders([]);
         setAllUsers([]);
         setAllSubscriptions([]);
         setAllTickets([]);
 
         setIsInitialSyncReady(true);
+        setIsAuthChecking(false);
 
         // Clean up user-specific listeners
         unsubscribersRef.current.forEach(u => u());
@@ -1551,6 +1727,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const safetySyncTimer = setTimeout(() => {
       setIsInitialSyncReady(true);
+      setIsAuthChecking(false);
     }, 2200);
 
     return () => {
@@ -1559,6 +1736,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubscribersRef.current.forEach(u => u());
       adminUnsubscribersRef.current.forEach(u => u());
       unsubscribersRef.current = [];
+      adminUnsubscribersRef.current = [];
     };
   }, [setupAdminRealtimeListeners]);
 
@@ -1820,6 +1998,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ΓöÇΓöÇΓöÇ Cart actions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
   const addToCart = (product: Product, selectedPlan: PlanPricing, customEmail?: string) => {
+    playMicroClickSound();
     if ((product.stockCount ?? 0) <= 0) {
       return; // Do not allow adding out-of-stock products
     }
@@ -2010,7 +2189,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })),
       subtotal: cartSubtotal,
       discount: cartDiscount,
-      couponCode: appliedCoupon?.code,
+      couponCode: appliedCoupon?.code || '',
       couponDiscount: cartDiscount,
       total: isFreeOrder ? 0 : cartTotal,
       totalBdt: isFreeOrder ? 0 : (paymentProof?.totalBdt || (cartTotal * 125)),
@@ -2065,7 +2244,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           userEmail: accountEmail || targetClaimEmail,
           claimEmail: targetClaimEmail || accountEmail,
         };
-        try { await setDoc(doc(db, 'subscriptions', subId), sub); } catch (err) { console.error(err); }
+        try { await setDoc(doc(db, 'subscriptions', subId), cleanFirestoreData(sub)); } catch (err) { console.error(err); }
       }
       newOrder.generatedSubscriptionIds = generatedSubIds;
 
@@ -2081,7 +2260,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Write order to Firestore & propagate error if saving fails
     try {
-      await setDoc(doc(db, 'orders', orderId), newOrder);
+      await setDoc(doc(db, 'orders', orderId), cleanFirestoreData(newOrder));
       if (isFreeOrder) {
         await logAdminActivity('FREE_ORDER_CLAIMED', 'orders', `Free subscription claimed for ${newOrder.items.map(i => i.productName).join(', ')}`, orderId);
       }
@@ -2907,7 +3086,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return ticketId;
   };
 
-  // ΓöÇΓöÇΓöÇ User: Create ticket ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+  // ─── User: Create ticket ──────────────────────────────────────────
   const createSupportTicket = (
     subject: string,
     category: SupportTicket['category'],
@@ -2960,6 +3139,227 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
     } catch { }
+  };
+
+  // ─── Unified Persistent Messenger Live Chat Hub ──────────────────────
+  const getEffectiveUserId = useCallback(() => {
+    if (firebaseUser?.uid) return firebaseUser.uid;
+    if (user?.id && user.id !== 'cust_default') return user.id;
+    if (user?.email) return user.email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    if (typeof window !== 'undefined') {
+      let guestId = localStorage.getItem('keyoon_guest_chat_id');
+      if (!guestId) {
+        guestId = 'guest_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('keyoon_guest_chat_id', guestId);
+      }
+      return guestId;
+    }
+    return 'guest_anon';
+  }, [firebaseUser?.uid, user?.id, user?.email]);
+
+  const sendChatMessage = async (
+    content: string,
+    imageUrl?: string,
+    metadata?: ChatMessageMetadata,
+    targetThreadId?: string
+  ) => {
+    const threadId = targetThreadId || getEffectiveUserId();
+    const isAdminSending = !!targetThreadId && (isAdmin || isSuperAdmin);
+    const nowIso = new Date().toISOString();
+
+    const senderName = isAdminSending
+      ? (user.name || 'Keyoon Support Specialist')
+      : (user.name || firebaseUser?.displayName || 'Customer');
+
+    const msg: ChatMessage = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      sender: isAdminSending ? 'agent' : 'user',
+      senderName,
+      content,
+      imageUrl,
+      timestamp: nowIso,
+      metadata,
+    };
+
+    // Sound effect on message sending
+    playMessageDingSound();
+
+    // Optimistic UI update for current customer thread
+    setUserChatThread(prev => {
+      if (prev && prev.id === threadId) {
+        return {
+          ...prev,
+          lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
+          lastMessageSender: msg.sender,
+          lastMessageTimestamp: nowIso,
+          updatedAt: nowIso,
+          messages: [...prev.messages, msg],
+          metadata: metadata || prev.metadata,
+        };
+      }
+      return prev || {
+        id: threadId,
+        userId: threadId,
+        userEmail: user.email || firebaseUser?.email || '',
+        userName: senderName,
+        userAvatar: user.avatar,
+        lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
+        lastMessageSender: msg.sender,
+        lastMessageTimestamp: nowIso,
+        updatedAt: nowIso,
+        createdAt: nowIso,
+        unreadCountAdmin: isAdminSending ? 0 : 1,
+        unreadCountUser: isAdminSending ? 1 : 0,
+        messages: [msg],
+        metadata,
+      };
+    });
+
+    // Optimistic UI update for admin thread inbox (auto-sort to top)
+    setAllChatThreads(prev => {
+      const idx = prev.findIndex(t => t.id === threadId);
+      if (idx > -1) {
+        const updatedThread: CustomerChatThread = {
+          ...prev[idx],
+          lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
+          lastMessageSender: msg.sender,
+          lastMessageTimestamp: nowIso,
+          updatedAt: nowIso,
+          unreadCountAdmin: isAdminSending ? 0 : (prev[idx].unreadCountAdmin || 0) + 1,
+          unreadCountUser: isAdminSending ? (prev[idx].unreadCountUser || 0) + 1 : 0,
+          messages: [...prev[idx].messages, msg],
+          metadata: metadata || prev[idx].metadata,
+        };
+        const rest = prev.filter((_, i) => i !== idx);
+        return [updatedThread, ...rest];
+      } else {
+        const newThread: CustomerChatThread = {
+          id: threadId,
+          userId: threadId,
+          userEmail: user.email || firebaseUser?.email || '',
+          userName: senderName,
+          userAvatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=6366f1&color=fff`,
+          lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
+          lastMessageSender: msg.sender,
+          lastMessageTimestamp: nowIso,
+          updatedAt: nowIso,
+          createdAt: nowIso,
+          unreadCountAdmin: isAdminSending ? 0 : 1,
+          unreadCountUser: isAdminSending ? 1 : 0,
+          messages: [msg],
+          metadata,
+        };
+        return [newThread, ...prev];
+      }
+    });
+
+    // Sync with Firestore doc `chats/{threadId}`
+    try {
+      const threadRef = doc(db, 'chats', threadId);
+      const snap = await getDoc(threadRef);
+      if (snap.exists()) {
+        const existingData = snap.data() as CustomerChatThread;
+        const updatedMessages = [...(existingData.messages || []), msg];
+        const updatePayload = cleanFirestoreData({
+          lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
+          lastMessageSender: msg.sender,
+          lastMessageTimestamp: nowIso,
+          updatedAt: nowIso,
+          unreadCountAdmin: isAdminSending ? 0 : (existingData.unreadCountAdmin || 0) + 1,
+          unreadCountUser: isAdminSending ? (existingData.unreadCountUser || 0) + 1 : 0,
+          messages: updatedMessages,
+          ...(metadata ? { metadata } : {}),
+        });
+        await updateDoc(threadRef, updatePayload);
+      } else {
+        const newThread: CustomerChatThread = {
+          id: threadId,
+          userId: threadId,
+          userEmail: user.email || firebaseUser?.email || '',
+          userName: senderName,
+          userAvatar: user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=6366f1&color=fff`,
+          lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
+          lastMessageSender: msg.sender,
+          lastMessageTimestamp: nowIso,
+          updatedAt: nowIso,
+          createdAt: nowIso,
+          unreadCountAdmin: isAdminSending ? 0 : 1,
+          unreadCountUser: isAdminSending ? 1 : 0,
+          messages: [msg],
+          metadata,
+        };
+        await setDoc(threadRef, cleanFirestoreData(newThread));
+      }
+    } catch (err) {
+      console.warn('[Firestore] Error saving chat message:', err);
+    }
+  };
+
+  // Active real-time listener for customer's live chat thread (works for both logged-in users and guests)
+  useEffect(() => {
+    const threadId = getEffectiveUserId();
+    if (!threadId) return;
+
+    const unsub = onSnapshot(doc(db, 'chats', threadId), (docSnap) => {
+      if (docSnap.exists()) {
+        setUserChatThread({ ...docSnap.data(), id: docSnap.id } as CustomerChatThread);
+      }
+    }, (err) => {
+      if (err?.code !== 'permission-denied') console.warn('[Firestore] Customer chat sync note:', err);
+    });
+
+    return () => unsub();
+  }, [getEffectiveUserId]);
+
+  const markChatThreadRead = async (threadId: string, by: 'admin' | 'user') => {
+    if (by === 'admin') {
+      setAllChatThreads(prev =>
+        prev.map(t => (t.id === threadId ? { ...t, unreadCountAdmin: 0 } : t))
+      );
+      try {
+        await updateDoc(doc(db, 'chats', threadId), { unreadCountAdmin: 0 });
+      } catch {}
+    } else {
+      setUserChatThread(prev => (prev ? { ...prev, unreadCountUser: 0 } : null));
+      try {
+        await updateDoc(doc(db, 'chats', threadId), { unreadCountUser: 0 });
+      } catch {}
+    }
+  };
+
+  const typingTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  const setChatTypingStatus = async (threadId: string, sender: 'user' | 'agent', isTyping: boolean) => {
+    if (!threadId) return;
+    const threadRef = doc(db, 'chats', threadId);
+    const updateField = sender === 'user' ? 'isUserTyping' : 'isAdminTyping';
+    const activeField = sender === 'user' ? 'lastUserActive' : 'lastAdminActive';
+
+    try {
+      await updateDoc(threadRef, {
+        [updateField]: isTyping,
+        [activeField]: new Date().toISOString(),
+      });
+    } catch {}
+
+    if (isTyping) {
+      const key = `${threadId}_${sender}`;
+      if (typingTimeoutsRef.current[key]) {
+        clearTimeout(typingTimeoutsRef.current[key]);
+      }
+      typingTimeoutsRef.current[key] = setTimeout(async () => {
+        try {
+          await updateDoc(threadRef, { [updateField]: false });
+        } catch {}
+      }, 2500);
+    }
+  };
+
+  const openChatWithContext = (initialMessage?: string, metadata?: ChatMessageMetadata) => {
+    setIsChatOpen(true);
+    if (initialMessage) {
+      sendChatMessage(initialMessage, undefined, metadata);
+    }
   };
 
   // ΓöÇΓöÇΓöÇ Admin simulation utilities ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
@@ -3293,16 +3693,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminResetHeroSlides = async () => {
-    const defaultSlides: HeroSlide[] = [
-      {
-        id: 'slide_01',
-        title: 'Unlock Infinite Possibilities with Premium Subscriptions',
-        sub: 'Automated 30-second vault delivery for ChatGPT Plus, Claude, Netflix 4K, and 20+ services with full replacement warranty.',
-        bgImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80',
-        tag: 'ΓÜí INSTANT VAULT DELIVERY',
-        order: 1,
-      },
-    ];
+    const defaultSlides: HeroSlide[] = MOCK_HERO_SLIDES;
     setHeroSlides(defaultSlides);
     try {
       const snap = await getDocs(collection(db, 'hero_slides'));
@@ -3311,7 +3702,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         batch.delete(d.ref);
       }
       for (const s of defaultSlides) {
-        batch.set(doc(db, 'hero_slides', s.id), s);
+        batch.set(doc(db, 'hero_slides', s.id), cleanFirestoreData(s));
       }
       await batch.commit();
     } catch (err) {
@@ -3410,6 +3801,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     currencySettings, updateCurrencySettings, detectedCurrency, bdtRate, formatPrice,
     refreshAllData, isSyncing,
     tickets, createSupportTicket, replyToTicket,
+    // Unified Messenger Chat System
+    isChatOpen, setIsChatOpen, userChatThread, allChatThreads, activeChatThreadId, setActiveChatThreadId,
+    openChatWithContext, sendChatMessage, markChatThreadRead, setChatTypingStatus, isAuthChecking,
     reviews, addReview, likeReview, deleteReview,
     adminCreateReview, adminUpdateReview, adminResetReviews,
     isWriteReviewOpen, setIsWriteReviewOpen,
@@ -3418,7 +3812,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     activeSearchQuery, setActiveSearchQuery, activeCategoryFilter, setActiveCategoryFilter,
     isInitialSyncReady,
   }), [
-    isInitialSyncReady,
+    isInitialSyncReady, isAuthChecking,
     theme, setTheme, toggleTheme,
     products, selectedProduct, cart, appliedCoupon, isCartOpen, isCheckoutOpen,
     orders, latestOrder, subscriptions, activeVaultSub,
@@ -3426,7 +3820,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     allOrders, allUsers, allSubscriptions, allTickets, coupons, paymentMethods, heroSlides, quickMessages, adminActivityLogs, brandSettings, categoryConfigs, specialOffersSettings,
     financialMetrics, emailNotifications, isSyncing,
     currencySettings, detectedCurrency, bdtRate,
-    tickets, reviews, isWriteReviewOpen, targetReviewProduct,
+    tickets, userChatThread, allChatThreads, activeChatThreadId, isChatOpen,
+    reviews, isWriteReviewOpen, targetReviewProduct,
     completedTasksMap,
     activeSearchQuery, activeCategoryFilter,
     cartSubtotal, cartDiscount, cartTotal,

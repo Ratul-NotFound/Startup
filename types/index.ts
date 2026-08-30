@@ -333,15 +333,41 @@ export interface Review {
   planDuration?: string;
 }
 
+export interface FloatingLogo {
+  id?: string;
+  name: string;
+  badge: string;
+  image: string;
+  color: string;
+  pos?: {
+    top?: string;
+    bottom?: string;
+    left?: string;
+    right?: string;
+  };
+  floatDuration?: number;
+  floatDelay?: number;
+}
+
 export interface HeroSlide {
   id: string;
-  tag: string;
-  title: string;
-  sub: string;
+  tag?: string;
+  title?: string;
+  sub?: string;
   bgImage: string;
   ctaText?: string;
   ctaLink?: string;
   order?: number;
+  // Bangla Fields
+  tagBangla?: string;
+  titleBangla?: string;
+  titleHighlight?: string;
+  subBangla?: string;
+  ctaTextBangla?: string;
+  secondaryCtaTextBangla?: string;
+  secondaryCtaLink?: string;
+  // Floating Brand Logos
+  floatingLogos?: FloatingLogo[];
 }
 
 export interface QuickMessage {
@@ -379,4 +405,42 @@ export interface CurrencySettings {
   bdtRate: number;             // 1 USD = X BDT, e.g. 125
   updatedAt?: string;
   updatedBy?: string;
+}
+
+export interface ChatMessageMetadata {
+  type?: 'warranty_claim' | 'credential_issue' | 'order_inquiry' | 'general';
+  subscriptionId?: string;
+  productName?: string;
+  orderNumber?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: 'user' | 'agent' | 'system';
+  senderName: string;
+  content: string;
+  imageUrl?: string;
+  timestamp: string;
+  metadata?: ChatMessageMetadata;
+}
+
+export interface CustomerChatThread {
+  id: string; // userId or userEmail
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userAvatar?: string;
+  lastMessageText: string;
+  lastMessageSender: 'user' | 'agent' | 'system';
+  lastMessageTimestamp: string;
+  updatedAt: string;
+  createdAt: string;
+  unreadCountAdmin: number;
+  unreadCountUser: number;
+  messages: ChatMessage[];
+  metadata?: ChatMessageMetadata;
+  isUserTyping?: boolean;
+  isAdminTyping?: boolean;
+  lastUserActive?: string;
+  lastAdminActive?: string;
 }

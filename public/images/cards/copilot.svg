@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="copilotGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5522e0"/>
+      <stop offset="100%" stop-color="#8a2be2"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="22" fill="url(#copilotGrad)"/>
+  <path fill="#ffffff" d="M50 25c-14.4 0-26 10.7-26 24 0 7.8 4.2 14.8 10.8 19.3.9.6 1.4 1.7 1.4 2.8v3.9h27.6v-3.9c0-1.1.5-2.2 1.4-2.8 6.6-4.5 10.8-11.5 10.8-19.3 0-13.3-11.6-24-26-24zm-10 26c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm20 0c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5z"/>
+</svg>

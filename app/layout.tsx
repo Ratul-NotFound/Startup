@@ -9,6 +9,7 @@ import { CheckoutModal } from '@/components/checkout/CheckoutModal';
 import { CredentialVaultModal } from '@/components/vault/CredentialVaultModal';
 import { WriteReviewModal } from '@/components/reviews/WriteReviewModal';
 import { FloatingLiveChat } from '@/components/chat/FloatingLiveChat';
+import { CommandMenu } from '@/components/search/CommandMenu';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { ScrollProgress } from '@/components/ui/ScrollProgress';
 import { InteractiveCursorGlow } from '@/components/ui/InteractiveCursorGlow';
@@ -18,8 +19,8 @@ import { ThemeScript } from '@/components/ui/ThemeScript';
 export const metadata: Metadata = {
   metadataBase: new URL('https://keyoon.com'),
   title: {
-    default: 'Keyoon ΓÇö Premium Digital Subscriptions & Retail Marketplace | ChatGPT, Netflix, Claude, Gemini',
-    template: '%s | Keyoon ΓÇö Premium Subscriptions',
+    default: 'Keyoon - Premium Digital Subscriptions & Retail Marketplace | ChatGPT, Netflix, Claude, Gemini',
+    template: '%s | Keyoon - Premium Subscriptions',
   },
   description: 'Buy 100% genuine digital subscriptions on Keyoon. Instant 30-second automated vault delivery for ChatGPT Plus, Claude Pro, Netflix 4K UHD, Gemini Advanced, YouTube Premium, Adobe Creative Cloud, and NordVPN with bKash, Nagad & Rocket. 100% replacement warranty.',
   keywords: [
@@ -54,8 +55,8 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://keyoon.com',
-    siteName: 'Keyoon ΓÇö Premium Subscriptions Marketplace',
-    title: 'Keyoon ΓÇö World-Class Retail Subscription Platform',
+    siteName: 'Keyoon - Premium Subscriptions Marketplace',
+    title: 'Keyoon - World-Class Retail Subscription Platform',
     description: 'Instant 30s automated delivery for ChatGPT Plus, Claude Pro, Netflix 4K, Gemini Advanced, and 20+ top subscriptions with full replacement warranty.',
     images: [
       {
@@ -68,7 +69,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary',
-    title: 'Keyoon ΓÇö World-Class Retail Subscription Platform',
+    title: 'Keyoon - World-Class Retail Subscription Platform',
     description: 'Instant automated delivery for ChatGPT Plus, Claude Pro, Netflix 4K, Gemini Advanced with bKash, Nagad, and Rocket.',
     images: ['https://keyoon.com/images/Fabicon.png'],
     creator: '@keyoon',
@@ -129,7 +130,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=Hind+Siliguri:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
         {/* Theme init script ΓÇô suppresses hydration warning since localStorage is client-only */}
@@ -152,6 +153,7 @@ export default function RootLayout({
             <CredentialVaultModal />
             <WriteReviewModal />
             <FloatingLiveChat />
+            <CommandMenu />
           </div>
         </AppProvider>
       </body>

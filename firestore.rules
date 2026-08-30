@@ -1,10 +1,10 @@
 rules_version = '2';
 
 // ============================================================================
-// 🔒 SUBNEXUS FIRESTORE SECURITY & ACCESS RULES
+// 🔒 KEYOON FIRESTORE SECURITY & ACCESS RULES
 // ============================================================================
-// Development Mode: Unrestricted read/write across all collections for seamless
-// prototyping, demo simulations, and real-time syncing.
+// Secure RBAC enforcement: Public storefront read-access, authenticated user-isolated
+// vault & order security, and protected administrative collections.
 // ============================================================================
 
 service cloud.firestore {
@@ -19,11 +19,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Checks if the authenticated user is the primary Superadmin / Owner
+    // Checks if the authenticated user is a primary Superadmin / Owner
     function isSuperAdmin() {
       return isAuthenticated() &&
              request.auth.token.email != null &&
-             request.auth.token.email.lower() == 'm.h.ratul18@gmail.com';
+             (request.auth.token.email.lower() == 'm.h.ratul18@gmail.com' ||
+              request.auth.token.email.lower() == 'admin@keyoon.com' ||
+              request.auth.token.email.lower() == 'rubab2712@gmail.com');
     }
 
     // Checks if the user has an Admin role in the users collection or is Superadmin
@@ -37,85 +39,130 @@ service cloud.firestore {
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // 🔓 1. PUBLIC STOREFRONT DATA (Read/Write accessible for live sync)
+    // 🔓 1. PUBLIC STOREFRONT DATA (Public Read, Admin Write)
     // ────────────────────────────────────────────────────────────────────────
 
     // Products Catalog (Storefront digital plans & specifications)
     match /products/{productId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin() || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stockCount']));
     }
 
     // Coupons & Special Offers (Promo codes, giveaways & flash deals)
     match /coupons/{couponCode} {
-      allow read, write: if true;
+      allow read: if true;
+      allow update: if isAuthenticated();
+      allow create, delete: if isAdmin();
     }
 
     // Customer Reviews & Ratings (Verified buyer feedback & star ratings)
     match /reviews/{reviewId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
 
     // Bangladesh Payment Gateways (bKash, Nagad, Rocket, Upay numbers & QR codes)
     match /payment_methods/{methodId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Storefront Hero Carousel Slides (Dynamic homepage banner slides)
     match /hero_slides/{slideId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Quick Bot Messages & Auto-Replies (Chatbot prompt chips & answers)
     match /quick_messages/{messageId} {
-      allow read, write: if true;
-    }
-
-    // ────────────────────────────────────────────────────────────────────────
-    // 🔐 2. CUSTOMER & ORDER OPERATIONS (Synced live to customer vault)
-    // ────────────────────────────────────────────────────────────────────────
-
-    // Customer Profiles (User account info, lifetime spend & roles)
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-
-    // Customer Orders (TrxID payment submissions & delivery status)
-    match /orders/{orderId} {
-      allow read, write: if true;
-    }
-
-    // Vault Subscriptions & Logins (Provisioned account credentials & expiry dates)
-    match /subscriptions/{subscriptionId} {
-      allow read, write: if true;
-    }
-
-    // Support Queue & Direct Messages (Customer tickets & admin replies)
-    match /support_tickets/{ticketId} {
-      allow read, write: if true;
-    }
-
-    // Email Verifications & OTP Tokens
-    match /email_verifications/{verificationId} {
-      allow read, write: if true;
-    }
-
-    // ────────────────────────────────────────────────────────────────────────
-    // 🛡️ 3. ADMIN MANAGEMENT
-    // ────────────────────────────────────────────────────────────────────────
-
-    // Admin Team List (Access control list for command hub)
-    match /admins/{adminId} {
-      allow read, write: if true;
-    }
-
-    // Admin Activity Audit Trace Logs
-    match /admin_activity_logs/{logId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
     // Global Storefront Brand Settings & Favicons
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // 🔐 2. CUSTOMER & ORDER OPERATIONS (Protected, User-Scoped)
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Customer Profiles (User account info, lifetime spend & roles)
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Customer Orders (TrxID payment submissions & delivery status)
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.userEmail == request.auth.token.email ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.userEmail == request.auth.token.email
+      );
+      allow update, delete: if isAdmin();
+    }
+
+    // Vault Subscriptions & Logins (Provisioned account credentials & expiry dates)
+    // Only the owner of the subscription or an authorized admin can decrypt/read
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.userEmail == request.auth.token.email ||
+        isAdmin()
+      );
+      allow write: if isAdmin();
+    }
+
+    // Unified Persistent Customer Live Chat Threads
+    match /chats/{chatId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAdmin();
+    }
+
+    // Support Queue & Direct Messages (Customer tickets & admin replies)
+    match /support_tickets/{ticketId} {
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.userEmail == request.auth.token.email ||
+        isAdmin()
+      );
+      allow create, update: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.userEmail == request.auth.token.email ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Email Verifications & OTP Tokens
+    match /email_verifications/{verificationId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // 🛡️ 3. ADMIN MANAGEMENT & AUDIT LOGS
+    // ────────────────────────────────────────────────────────────────────────
+
+    // Admin Team List (Access control list for command hub)
+    match /admins/{adminId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Admin Activity Audit Trace Logs
+    match /admin_activity_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if isSuperAdmin();
     }
   }
 }

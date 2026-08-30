@@ -135,9 +135,17 @@ export function resolveSmartAssistantResponse(queryText: string, ctx: DynamicCha
   }
 
   // 6. Fallback standard intelligent assistant response with user context
+  const isBangla = /[\u0980-\u09FF]/.test(queryText);
   if (ctx.orders && ctx.orders.length > 0) {
     const latest = ctx.orders[0];
+    if (isBangla) {
+      return `আপনার বার্তাটি পেয়েছি, ${ctx.user?.name || 'প্রিয় গ্রাহক'}! কিউনের একজন সাপোর্ট স্পেশালিস্টকে জানানো হয়েছে, খুব শীঘ্রই আপনাকে রিপ্লাই দেওয়া হবে।\n\n(আপনার সর্বশেষ অর্ডার #${latest.orderNumber} এর বর্তমান স্ট্যাটাস: [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}])`;
+    }
     return `Got your message, ${ctx.user?.name || 'there'}! A live Keyoon Support Specialist has been notified and will assist you shortly.\n\n(FYI: Your latest Order #${latest.orderNumber} is currently [${latest.paymentStatus.toUpperCase()} - ${latest.deliveryStatus.toUpperCase()}])`;
+  }
+
+  if (isBangla) {
+    return `আপনার বার্তাটি পেয়েছি, ${ctx.user?.name || 'প্রিয় গ্রাহক'}! কিউনের একজন লাইভ সাপোর্ট স্পেশালিস্টকে সতর্ক করা হয়েছে, খুব দ্রুতই এই চ্যাটে আপনার সাথে যুক্ত হবেন।`;
   }
 
   return `Got your message, ${ctx.user?.name || 'there'}! A live Keyoon Support Specialist has been alerted and will assist you right here shortly.`;

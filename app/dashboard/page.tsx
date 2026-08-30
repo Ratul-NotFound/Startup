@@ -8,6 +8,7 @@ import {
   User, X, Eye, EyeOff, Copy, Check, ExternalLink, ShieldCheck,
   CreditCard, Sparkles, Image as ImageIcon, Loader2, ArrowUpRight,
   Bell, Globe, LogOut, Phone, Shield, Search, CheckCircle, Upload, Camera,
+  AlertCircle, MessageCircle,
 } from 'lucide-react';
 import { calculateDaysRemaining, calculateExpiryProgress } from '@/lib/utils';
 import { compressImageToDataUrl } from '@/lib/image-compression';
@@ -33,8 +34,9 @@ const getServiceUrl = (productName: string): string => {
 
 export default function CustomerDashboardPage() {
   const {
-    user, setUser, updateUserProfile, firebaseUser, subscriptions, orders, toggleAutoRenew, extendSubscription,
+    user, setUser, updateUserProfile, firebaseUser, isAuthChecking, subscriptions, orders, toggleAutoRenew, extendSubscription,
     tickets, createSupportTicket, replyToTicket, setIsAuthModalOpen, logout, refreshAllData, isSyncing,
+    openChatWithContext, userChatThread,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'subscriptions' | 'orders' | 'support' | 'settings'>('subscriptions');
@@ -43,20 +45,7 @@ export default function CustomerDashboardPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showCredentials, setShowCredentials] = useState<Record<string, boolean>>({});
   const [viewingInvoice, setViewingInvoice] = useState<typeof orders[0] | null>(null);
-
-  // Support ticket form state
-  const [ticketSubject, setTicketSubject] = useState('');
-  const [ticketCategory, setTicketCategory] = useState<'credential_issue' | 'renewal_help' | 'payment_issue' | 'general'>('credential_issue');
-  const [ticketMessage, setTicketMessage] = useState('');
-  const [ticketImage, setTicketImage] = useState<string | null>(null);
-  const [isCompressingTicketImg, setIsCompressingTicketImg] = useState(false);
-  const ticketFileInputRef = useRef<HTMLInputElement>(null);
-
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
-  const [replyInput, setReplyInput] = useState('');
-  const [replyImage, setReplyImage] = useState<string | null>(null);
-  const [isCompressingReplyImg, setIsCompressingReplyImg] = useState(false);
-  const replyFileInputRef = useRef<HTMLInputElement>(null);
+  const [warrantyNotice, setWarrantyNotice] = useState<string | null>(null);
 
   // Settings State
   const [editName, setEditName] = useState(user?.name || '');
@@ -103,7 +92,18 @@ export default function CustomerDashboardPage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  // ─── AUTH GATE ──────────────────────────────────────────────────────
+  // ─── AUTH GATE & HYDRATION GUARD ────────────────────────────────────
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-20">
+        <div className="text-center space-y-4 max-w-sm p-8 rounded-3xl bg-zinc-900/80 border border-white/10 shadow-2xl backdrop-blur-xl">
+          <Loader2 className="h-10 w-10 text-cyan-400 animate-spin mx-auto" />
+          <p className="text-xs text-slate-300 font-semibold tracking-wide">Securing Customer Portal Session...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!firebaseUser) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-20">
@@ -148,30 +148,27 @@ export default function CustomerDashboardPage() {
     return true;
   });
 
-  const handleCreateTicket = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketSubject.trim() || (!ticketMessage.trim() && !ticketImage)) return;
-    const t = createSupportTicket(ticketSubject, ticketCategory, ticketMessage || 'Sent screenshot', ticketImage || undefined);
-    setSelectedTicketId(t.id);
-    setTicketSubject('');
-    setTicketMessage('');
-    setTicketImage(null);
-  };
 
-  const handleSendReply = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTicketId || (!replyInput.trim() && !replyImage)) return;
-    replyToTicket(selectedTicketId, replyInput.trim(), 'user', replyImage || undefined);
-    setReplyInput('');
-    setReplyImage(null);
-  };
 
   const handleClaimWarranty = (sub: typeof subscriptions[0]) => {
-    const subject = `Warranty Claim: ${sub.productName}`;
-    const initialMsg = `Hi Keyoon Team, I am requesting a warranty replacement check for my ${sub.productName} plan (${sub.durationLabel}).`;
-    const t = createSupportTicket(subject, 'renewal_help', initialMsg);
-    setSelectedTicketId(t.id);
-    setActiveTab('support');
+    const isExpired = sub.status === 'expired' || calculateDaysRemaining(sub.expiryDate) <= 0;
+    const isWarrantyExpired = sub.warrantyValidUntil && new Date(sub.warrantyValidUntil).getTime() < Date.now();
+
+    if (isExpired || isWarrantyExpired) {
+      setWarrantyNotice(`Warranty coverage for "${sub.productName}" has concluded. You can extend this subscription to restore active replacement coverage.`);
+      setTimeout(() => setWarrantyNotice(null), 6000);
+      return;
+    }
+
+    openChatWithContext(
+      `🛡️ Warranty Claim for ${sub.productName} (${sub.durationLabel}) | Subscription ID: ${sub.id}`,
+      {
+        type: 'warranty_claim',
+        subscriptionId: sub.id,
+        productName: sub.productName,
+        orderNumber: sub.orderId,
+      }
+    );
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -192,12 +189,10 @@ export default function CustomerDashboardPage() {
     }
   };
 
-  const activeTicket = tickets.find(t => t.id === selectedTicketId) || tickets[0] || null;
-
   const tabs = [
     { id: 'subscriptions', label: 'My Subscriptions & Vault', count: subscriptions.length, icon: <Key className="h-4 w-4" /> },
     { id: 'orders', label: 'Order History & Status', count: orders.length, icon: <FileText className="h-4 w-4" /> },
-    { id: 'support', label: 'Live Support & Tickets', count: tickets.length, icon: <Headphones className="h-4 w-4" /> },
+    { id: 'support', label: '24/7 Live Support Desk', count: userChatThread?.unreadCountUser || null, icon: <Headphones className="h-4 w-4" /> },
     { id: 'settings', label: 'Account Settings', count: null, icon: <Settings className="h-4 w-4" /> },
   ] as const;
 
@@ -364,8 +359,24 @@ export default function CustomerDashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredSubscriptions.map(sub => {
+            <div className="space-y-5">
+              {warrantyNotice && (
+                <div className="p-4 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
+                    <span className="font-semibold">{warrantyNotice}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setWarrantyNotice(null)}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-white text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredSubscriptions.map(sub => {
                 const daysLeft = calculateDaysRemaining(sub.expiryDate);
                 const percentRemaining = calculateExpiryProgress(sub.startDate, sub.expiryDate, sub.planDuration);
                 const isUrgent = daysLeft <= 3 && daysLeft > 0;
@@ -555,7 +566,8 @@ export default function CustomerDashboardPage() {
                 );
               })}
             </div>
-          )}
+          </div>
+        )}
         </div>
       )}
 
@@ -677,248 +689,122 @@ export default function CustomerDashboardPage() {
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* 3. SUPPORT & LIVE CHAT TICKETS TAB                          */}
       {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* 3. SUPPORT & LIVE MESSENGER CHAT HUB                         */}
+      {/* ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'support' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Create New Ticket Form */}
-          <div className="lg:col-span-5 space-y-4">
-            <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] space-y-4 shadow-sm dark:shadow-lg">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Create Support Ticket</h3>
-                <span className="text-[10px] uppercase font-bold text-cyan-700 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-200 dark:border-cyan-500/20">
-                  24/7 SLA
-                </span>
-              </div>
-
-              <form onSubmit={handleCreateTicket} className="space-y-3">
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Inquiry Category</label>
-                  <select
-                    value={ticketCategory}
-                    onChange={e => setTicketCategory(e.target.value as typeof ticketCategory)}
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="credential_issue">Login / Credential Help</option>
-                    <option value="renewal_help">Warranty Claim & Renewal Help</option>
-                    <option value="payment_issue">bKash / Nagad TrxID Verification</option>
-                    <option value="general">General Question</option>
-                  </select>
+        <div className="space-y-6">
+          {/* Main Messenger Desk Hero */}
+          <div className="rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900 border border-white/10 p-6 sm:p-8 relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="space-y-3 max-w-xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                  <span>Unified 24/7 Operations Messenger Hub</span>
                 </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Subject</label>
-                  <input
-                    type="text"
-                    value={ticketSubject}
-                    onChange={e => setTicketSubject(e.target.value)}
-                    placeholder="Brief description of the request…"
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400 block mb-1">Message Details</label>
-                  <textarea
-                    rows={4}
-                    value={ticketMessage}
-                    onChange={e => setTicketMessage(e.target.value)}
-                    placeholder="Explain your question or paste relevant details..."
-                    className="w-full px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 resize-none"
-                    required={!ticketImage}
-                  />
-                </div>
-
-                {/* Screenshot upload */}
-                <div>
-                  <input
-                    ref={ticketFileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={async (e) => {
-                      const f = e.target.files?.[0];
-                      if (!f) return;
-                      setIsCompressingTicketImg(true);
-                      try {
-                        const dataUrl = await compressImageToDataUrl(f, 750, 750, 0.65);
-                        setTicketImage(dataUrl);
-                      } finally {
-                        setIsCompressingTicketImg(false);
-                        if (ticketFileInputRef.current) ticketFileInputRef.current.value = '';
-                      }
-                    }}
-                    className="hidden"
-                  />
-
-                  {ticketImage ? (
-                    <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-white/10">
-                      <img src={ticketImage} alt="Attachment" className="h-10 w-10 object-cover rounded-lg" />
-                      <span className="flex-1 text-[10px] text-slate-500 dark:text-slate-400">Compressed image attached</span>
-                      <button
-                        type="button"
-                        onClick={() => setTicketImage(null)}
-                        className="p-1 rounded text-slate-400 hover:text-red-500 cursor-pointer"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isCompressingTicketImg}
-                      onClick={() => ticketFileInputRef.current?.click()}
-                      className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-zinc-950 dark:hover:bg-zinc-850 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                    >
-                      {isCompressingTicketImg ? <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-500 dark:text-cyan-400" /> : <ImageIcon className="h-3.5 w-3.5" />}
-                      <span>Attach Error Screenshot</span>
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!ticketSubject.trim() || (!ticketMessage.trim() && !ticketImage)}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
-                >
-                  <Send className="h-3.5 w-3.5" />
-                  <span>Submit Ticket</span>
-                </button>
-              </form>
-            </div>
-
-            {/* List of user tickets */}
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-600 dark:text-slate-400">Your Ticket Threads ({tickets.length})</h4>
-              {tickets.map(t => (
-                <div
-                  key={t.id}
-                  onClick={() => setSelectedTicketId(t.id)}
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all space-y-1 ${
-                    selectedTicketId === t.id
-                      ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-500/50 shadow-sm'
-                      : 'bg-white dark:bg-zinc-900 border-slate-200 dark:border-white/[0.06] hover:bg-slate-50 dark:hover:bg-zinc-800'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">{t.ticketNumber}</span>
-                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
-                      t.status === 'open' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' :
-                      t.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' :
-                      'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10'
-                    }`}>
-                      {t.status.replace('_', ' ')}
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                  Continuous Live Support & Warranty Desk
+                </h2>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  All your customer support, credential replacements, and warranty claims are unified into a single persistent Messenger thread. No disjointed tickets, no lost context—our specialists respond in real time.
+                </p>
+                {userChatThread && userChatThread.messages?.length > 0 && (
+                  <div className="flex items-center gap-2 pt-1 text-xs text-slate-400">
+                    <Clock className="h-3.5 w-3.5 text-cyan-400" />
+                    <span>
+                      Active thread: {userChatThread.messages.length} messages · Last updated {new Date(userChatThread.updatedAt || userChatThread.lastMessageTimestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{t.subject}</p>
-                </div>
-              ))}
+                )}
+              </div>
+
+              <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={() => openChatWithContext()}
+                  className="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 active:scale-95 text-white font-extrabold text-sm shadow-[0_4px_25px_rgba(6,182,212,0.4)] flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <MessageCircle className="h-5 w-5 stroke-[2.2]" />
+                  <span>Open 24/7 Live Support Chat</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Active Ticket Conversation */}
-          <div className="lg:col-span-7">
-            {activeTicket ? (
-              <div className="h-[580px] rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] flex flex-col shadow-sm dark:shadow-xl">
-                <div className="p-4 border-b border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-zinc-950 flex justify-between items-center rounded-t-3xl">
-                  <div>
-                    <span className="text-[10px] font-mono text-cyan-600 dark:text-cyan-400 font-bold">{activeTicket.ticketNumber}</span>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">{activeTicket.subject}</h4>
-                  </div>
-                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${
-                    activeTicket.status === 'open' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30' :
-                    activeTicket.status === 'in_progress' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-500/30' :
-                    'bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-white/10'
-                  }`}>
-                    {activeTicket.status.replace('_', ' ')}
-                  </span>
+          {/* Quick Context Launch Cards */}
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-3">
+              Fast Context Starters (Auto-Routed to Specialist)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <button
+                type="button"
+                onClick={() => openChatWithContext('🛡️ Warranty Claim Request: I need replacement assistance with an active subscription.', { type: 'warranty_claim' })}
+                className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] hover:border-cyan-500/50 hover:shadow-lg transition-all text-left space-y-2 cursor-pointer group"
+              >
+                <div className="h-10 w-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
+                <h4 className="text-sm font-black text-slate-900 dark:text-white group-hover:text-cyan-400 transition-colors">
+                  100% Replacement Warranty
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Route directly into our priority warranty verification queue.
+                </p>
+              </button>
 
-                <div className="flex-1 p-5 overflow-y-auto space-y-4 scrollbar-thin">
-                  {activeTicket.messages.map(msg => {
-                    const isUser = msg.sender === 'user';
-                    return (
-                      <div key={msg.id} className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-                        <span className="text-[11px] text-slate-500 dark:text-slate-400 mb-1">
-                          {msg.senderName} · {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        <div className={`p-3.5 rounded-2xl max-w-sm text-xs leading-relaxed space-y-2 ${
-                          isUser
-                            ? 'bg-indigo-600 text-white rounded-tr-none shadow-md'
-                            : 'bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/[0.06] rounded-tl-none shadow-sm'
-                        }`}>
-                          {msg.imageUrl && (
-                            <img src={msg.imageUrl} alt="Attachment" className="rounded-xl max-h-44 object-cover border border-white/15" />
-                          )}
-                          {msg.content && <p>{msg.content}</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
+              <button
+                type="button"
+                onClick={() => openChatWithContext('🔑 Credential Assistance: Need help retrieving or verifying login credentials for my subscription.', { type: 'credential_issue' })}
+                className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] hover:border-indigo-500/50 hover:shadow-lg transition-all text-left space-y-2 cursor-pointer group"
+              >
+                <div className="h-10 w-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Key className="h-5 w-5" />
                 </div>
+                <h4 className="text-sm font-black text-slate-900 dark:text-white group-hover:text-indigo-400 transition-colors">
+                  Credential Vault Help
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Instant help with login emails, passwords, and 2FA pins.
+                </p>
+              </button>
 
-                {/* Reply bar with image attachment */}
-                <div className="p-3.5 bg-slate-50 dark:bg-zinc-950 border-t border-slate-200 dark:border-white/[0.06] rounded-b-3xl space-y-2">
-                  {replyImage && (
-                    <div className="flex items-center gap-2 px-1">
-                      <img src={replyImage} alt="Preview" className="h-10 w-10 object-cover rounded-lg border border-slate-200 dark:border-white/10" />
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 flex-1">Image attached</span>
-                      <button onClick={() => setReplyImage(null)} className="p-1 text-slate-400 hover:text-red-500 cursor-pointer">
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSendReply} className="flex gap-2">
-                    <input
-                      ref={replyFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={async (e) => {
-                        const f = e.target.files?.[0];
-                        if (!f) return;
-                        setIsCompressingReplyImg(true);
-                        try {
-                          const dataUrl = await compressImageToDataUrl(f, 750, 750, 0.65);
-                          setReplyImage(dataUrl);
-                        } finally {
-                          setIsCompressingReplyImg(false);
-                          if (replyFileInputRef.current) replyFileInputRef.current.value = '';
-                        }
-                      }}
-                      className="hidden"
-                    />
-
-                    <button
-                      type="button"
-                      disabled={isCompressingReplyImg}
-                      onClick={() => replyFileInputRef.current?.click()}
-                      className="p-2.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-zinc-900 dark:hover:bg-zinc-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-white/10 transition-colors cursor-pointer"
-                      title="Attach image"
-                    >
-                      {isCompressingReplyImg ? <Loader2 className="h-4 w-4 animate-spin text-cyan-500 dark:text-cyan-400" /> : <ImageIcon className="h-4 w-4" />}
-                    </button>
-
-                    <input
-                      type="text"
-                      value={replyInput}
-                      onChange={e => setReplyInput(e.target.value)}
-                      placeholder="Type your reply to support ops…"
-                      className="flex-1 px-3.5 py-2 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.1] text-xs text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!replyInput.trim() && !replyImage}
-                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold transition-all shadow-md cursor-pointer"
-                    >
-                      Send
-                    </button>
-                  </form>
+              <button
+                type="button"
+                onClick={() => openChatWithContext('💳 Payment Verification: Inquiry regarding my bKash/Nagad/Rocket TrxID.', { type: 'order_inquiry' })}
+                className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] hover:border-emerald-500/50 hover:shadow-lg transition-all text-left space-y-2 cursor-pointer group"
+              >
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <CreditCard className="h-5 w-5" />
                 </div>
-              </div>
-            ) : (
-              <div className="h-64 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
-                Select a ticket thread to view messages.
-              </div>
-            )}
+                <h4 className="text-sm font-black text-slate-900 dark:text-white group-hover:text-emerald-400 transition-colors">
+                  Payment & TrxID Sync
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Fast verification of manual mobile banking transactions.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openChatWithContext('👋 Hello Keyoon Support Team, I have a general question.')}
+                className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-white/[0.08] hover:border-purple-500/50 hover:shadow-lg transition-all text-left space-y-2 cursor-pointer group"
+              >
+                <div className="h-10 w-10 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Headphones className="h-5 w-5" />
+                </div>
+                <h4 className="text-sm font-black text-slate-900 dark:text-white group-hover:text-purple-400 transition-colors">
+                  General Consultation
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  24/7 direct guidance on digital tool renewals and upgrades.
+                </p>
+              </button>
+            </div>
           </div>
         </div>
       )}

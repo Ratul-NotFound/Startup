@@ -6,17 +6,18 @@ import { usePathname } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
 import {
   ShoppingBag, Menu, X, User, LogOut, LayoutDashboard,
-  Shield, ChevronDown,
+  Shield, ChevronDown, Search,
 } from 'lucide-react';
 import { AuthModal } from '@/components/auth/AuthModal';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { AnnouncementBar } from '@/components/hero/AnnouncementBar';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const {
     cart, setIsCartOpen,
     user, firebaseUser, isAdmin, isSuperAdmin,
-    isAuthModalOpen, setIsAuthModalOpen,
+    isAuthModalOpen, setIsAuthModalOpen, isAuthChecking,
     logout, brandSettings,
   } = useApp();
 
@@ -61,16 +62,30 @@ export const Navbar: React.FC = () => {
 
   const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'U')}&background=6366f1&color=fff&size=80`;
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href.startsWith('/#') && pathname === '/') {
+      e.preventDefault();
+      const id = href.replace('/#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
+
   return (
     <>
-      <header className="sticky top-0 z-40 w-full" suppressHydrationWarning>
+      <header className="sticky top-0 z-40 w-full shadow-sm" suppressHydrationWarning>
+        {/* Sticky Site-Wide Rolling Announcement Bar */}
+        <AnnouncementBar />
+
         {/* Top Navbar */}
         <div
           suppressHydrationWarning
           className={`w-full transition-all duration-300 ${
             scrolled
               ? 'nav-scrolled bg-white/92 dark:bg-zinc-950/90 backdrop-blur-xl border-b border-slate-200 dark:border-white/[0.07] shadow-sm dark:shadow-black/20'
-              : 'bg-transparent border-b border-transparent'
+              : 'bg-zinc-950/80 backdrop-blur-md border-b border-white/[0.05]'
           }`}
         >
           <div className="max-w-[1550px] mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-4" suppressHydrationWarning>
@@ -100,6 +115,7 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.href}
                   href={link.href}
+                  onClick={(e) => handleNavClick(e, link.href)}
                   suppressHydrationWarning
                   className={`transition-colors hover:text-slate-950 dark:hover:text-white ${
                     pathname === link.href ? 'text-slate-950 dark:text-white font-bold' : ''
@@ -112,6 +128,19 @@ export const Navbar: React.FC = () => {
 
             {/* Right Actions */}
             <div className="flex items-center gap-2 sm:gap-2.5" suppressHydrationWarning>
+
+              {/* Search Palette Trigger (Cmd + K) */}
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('open-cmdk'))}
+                className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-zinc-900/80 hover:bg-slate-200 dark:hover:bg-zinc-800 border border-slate-200 dark:border-white/10 text-xs text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer shadow-sm"
+                title="Quick Search (Ctrl + K / Cmd + K)"
+              >
+                <Search className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-medium">Search</span>
+                <kbd className="px-1.5 py-0.2 text-[10px] bg-white dark:bg-zinc-800 border border-slate-200 dark:border-white/10 rounded font-mono text-slate-600 dark:text-zinc-400">
+                  ⌘K
+                </kbd>
+              </button>
 
               {/* Theme Toggle Button */}
               <ThemeToggle />
@@ -131,7 +160,9 @@ export const Navbar: React.FC = () => {
               </button>
 
               {/* Auth / User */}
-              {firebaseUser ? (
+              {isAuthChecking && user.id === 'guest' ? (
+                <div className="h-8 w-20 rounded-full bg-slate-200/70 dark:bg-zinc-800/70 animate-pulse border border-slate-300/30 dark:border-white/5" />
+              ) : firebaseUser || user.id !== 'guest' ? (
                 <div className="relative" ref={dropdownRef} suppressHydrationWarning>
                   <button
                     onClick={() => setUserDropdownOpen(prev => !prev)}
@@ -242,7 +273,10 @@ export const Navbar: React.FC = () => {
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={(e) => {
+                  handleNavClick(e, link.href);
+                  setMobileMenuOpen(false);
+                }}
                 className={`flex items-center py-2.5 text-sm font-medium border-b border-slate-100 dark:border-white/[0.04] last:border-0 transition-colors ${
                   pathname === link.href ? 'text-slate-950 dark:text-white font-bold' : 'text-slate-600 dark:text-zinc-400 hover:text-slate-950 dark:hover:text-white'
                 }`}

@@ -18,9 +18,10 @@ import {
   Calendar,
 } from 'lucide-react';
 import { calculateDaysRemaining, calculateExpiryProgress } from '@/lib/utils';
+import { playCredentialUnlockSound } from '@/lib/sound-effects';
 
 export const CredentialVaultModal: React.FC = () => {
-  const { activeVaultSub, setActiveVaultSub, toggleAutoRenew, extendSubscription, createSupportTicket } = useApp();
+  const { activeVaultSub, setActiveVaultSub, toggleAutoRenew, extendSubscription, openChatWithContext } = useApp();
 
   const [showPassword, setShowPassword] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -41,10 +42,16 @@ export const CredentialVaultModal: React.FC = () => {
 
   const handleRequestReplacement = () => {
     setReplacementRequested(true);
-    createSupportTicket(
-      `Credential Refresh Request for ${activeVaultSub.productName}`,
-      'credential_issue',
-      `Hello, I would like to request an automated credential verification / slot refresh for my active subscription ID: ${activeVaultSub.id}.`
+    const sub = activeVaultSub;
+    setActiveVaultSub(null);
+    openChatWithContext(
+      `🔑 Credential Refresh Request for ${sub.productName} | Subscription ID: ${sub.id}`,
+      {
+        type: 'credential_issue',
+        subscriptionId: sub.id,
+        productName: sub.productName,
+        orderNumber: sub.orderId,
+      }
     );
   };
 
@@ -152,7 +159,10 @@ export const CredentialVaultModal: React.FC = () => {
                 <label className="text-[11px] font-semibold text-slate-400">Account Password</label>
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => {
+                    if (!showPassword) playCredentialUnlockSound();
+                    setShowPassword(!showPassword);
+                  }}
                   className="text-[11px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
                 >
                   {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}

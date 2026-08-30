@@ -696,6 +696,11 @@ export const ProductModal: React.FC = () => {
                       type="email"
                       value={customEmail}
                       onChange={e => setCustomEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.code === 'Space') {
+                          e.stopPropagation();
+                        }
+                      }}
                       placeholder="Enter the email address you want upgraded"
                       className="w-full px-3.5 py-2 rounded-xl bg-zinc-950 border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors"
                     />
@@ -926,7 +931,7 @@ export const ProductModal: React.FC = () => {
 
           {/* Persistent Footer CTA Row */}
           {(() => {
-            const isFreeReward = isSpecialProduct && (selectedProduct.specialConfig?.isFreeProduct || selectedProduct.isFreeProduct || currentPlan.price === 0);
+            const isFreeReward = currentPlan.price === 0 || (isSpecialProduct && (selectedProduct.specialConfig?.isFreeProduct || selectedProduct.isFreeProduct));
             const isClaimedAlready = isSpecialProduct && isSpecialOfferClaimed(selectedProduct.id);
             const tasks = specialTasks;
             const completedCount = tasks.filter(t => {

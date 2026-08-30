@@ -530,6 +530,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.code === 'Space') {
+                          e.stopPropagation();
+                        }
+                      }}
                       placeholder="Alex Vance"
                       className="w-full pl-10 pr-4 py-2.5 bg-zinc-950/80 border border-white/10 focus:border-cyan-500/50 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all font-sans"
                     />

@@ -272,10 +272,14 @@ export function SpecialOffersSection() {
                     <button
                       type="button"
                       onClick={() => handleOpenLinkedProduct(offer.linkedProductId)}
-                      className="w-full py-1.5 px-2.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-cyan-600/25 via-blue-600/25 to-indigo-600/25 hover:from-cyan-600/40 hover:to-indigo-600/40 text-cyan-200 border border-cyan-500/40 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer font-['Hind_Siliguri',sans-serif]"
                     >
-                      <span>View Synced Product Deal</span>
-                      <ArrowRight className="h-3 w-3" />
+                      <span>
+                        {offer.linkedProductId === 'gemini-advanced'
+                          ? '🤖 Gemini Pro (৳১৩০) ও ফ্রি Netflix নিন →'
+                          : 'View Synced Product Deal'}
+                      </span>
+                      <ArrowRight className="h-3.5 w-3.5" />
                     </button>
                   )}
 

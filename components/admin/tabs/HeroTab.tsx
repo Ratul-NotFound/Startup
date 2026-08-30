@@ -291,14 +291,14 @@ export function HeroTab({
           <div className="flex items-center gap-2">
             <button
               onClick={async () => {
-                if (confirm('Reset all hero slides to the default cinematic presets?')) {
+                if (confirm('সবগুলো হিরো ব্যানার স্লাইড ডিফল্ট বাংলা ভার্সনে রিসেট করবেন?')) {
                   await adminResetHeroSlides();
-                  showFeedback('success', 'Hero slides reset to default presets.');
+                  showFeedback('success', '✓ হিরো স্লাইড সফলভাবে বাংলা ডিফল্ট ভার্সনে রিসেট করা হয়েছে।');
                 }
               }}
               className="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-750 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
             >
-              Reset to Defaults
+              রিসেট টু ডিফল্ট (বাংলা)
             </button>
 
             <button
@@ -306,25 +306,27 @@ export function HeroTab({
                 setEditingHeroSlide({
                   id: '',
                   isNew: true,
-                  tag: 'NEW EXCLUSIVE DEAL',
-                  title: 'Ultimate Premium Suite at 80% Off',
-                  sub: 'Instant 30-Second Vault Delivery',
+                  tagBangla: '⚡ বিশেষ অফার • ১০০% রিপ্লেসমেন্ট ওয়ারেন্টি',
+                  titleBangla: 'হাতের মুঠোয় বিশ্বের সেরা',
+                  titleHighlight: 'প্রিমিয়াম টুলস ও সফটওয়্যার',
+                  subBangla: 'বিকাশ, নগদ ও রকেটে দ্রুততম ডেলিভারি',
                   bgImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1600&auto=format&fit=crop&q=80',
-                  ctaText: 'Explore Subscriptions',
+                  ctaTextBangla: 'সাবস্ক্রিপশন দেখুন',
                   ctaLink: '#catalog',
                   order: heroSlides.length + 1,
+                  floatingLogos: [],
                 });
               }}
               className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>Add Hero Slide</span>
+              <span>নতুন স্লাইড যোগ করুন</span>
             </button>
           </div>
         </div>
 
         {/* Slides Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-['Hind_Siliguri',sans-serif]">
           {heroSlides.map((slide, idx) => (
             <div
               key={slide.id || idx}
@@ -334,7 +336,7 @@ export function HeroTab({
               <div className="relative h-44 w-full overflow-hidden bg-black">
                 <img
                   src={slide.bgImage}
-                  alt={slide.title}
+                  alt={slide.titleBangla || slide.title || 'Slide'}
                   className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 opacity-70"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
@@ -348,7 +350,7 @@ export function HeroTab({
                     Slide #{idx + 1}
                   </span>
                   <span className="px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-[10px] font-bold text-cyan-300">
-                    {slide.tag}
+                    {slide.tagBangla || slide.tag}
                   </span>
                 </div>
 
@@ -384,21 +386,54 @@ export function HeroTab({
               {/* Content Details */}
               <div className="p-5 space-y-3">
                 <div>
-                  <p className="text-base text-cyan-400 font-bold" style={{ fontFamily: "'Caveat', cursive" }}>
-                    {slide.sub}
+                  <p className="text-sm text-cyan-400 font-semibold">
+                    {slide.subBangla || slide.sub}
                   </p>
-                  <h3 className="text-base font-black text-white leading-snug mt-0.5">
-                    {slide.title}
+                  <h3 className="text-base font-black text-white leading-snug mt-1">
+                    <span>{slide.titleBangla || slide.title} </span>
+                    {slide.titleHighlight && (
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+                        {slide.titleHighlight}
+                      </span>
+                    )}
                   </h3>
                 </div>
 
+                {/* Floating Brand Logos Preview Chips */}
+                {slide.floatingLogos && slide.floatingLogos.length > 0 && (
+                  <div className="pt-2 border-t border-white/[0.06]">
+                    <p className="text-[10px] text-slate-400 font-bold mb-1.5">🪐 ফ্লোটিং লোগো ({slide.floatingLogos.length}টি):</p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {slide.floatingLogos.map((l, i) => (
+                        <span
+                          key={i}
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-zinc-950 border border-white/10 text-[10px] text-slate-200"
+                        >
+                          <img
+                            src={l.image}
+                            alt={l.name}
+                            className="h-3.5 w-3.5 rounded object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/images/Fabicon.png';
+                            }}
+                          />
+                          <span className="font-semibold">{l.name}</span>
+                          <span className="font-mono text-[9px] font-bold" style={{ color: l.color }}>
+                            [{l.badge}]
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/[0.06]">
-                  <span className="font-mono">CTA: {slide.ctaText || 'Explore Subscriptions'} ({slide.ctaLink || '#catalog'})</span>
+                  <span className="font-mono">বাটন: {slide.ctaTextBangla || slide.ctaText || 'সাবস্ক্রিপশন দেখুন'} ({slide.ctaLink || '#catalog'})</span>
                   <button
                     onClick={() => setEditingHeroSlide({ ...slide, isNew: false })}
                     className="text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer"
                   >
-                    <span>Edit Content</span>
+                    <span>সম্পাদনা করুন</span>
                     <ArrowUpRight className="h-3 w-3" />
                   </button>
                 </div>

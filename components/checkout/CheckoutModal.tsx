@@ -620,6 +620,11 @@ export const CheckoutModal: React.FC = () => {
                       autoComplete="email"
                       value={claimEmail}
                       onChange={e => setClaimEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.code === 'Space') {
+                          e.stopPropagation();
+                        }
+                      }}
                       placeholder="e.g. yourname@gmail.com"
                       className="w-full px-3.5 py-2 rounded-xl bg-zinc-900 border border-white/10 focus:border-cyan-400 text-white font-medium text-xs focus:outline-none"
                     />
@@ -641,6 +646,11 @@ export const CheckoutModal: React.FC = () => {
                         placeholder="e.g. 017XXXXXXXX"
                         value={senderNumber}
                         onChange={e => setSenderNumber(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === ' ' || e.code === 'Space') {
+                            e.stopPropagation();
+                          }
+                        }}
                         className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 font-mono focus:outline-none focus:border-white/30"
                       />
                     </div>
@@ -656,6 +666,11 @@ export const CheckoutModal: React.FC = () => {
                         placeholder="e.g. 9L87X5ZP0A"
                         value={transactionId}
                         onChange={e => setTransactionId(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => {
+                          if (e.key === ' ' || e.code === 'Space') {
+                            e.stopPropagation();
+                          }
+                        }}
                         className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 font-mono uppercase focus:outline-none focus:border-white/30"
                       />
                     </div>

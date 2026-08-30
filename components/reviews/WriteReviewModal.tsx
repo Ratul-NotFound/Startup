@@ -193,9 +193,14 @@ export const WriteReviewModal: React.FC = () => {
                     type="text"
                     value={authorName}
                     onChange={(e) => setAuthorName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.code === 'Space') {
+                        e.stopPropagation();
+                      }
+                    }}
                     placeholder="e.g. Alex"
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                    className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 font-['Hind_Siliguri',sans-serif]"
                   />
                 </div>
                 <div className="space-y-1">
@@ -220,9 +225,14 @@ export const WriteReviewModal: React.FC = () => {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.code === 'Space') {
+                      e.stopPropagation();
+                    }
+                  }}
                   placeholder="e.g. Fast delivery & worked right away"
                   required
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30"
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 font-['Hind_Siliguri',sans-serif]"
                 />
               </div>
 
@@ -232,10 +242,15 @@ export const WriteReviewModal: React.FC = () => {
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.code === 'Space') {
+                      e.stopPropagation();
+                    }
+                  }}
                   placeholder="Tell others what you liked about this subscription..."
                   required
                   rows={3}
-                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 resize-none"
+                  className="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-white/10 text-white placeholder-zinc-500 focus:outline-none focus:border-white/30 resize-none font-['Hind_Siliguri',sans-serif]"
                 />
               </div>
 

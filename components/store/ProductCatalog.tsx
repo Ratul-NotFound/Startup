@@ -131,6 +131,11 @@ export const ProductCatalog: React.FC = () => {
               type="text"
               value={activeSearchQuery}
               onChange={(e) => setActiveSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.code === 'Space') {
+                  e.stopPropagation();
+                }
+              }}
               placeholder="Search subscriptions..."
               className="w-full sm:w-64 pl-10 pr-9 py-2.5 bg-white dark:bg-zinc-900/90 hover:bg-slate-50 dark:hover:bg-zinc-900 border border-slate-200 dark:border-white/10 focus:border-cyan-500 rounded-xl text-xs text-slate-900 dark:text-zinc-200 placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 transition-all font-sans shadow-sm"
             />
@@ -371,12 +376,14 @@ export const ProductCatalog: React.FC = () => {
                               transition={{ duration: 0.15 }}
                               className="flex items-baseline gap-2"
                             >
-                              <span className="text-lg sm:text-xl font-black text-slate-900 dark:text-white drop-shadow-sm">
-                                {formatPrice(currentPlan.price)}
+                              <span className={`text-lg sm:text-xl font-black drop-shadow-sm ${currentPlan.price === 0 ? 'text-emerald-500 dark:text-emerald-400 font-[\'Hind_Siliguri\',sans-serif]' : 'text-slate-900 dark:text-white'}`}>
+                                {currentPlan.price === 0 ? '৳০ (ফ্রি গিভঅ্যাওয়ে)' : formatPrice(currentPlan.price)}
                               </span>
-                              <span className="text-xs text-slate-400 dark:text-zinc-500 line-through">
-                                {formatPrice(currentPlan.originalPrice)}
-                              </span>
+                              {currentPlan.originalPrice && (
+                                <span className="text-xs text-slate-400 dark:text-zinc-500 line-through">
+                                  {formatPrice(currentPlan.originalPrice)}
+                                </span>
+                              )}
                             </motion.div>
                           </AnimatePresence>
 
@@ -406,7 +413,7 @@ export const ProductCatalog: React.FC = () => {
 
                         {(() => {
                           const isSpecial = product.productType === 'special' || (product.specialConfig?.tasks && product.specialConfig.tasks.length > 0) || product.isFreeProduct;
-                          const isFree = isSpecial && (product.isFreeProduct || product.specialConfig?.isFreeProduct || currentPlan.price === 0);
+                          const isFree = currentPlan.price === 0 || (isSpecial && (product.isFreeProduct || product.specialConfig?.isFreeProduct));
                           const isClaimed = isSpecial && isSpecialOfferClaimed(product.id);
 
                           return (
