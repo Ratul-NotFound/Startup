@@ -1234,7 +1234,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Hero slides listener error:', err);
     });
 
-    // 6. CACHED: quick messages (chat template buttons)
+    // 6. REAL-TIME: All customer chat threads (real-time Messenger inbox for Admin & customer service)
+    const unsubGlobalChats = onSnapshot(collection(db, 'chats'), (snapshot) => {
+      const threads = snapshot.docs
+        .map(d => ({ ...d.data(), id: d.id } as CustomerChatThread))
+        .sort((a, b) =>
+          new Date(b.updatedAt || b.lastMessageTimestamp).getTime() -
+          new Date(a.updatedAt || a.lastMessageTimestamp).getTime()
+        );
+      setAllChatThreads(threads);
+    }, (err) => {
+      if (err?.code !== 'permission-denied') console.warn('[Firestore] Global chats listener note:', err);
+    });
+
+    // 7. CACHED: quick messages (chat template buttons)
     const cachedQM = readCache<QuickMessage[]>('keyoon_cache_quick_messages');
     if (cachedQM) {
       setQuickMessages(cachedQM);
@@ -1358,6 +1371,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       unsubCoupons();
       unsubPaymentMethods();
       unsubHero();
+      unsubGlobalChats();
     };
   }, [seedFirestoreIfEmpty]);
 
@@ -2445,10 +2459,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return next;
     });
     try {
-      await setDoc(doc(db, 'products', id), newProduct);
+      await setDoc(doc(db, 'products', id), cleanFirestoreData(newProduct), { merge: true });
       if (newProduct.productType === 'special') {
         await syncSpecialProductToDeals(newProduct);
       }
+      await logAdminActivity('PRODUCT_CREATED', 'catalog', `Created product: ${newProduct.name}`, id);
     } catch (err) {
       console.error('adminCreateProduct error:', err);
     }
@@ -2456,6 +2471,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminUpdateProduct = async (id: string, updates: Partial<Product>) => {
+    const cleaned = cleanFirestoreData(updates);
     setProducts(prev => {
       const next = prev.map(p => p.id === id ? { ...p, ...updates } : p);
       writeCache('keyoon_cache_products', next);
@@ -2463,7 +2479,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
     setSelectedProduct(prev => (prev && prev.id === id) ? { ...prev, ...updates } : prev);
     try {
-      await updateDoc(doc(db, 'products', id), updates as Record<string, unknown>);
+      await setDoc(doc(db, 'products', id), cleaned, { merge: true });
       const fullProd = products.find(p => p.id === id);
       if (fullProd) {
         const merged = { ...fullProd, ...updates } as Product;
@@ -2471,6 +2487,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           await syncSpecialProductToDeals(merged);
         }
       }
+      await logAdminActivity('PRODUCT_UPDATED', 'catalog', `Updated product details and pricing for product ID: ${id}`, id);
     } catch (err) {
       console.error('adminUpdateProduct error:', err);
     }
@@ -2509,7 +2526,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminUpdateProductStock = async (productId: string, newStock: number) => {
     try {
       const cleanStock = Math.max(0, Number(newStock) || 0);
-      await updateDoc(doc(db, 'products', productId), { stockCount: cleanStock });
+      await setDoc(doc(db, 'products', productId), { stockCount: cleanStock }, { merge: true });
       setProducts(prev => prev.map(p => p.id === productId ? { ...p, stockCount: cleanStock } : p));
       await logAdminActivity('PRODUCT_STOCK_UPDATED', 'catalog', `Updated stock count for product ID: ${productId} to ${cleanStock}`, productId);
     } catch (err) {
@@ -2760,12 +2777,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const adminUpdatePaymentMethod = async (id: string, updates: Partial<BangladeshPaymentMethod>) => {
+    const payload = cleanFirestoreData({
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
     setPaymentMethods(prev => prev.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p));
     try {
-      await updateDoc(doc(db, 'payment_methods', id), {
-        ...updates,
-        updatedAt: new Date().toISOString(),
-      });
+      await setDoc(doc(db, 'payment_methods', id), payload, { merge: true });
     } catch (err) {
       console.error('adminUpdatePaymentMethod error:', err);
     }
@@ -3152,18 +3170,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // ─── Unified Persistent Messenger Live Chat Hub ──────────────────────
   const getEffectiveUserId = useCallback(() => {
     if (firebaseUser?.uid) return firebaseUser.uid;
-    if (user?.id && user.id !== 'cust_default') return user.id;
-    if (user?.email) return user.email.toLowerCase().replace(/[^a-z0-9]/g, '_');
     if (typeof window !== 'undefined') {
       let guestId = localStorage.getItem('keyoon_guest_chat_id');
       if (!guestId) {
-        guestId = 'guest_' + Math.random().toString(36).slice(2, 10);
+        guestId = 'guest_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
         localStorage.setItem('keyoon_guest_chat_id', guestId);
       }
       return guestId;
     }
     return 'guest_anon';
-  }, [firebaseUser?.uid, user?.id, user?.email]);
+  }, [firebaseUser?.uid]);
 
   const sendChatMessage = async (
     content: string,
@@ -3278,7 +3294,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           messages: updatedMessages,
           ...(metadata ? { metadata } : {}),
         });
-        await updateDoc(threadRef, updatePayload);
+        await setDoc(threadRef, updatePayload, { merge: true });
       } else {
         const newThread: CustomerChatThread = {
           id: threadId,
@@ -3296,7 +3312,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           messages: [msg],
           metadata,
         };
-        await setDoc(threadRef, cleanFirestoreData(newThread));
+        await setDoc(threadRef, cleanFirestoreData(newThread), { merge: true });
       }
     } catch (err) {
       console.warn('[Firestore] Error saving chat message:', err);
@@ -3325,12 +3341,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         prev.map(t => (t.id === threadId ? { ...t, unreadCountAdmin: 0 } : t))
       );
       try {
-        await updateDoc(doc(db, 'chats', threadId), { unreadCountAdmin: 0 });
+        await setDoc(doc(db, 'chats', threadId), { unreadCountAdmin: 0 }, { merge: true });
       } catch {}
     } else {
       setUserChatThread(prev => (prev ? { ...prev, unreadCountUser: 0 } : null));
       try {
-        await updateDoc(doc(db, 'chats', threadId), { unreadCountUser: 0 });
+        await setDoc(doc(db, 'chats', threadId), { unreadCountUser: 0 }, { merge: true });
       } catch {}
     }
   };
@@ -3344,10 +3360,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const activeField = sender === 'user' ? 'lastUserActive' : 'lastAdminActive';
 
     try {
-      await updateDoc(threadRef, {
+      await setDoc(threadRef, {
         [updateField]: isTyping,
         [activeField]: new Date().toISOString(),
-      });
+      }, { merge: true });
     } catch {}
 
     if (isTyping) {
@@ -3357,7 +3373,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       typingTimeoutsRef.current[key] = setTimeout(async () => {
         try {
-          await updateDoc(threadRef, { [updateField]: false });
+          await setDoc(threadRef, { [updateField]: false }, { merge: true });
         } catch {}
       }, 2500);
     }
@@ -3614,7 +3630,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const adminUpdateReview = async (reviewId: string, updates: Partial<Review>) => {
     setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, ...updates } : r));
     try {
-      await updateDoc(doc(db, 'reviews', reviewId), updates);
+      await setDoc(doc(db, 'reviews', reviewId), cleanFirestoreData(updates), { merge: true });
     } catch (err) {
       console.warn('[Firestore] Admin review update error:', err);
     }

@@ -33,8 +33,7 @@ service cloud.firestore {
       return isAuthenticated() && (
         isSuperAdmin() ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-        (exists(/databases/$(database)/documents/admins/$(request.auth.token.email.lower().replace('[^a-z0-9]', '_'))))
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
