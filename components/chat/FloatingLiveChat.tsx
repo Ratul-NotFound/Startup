@@ -21,9 +21,23 @@ const MessageBubble = memo(({
   msg: ChatMessage;
   onImageClick?: (url: string) => void;
 }) => {
-  const isUser = msg.sender === 'user';
-  const isBot = msg.sender === 'bot';
-  const isAgent = msg.sender === 'agent';
+  const isAutoMessage = msg.sender === 'bot' ||
+    msg.content?.startsWith('Got your message') ||
+    msg.content?.startsWith('আপনার বার্তাটি পেয়েছি') ||
+    msg.content?.startsWith('Thank you for providing the screenshot') ||
+    msg.content?.includes('Keyoon Support Specialist') ||
+    msg.senderName?.toLowerCase().includes('assistant') ||
+    msg.senderName?.toLowerCase().includes('bot');
+
+  const isAgent = msg.sender === 'agent' || (!isAutoMessage && (
+    msg.senderName?.toLowerCase().includes('support') ||
+    msg.senderName?.toLowerCase().includes('specialist') ||
+    msg.senderName?.toLowerCase().includes('admin') ||
+    msg.senderName?.toLowerCase().includes('shadow')
+  ));
+
+  const isBot = isAutoMessage;
+  const isUser = msg.sender === 'user' && !isAutoMessage && !isAgent;
 
   return (
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} transform-gpu`}>
@@ -41,7 +55,7 @@ const MessageBubble = memo(({
           </span>
         )}
         <span className="text-[10px] text-zinc-400 font-semibold">
-          {isUser ? 'You' : (msg.senderName || (isBot ? 'Keyoon Assistant' : 'Support Specialist'))}
+          {isUser ? 'You' : (isBot ? 'Keyoon AI Assistant' : (msg.senderName || 'Support Specialist'))}
         </span>
         <span className="text-[9px] text-zinc-600">·</span>
         <span className="text-[9px] text-zinc-500">

@@ -3398,6 +3398,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsub();
   }, [getEffectiveUserId]);
 
+  // Reactive cross-sync: Whenever allChatThreads updates from Firestore, update userChatThread immediately
+  useEffect(() => {
+    if (!allChatThreads || allChatThreads.length === 0) return;
+    const currentEffId = getEffectiveUserId();
+    const currentEmail = (user.email || firebaseUser?.email || '').toLowerCase().trim();
+    const currentUserId = user.id || firebaseUser?.uid;
+
+    const active = allChatThreads.find(t =>
+      (currentEffId && (t.id === currentEffId || t.userId === currentEffId)) ||
+      (currentUserId && (t.id === currentUserId || t.userId === currentUserId)) ||
+      (currentEmail && t.userEmail && t.userEmail.toLowerCase().trim() === currentEmail)
+    );
+
+    if (active) {
+      setUserChatThread(prev => {
+        if (!prev || prev.id !== active.id || prev.messages?.length !== active.messages?.length || prev.updatedAt !== active.updatedAt) {
+          return active;
+        }
+        return prev;
+      });
+    }
+  }, [allChatThreads, getEffectiveUserId, user.email, user.id, firebaseUser?.email, firebaseUser?.uid]);
+
   const markChatThreadRead = async (threadId: string, by: 'admin' | 'user') => {
     if (by === 'admin') {
       setAllChatThreads(prev =>
