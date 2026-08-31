@@ -3237,9 +3237,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ? subscriptions.filter(s => s.status === 'active').map(s => s.productName).join(', ')
         : undefined;
 
-      const existingThread = userChatThread?.id === threadId ? userChatThread : allChatThreads.find(t => t.id === threadId);
-      const assignedAgentId = existingThread?.assignedAgentId;
-      const assignedAgentName = existingThread?.assignedAgentName;
+      let assignedAgentId = userChatThread?.assignedAgentId;
+      let assignedAgentName = userChatThread?.assignedAgentName;
+
+      // 🛡️ Always fetch the absolute latest assignment from Firestore to prevent routing to group if claimed
+      try {
+        const snap = await getDoc(doc(db, 'chats', threadId));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.assignedAgentId) {
+            assignedAgentId = data.assignedAgentId;
+            assignedAgentName = data.assignedAgentName;
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch latest agent assignment', e);
+      }
 
       notifyTelegramChat({
         customerName: user.name || firebaseUser?.displayName || 'Guest Customer',
@@ -3304,7 +3317,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const snap = await getDoc(threadRef);
       if (snap.exists()) {
         const existingData = snap.data() as CustomerChatThread;
-        const updatedMessages = [...(existingData.messages || []), msg];
         const updatePayload = cleanFirestoreData({
           lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
           lastMessageSender: msg.sender,
@@ -3312,7 +3324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updatedAt: nowIso,
           unreadCountAdmin: (isAdminSending || resolvedRole === 'bot') ? 0 : (existingData.unreadCountAdmin || 0) + 1,
           unreadCountUser: isAdminSending ? (existingData.unreadCountUser || 0) + 1 : 0,
-          messages: updatedMessages,
+          messages: arrayUnion(msg),
           ...(metadata ? { metadata } : {}),
         });
         await setDoc(threadRef, updatePayload, { merge: true });
@@ -3349,12 +3361,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const unsubDirect = onSnapshot(doc(db, 'chats', threadId), (docSnap) => {
       if (docSnap.exists()) {
-        // Only react to server-confirmed writes, not local echoes
-        if (!docSnap.metadata.hasPendingWrites) {
-          const thread = { ...docSnap.data(), id: docSnap.id } as CustomerChatThread;
-          setUserChatThread(thread);
-          writeCache('keyoon_cached_chat_thread', thread);
-        }
+        const thread = { ...docSnap.data(), id: docSnap.id } as CustomerChatThread;
+        setUserChatThread(thread);
+        writeCache('keyoon_cached_chat_thread', thread);
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Customer chat sync note:', err);
