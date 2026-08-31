@@ -22,12 +22,26 @@ const MessageBubble = memo(({
   onImageClick?: (url: string) => void;
 }) => {
   const isUser = msg.sender === 'user';
+  const isBot = msg.sender === 'bot';
+  const isAgent = msg.sender === 'agent';
 
   return (
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} transform-gpu`}>
-      <div className="flex items-center gap-1 mb-1 px-1">
+      <div className="flex items-center gap-1.5 mb-1 px-1">
+        {isBot && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-purple-950/80 border border-purple-500/30 text-[9px] font-bold text-purple-300">
+            <Sparkles className="h-2.5 w-2.5 text-purple-400" />
+            AI Assistant
+          </span>
+        )}
+        {isAgent && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/30 text-[9px] font-bold text-emerald-300">
+            <Headphones className="h-2.5 w-2.5 text-emerald-400" />
+            Live Support
+          </span>
+        )}
         <span className="text-[10px] text-zinc-400 font-semibold">
-          {isUser ? 'You' : msg.senderName}
+          {isUser ? 'You' : (msg.senderName || (isBot ? 'Keyoon Assistant' : 'Support Specialist'))}
         </span>
         <span className="text-[9px] text-zinc-600">·</span>
         <span className="text-[9px] text-zinc-500">
@@ -39,7 +53,9 @@ const MessageBubble = memo(({
         className={`max-w-[88%] p-3.5 rounded-2xl text-xs leading-relaxed space-y-2.5 ${
           isUser
             ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-tr-sm shadow-[0_2px_12px_rgba(6,182,212,0.3)]'
-            : 'bg-zinc-900 border border-white/10 text-zinc-200 rounded-tl-sm shadow-sm'
+            : isBot
+            ? 'bg-zinc-900 border border-purple-500/25 text-zinc-100 rounded-tl-sm shadow-sm'
+            : 'bg-zinc-900 border border-emerald-500/25 text-zinc-100 rounded-tl-sm shadow-sm'
         }`}
       >
         {/* Structured Context Metadata Badge (Warranty Claim / Credential / Order) */}
@@ -311,36 +327,38 @@ export const FloatingLiveChat: React.FC = () => {
 
   // Handle Quick Chip selection with auto response
   const handleSelectQuickChip = useCallback((qm: QuickMessage) => {
-    sendChatMessage(qm.query);
+    sendChatMessage(qm.query, undefined, undefined, undefined, 'user');
 
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
       const answerText = interpolateDynamicVariables(qm.answer, dynamicContext);
-      sendChatMessage(answerText);
+      sendChatMessage(answerText, undefined, undefined, userChatThread?.id, 'bot', 'Keyoon AI Assistant');
     }, 450);
-  }, [dynamicContext, sendChatMessage]);
+  }, [dynamicContext, sendChatMessage, userChatThread?.id]);
 
   // Handle regular chat send with AI smart assistant resolution
   const handleSendMessage = useCallback(async (text: string, imageUrl?: string) => {
     if (!text.trim() && !imageUrl) return;
 
-    await sendChatMessage(text, imageUrl);
+    await sendChatMessage(text, imageUrl, undefined, undefined, 'user');
 
-    // Dynamic smart response
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      const botResponseText = imageUrl && !text
-        ? 'Thank you for providing the screenshot! Our operations team has received it in the live queue and will assist you shortly.'
-        : resolveSmartAssistantResponse(text, dynamicContext);
+    const botResponseText = imageUrl && !text
+      ? 'Thank you for providing the screenshot! Our operations team has received it in the live queue and will assist you shortly.'
+      : resolveSmartAssistantResponse(text, dynamicContext);
 
-      // Only auto-reply if bot has a specific helpful answer
-      if (botResponseText) {
-        sendChatMessage(botResponseText);
-      }
-    }, 550);
-  }, [dynamicContext, sendChatMessage]);
+    const isGenericGreeting = botResponseText.startsWith('Got your message') || botResponseText.startsWith('আপনার বার্তাটি পেয়েছি');
+    const alreadyGreeted = messages.some(m => m.sender === 'bot' || m.sender === 'agent');
+
+    // Only auto-reply if bot has a specific helpful answer OR if it's the very first greeting
+    if (botResponseText && (!isGenericGreeting || !alreadyGreeted)) {
+      setIsTyping(true);
+      setTimeout(() => {
+        setIsTyping(false);
+        sendChatMessage(botResponseText, undefined, undefined, userChatThread?.id, 'bot', 'Keyoon AI Assistant');
+      }, 550);
+    }
+  }, [dynamicContext, sendChatMessage, userChatThread?.id, messages]);
 
   const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypingStateRef = useRef<boolean>(false);

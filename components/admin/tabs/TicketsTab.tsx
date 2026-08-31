@@ -420,8 +420,11 @@ export function TicketsTab({
                 {activeThread.messages && activeThread.messages.length > 0 ? (
                   activeThread.messages.map((msg) => {
                     const isAgent = msg.sender === 'agent';
+                    const isBot = msg.sender === 'bot';
                     const avatar = isAgent
                       ? (currentAdmin.avatar || 'https://ui-avatars.com/api/?name=Admin+Ops&background=0284c7&color=fff')
+                      : isBot
+                      ? 'https://ui-avatars.com/api/?name=AI+Bot&background=7c3aed&color=fff'
                       : (activeThread.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(msg.senderName)}&background=6366f1&color=fff`);
 
                     return (
@@ -437,7 +440,15 @@ export function TicketsTab({
 
                         <div className={`flex flex-col ${isAgent ? 'items-end' : 'items-start'} max-w-[80%]`}>
                           <div className="flex items-center gap-1.5 mb-1 px-1">
-                            <span className="text-[11px] font-bold text-slate-300">{msg.senderName}</span>
+                            {isBot && (
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-950/80 border border-purple-500/40 text-[9px] font-bold text-purple-300">
+                                <Sparkles className="h-2.5 w-2.5 text-purple-400" />
+                                Auto-Reply
+                              </span>
+                            )}
+                            <span className="text-[11px] font-bold text-slate-300">
+                              {isBot ? 'Keyoon AI Assistant' : msg.senderName}
+                            </span>
                             <span className="text-[9px] text-slate-600">·</span>
                             <span className="text-[10px] text-slate-400">
                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -448,6 +459,8 @@ export function TicketsTab({
                             className={`p-3.5 rounded-2xl text-xs leading-relaxed space-y-2 shadow-sm ${
                               isAgent
                                 ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-tr-none shadow-[0_2px_12px_rgba(6,182,212,0.25)]'
+                                : isBot
+                                ? 'bg-zinc-900/90 border border-purple-500/30 text-purple-100 rounded-tl-none'
                                 : 'bg-zinc-900 border border-white/10 text-slate-200 rounded-tl-none'
                             }`}
                           >

@@ -416,7 +416,7 @@ export interface ChatMessageMetadata {
 
 export interface ChatMessage {
   id: string;
-  sender: 'user' | 'agent' | 'system';
+  sender: 'user' | 'agent' | 'system' | 'bot';
   senderName: string;
   content: string;
   imageUrl?: string;
@@ -431,7 +431,7 @@ export interface CustomerChatThread {
   userName: string;
   userAvatar?: string;
   lastMessageText: string;
-  lastMessageSender: 'user' | 'agent' | 'system';
+  lastMessageSender: 'user' | 'agent' | 'system' | 'bot';
   lastMessageTimestamp: string;
   updatedAt: string;
   createdAt: string;

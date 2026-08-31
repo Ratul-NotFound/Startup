@@ -25,6 +25,7 @@ import {
   deleteDoc, query, where, orderBy, onSnapshot, writeBatch, arrayUnion,
 } from 'firebase/firestore';
 import { playMicroClickSound, playMessageDingSound } from '@/lib/sound-effects';
+import { notifyTelegramChat, notifyTelegramOrder, notifyTelegramWarranty } from '@/lib/telegram-client';
 
 /**
  * Sanitizes an object before writing to Firestore, eliminating any undefined values recursively
@@ -349,7 +350,14 @@ interface AppContextType {
   activeChatThreadId: string | null;
   setActiveChatThreadId: (id: string | null) => void;
   openChatWithContext: (initialMessage?: string, metadata?: ChatMessageMetadata) => void;
-  sendChatMessage: (content: string, imageUrl?: string, metadata?: ChatMessageMetadata, targetThreadId?: string) => Promise<void>;
+  sendChatMessage: (
+    content: string,
+    imageUrl?: string,
+    metadata?: ChatMessageMetadata,
+    targetThreadId?: string,
+    senderRole?: 'user' | 'agent' | 'bot' | 'system',
+    customSenderName?: string
+  ) => Promise<void>;
   markChatThreadRead: (threadId: string, by: 'admin' | 'user') => Promise<void>;
   setChatTypingStatus: (threadId: string, sender: 'user' | 'agent', isTyping: boolean) => Promise<void>;
   isAuthChecking: boolean;
@@ -1239,6 +1247,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           new Date(a.updatedAt || a.lastMessageTimestamp).getTime()
         );
       setAllChatThreads(threads);
+
+      // Instant cross-tab real-time sync for customer live chat window
+      if (typeof window !== 'undefined') {
+        const guestId = localStorage.getItem('keyoon_guest_chat_id');
+        const currentUid = auth.currentUser?.uid;
+        const currentEmail = auth.currentUser?.email?.toLowerCase().trim();
+
+        const active = threads.find(t =>
+          (currentUid && (t.id === currentUid || t.userId === currentUid)) ||
+          (currentEmail && t.userEmail?.toLowerCase().trim() === currentEmail) ||
+          (guestId && (t.id === guestId || t.userId === guestId))
+        );
+
+        if (active) {
+          setUserChatThread(active);
+        }
+      }
     }, (err) => {
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Global chats listener note:', err);
     });
@@ -2283,6 +2308,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await logAdminActivity('FREE_ORDER_CLAIMED', 'orders', `Free subscription claimed for ${newOrder.items.map(i => i.productName).join(', ')}`, orderId);
       }
 
+      // Dispatch Telegram alert to Topic #749
+      notifyTelegramOrder({
+        orderNumber: String(newOrder.orderNumber),
+        items: newOrder.items.map(i => ({ productName: i.productName, durationLabel: i.durationLabel, quantity: i.quantity })),
+        totalUsd: newOrder.total,
+        totalBdt: newOrder.totalBdt,
+        customerName: user.name || firebaseUser?.displayName || 'Customer',
+        customerEmail: newOrder.userEmail || user.email || '',
+        paymentMethod: newOrder.paymentMethodName || newOrder.paymentMethod,
+        transactionId: newOrder.transactionId,
+        senderNumber: newOrder.senderNumber,
+        isFree: isFreeOrder,
+      });
+
       // Record used promo code in Firestore & LocalStorage
       if (appliedCoupon?.code) {
         const cleanCode = appliedCoupon.code.trim().toUpperCase();
@@ -3176,19 +3215,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     content: string,
     imageUrl?: string,
     metadata?: ChatMessageMetadata,
-    targetThreadId?: string
+    targetThreadId?: string,
+    senderRole?: 'user' | 'agent' | 'bot' | 'system',
+    customSenderName?: string
   ) => {
     const threadId = targetThreadId || getEffectiveUserId();
     const isAdminSending = !!targetThreadId && (isAdmin || isSuperAdmin);
     const nowIso = new Date().toISOString();
 
-    const senderName = isAdminSending
-      ? (user.name || 'Keyoon Support Specialist')
-      : (user.name || firebaseUser?.displayName || 'Customer');
+    const resolvedRole = senderRole || (isAdminSending ? 'agent' : 'user');
+    const senderName = customSenderName || (
+      resolvedRole === 'bot'
+        ? 'Keyoon AI Assistant'
+        : (isAdminSending
+            ? (user.name || 'Keyoon Support Specialist')
+            : (user.name || firebaseUser?.displayName || 'Customer')
+          )
+    );
 
     const msg: ChatMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      sender: isAdminSending ? 'agent' : 'user',
+      sender: resolvedRole,
       senderName,
       content,
       imageUrl,
@@ -3198,6 +3245,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Sound effect on message sending
     playMessageDingSound();
+
+    // Notify Telegram Support Topic #749 if a real customer sends a message
+    if (resolvedRole === 'user' && !isAdminSending) {
+      const latestOrd = orders && orders.length > 0 ? `#${orders[0].orderNumber} [${orders[0].paymentStatus.toUpperCase()}]` : undefined;
+      const activeSubs = subscriptions && subscriptions.length > 0
+        ? subscriptions.filter(s => s.status === 'active').map(s => s.productName).join(', ')
+        : undefined;
+
+      notifyTelegramChat({
+        customerName: user.name || firebaseUser?.displayName || 'Guest Customer',
+        customerEmail: user.email || firebaseUser?.email || undefined,
+        userId: user.id || firebaseUser?.uid || undefined,
+        messageText: content,
+        imageUrl,
+        threadId,
+        orderContext: latestOrd,
+        activeSubscriptions: activeSubs,
+      });
+    }
 
     // Optimistic UI update for current customer thread
     setUserChatThread(prev => {
@@ -3223,7 +3289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastMessageTimestamp: nowIso,
         updatedAt: nowIso,
         createdAt: nowIso,
-        unreadCountAdmin: isAdminSending ? 0 : 1,
+        unreadCountAdmin: (isAdminSending || resolvedRole === 'bot') ? 0 : 1,
         unreadCountUser: isAdminSending ? 1 : 0,
         messages: [msg],
         metadata,
@@ -3240,7 +3306,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lastMessageSender: msg.sender,
           lastMessageTimestamp: nowIso,
           updatedAt: nowIso,
-          unreadCountAdmin: isAdminSending ? 0 : (prev[idx].unreadCountAdmin || 0) + 1,
+          unreadCountAdmin: (isAdminSending || resolvedRole === 'bot') ? 0 : (prev[idx].unreadCountAdmin || 0) + 1,
           unreadCountUser: isAdminSending ? (prev[idx].unreadCountUser || 0) + 1 : 0,
           messages: [...prev[idx].messages, msg],
           metadata: metadata || prev[idx].metadata,
@@ -3259,7 +3325,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lastMessageTimestamp: nowIso,
           updatedAt: nowIso,
           createdAt: nowIso,
-          unreadCountAdmin: isAdminSending ? 0 : 1,
+          unreadCountAdmin: (isAdminSending || resolvedRole === 'bot') ? 0 : 1,
           unreadCountUser: isAdminSending ? 1 : 0,
           messages: [msg],
           metadata,
@@ -3280,7 +3346,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lastMessageSender: msg.sender,
           lastMessageTimestamp: nowIso,
           updatedAt: nowIso,
-          unreadCountAdmin: isAdminSending ? 0 : (existingData.unreadCountAdmin || 0) + 1,
+          unreadCountAdmin: (isAdminSending || resolvedRole === 'bot') ? 0 : (existingData.unreadCountAdmin || 0) + 1,
           unreadCountUser: isAdminSending ? (existingData.unreadCountUser || 0) + 1 : 0,
           messages: updatedMessages,
           ...(metadata ? { metadata } : {}),
@@ -3298,7 +3364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lastMessageTimestamp: nowIso,
           updatedAt: nowIso,
           createdAt: nowIso,
-          unreadCountAdmin: isAdminSending ? 0 : 1,
+          unreadCountAdmin: (isAdminSending || resolvedRole === 'bot') ? 0 : 1,
           unreadCountUser: isAdminSending ? 1 : 0,
           messages: [msg],
           metadata,

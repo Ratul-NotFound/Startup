@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { MessageSquare, Plus, Edit2, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { MessageSquare, Plus, Edit2, Trash2, Send, CheckCircle2, AlertCircle, Bot, Zap, Sparkles } from 'lucide-react';
 import { QuickMessage } from '@/types';
+import { TELEGRAM_CONFIG } from '@/lib/telegram';
 
 interface BotTabProps {
   quickMessages: QuickMessage[];
@@ -21,9 +22,125 @@ export function BotTab({
   quickMessageDeleteConfirm,
   handleDeleteQuickMessage,
 }: BotTabProps) {
+  const [isTestingTg, setIsTestingTg] = useState(false);
+  const [tgTestStatus, setTgTestStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+
+  const handleTestTelegram = async () => {
+    setIsTestingTg(true);
+    setTgTestStatus(null);
+    try {
+      const res = await fetch('/api/telegram/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'custom',
+          payload: {
+            text: `🧪 <b>[KEYOON SYSTEM TEST ALERT]</b>\n` +
+              `━━━━━━━━━━━━━━━━━━━━\n` +
+              `✅ <b>Bot Name:</b> ${TELEGRAM_CONFIG.botName}\n` +
+              `👥 <b>Group:</b> ${TELEGRAM_CONFIG.groupName} (<code>${TELEGRAM_CONFIG.defaultGroupId}</code>)\n` +
+              `💬 <b>Topic:</b> ${TELEGRAM_CONFIG.topicName} (ID: <code>${TELEGRAM_CONFIG.defaultTopicId}</code>)\n` +
+              `🕒 <b>Triggered:</b> ${new Date().toLocaleString()}\n` +
+              `━━━━━━━━━━━━━━━━━━━━\n` +
+              `🚀 <i>Telegram Support Bot integration is active and operating normally! Customer chats and orders will alert this topic in real-time.</i>`,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTgTestStatus({ success: true, message: `✅ Test alert delivered successfully to Topic #749 (Msg ID: ${data.messageId || 'OK'})` });
+      } else {
+        setTgTestStatus({ success: false, message: data.warning || data.error || (data.telegramError?.description ? `Telegram: ${data.telegramError.description}` : 'Failed to dispatch test message. Check TELEGRAM_BOT_TOKEN.') });
+      }
+    } catch (err: any) {
+      setTgTestStatus({ success: false, message: err?.message || 'Network error' });
+    } finally {
+      setIsTestingTg(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* ─── Telegram Support Bot Forum Integration Card ──────────────── */}
+      <div className="p-6 rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-900/90 to-blue-950/40 border border-blue-500/20 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3.5">
+            <div className="h-12 w-12 rounded-2xl bg-blue-600/20 border border-blue-400/40 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+              <Bot className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base font-black text-white">{TELEGRAM_CONFIG.botName}</h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Forum Topic #749 Synced
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">
+                Real-time ops notifications routed exclusively to group <b>{TELEGRAM_CONFIG.groupName}</b> &gt; topic <b>{TELEGRAM_CONFIG.topicName}</b>.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleTestTelegram}
+            disabled={isTestingTg}
+            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            {isTestingTg ? (
+              <>
+                <Zap className="h-4 w-4 animate-spin text-white" />
+                <span>Sending Test Ping...</span>
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                <span>Send Test Alert to Topic #749</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Telegram Configuration Specs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+          <div className="p-3 rounded-2xl bg-zinc-950/80 border border-white/5 space-y-0.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Group ID</span>
+            <p className="font-mono text-xs font-bold text-white">{TELEGRAM_CONFIG.defaultGroupId}</p>
+            <span className="text-[10px] text-slate-500">{TELEGRAM_CONFIG.groupName}</span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-zinc-950/80 border border-white/5 space-y-0.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Support Topic ID</span>
+            <p className="font-mono text-xs font-bold text-cyan-400">message_thread_id: {TELEGRAM_CONFIG.defaultTopicId}</p>
+            <span className="text-[10px] text-slate-500">{TELEGRAM_CONFIG.topicName} (Forum)</span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-zinc-950/80 border border-white/5 space-y-0.5">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Automated Events</span>
+            <p className="text-xs font-bold text-emerald-400">Live Chat + Orders + Tickets</p>
+            <span className="text-[10px] text-slate-500">Zero ticket closing delays</span>
+          </div>
+        </div>
+
+        {/* Test Result Feedback */}
+        {tgTestStatus && (
+          <div className={`p-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2.5 border ${
+            tgTestStatus.success
+              ? 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
+              : 'bg-amber-950/70 border-amber-500/40 text-amber-300'
+          }`}>
+            {tgTestStatus.success ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
+            )}
+            <p>{tgTestStatus.message}</p>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div>
           <h2 className="text-base font-black text-white flex items-center gap-2">
             <MessageSquare className="h-5 w-5 text-cyan-400" />
