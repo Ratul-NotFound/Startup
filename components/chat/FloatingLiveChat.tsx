@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, memo, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useApp } from '@/context/AppContext';
 import {
@@ -321,9 +321,9 @@ export const FloatingLiveChat: React.FC = () => {
     }
   }, [isChatOpen, scrollToBottom]);
 
-  const messages: ChatMessage[] = userChatThread?.messages && userChatThread.messages.length > 0
-    ? userChatThread.messages
-    : [
+  const messages: ChatMessage[] = useMemo(() => {
+    if (!userChatThread?.messages || userChatThread.messages.length === 0) {
+      return [
         {
           id: 'welcome_initial',
           sender: 'agent',
@@ -332,6 +332,21 @@ export const FloatingLiveChat: React.FC = () => {
           timestamp: new Date().toISOString(),
         },
       ];
+    }
+
+    const seen = new Set<string>();
+    const unique: ChatMessage[] = [];
+    for (const m of userChatThread.messages) {
+      // Deduplicate by message ID or identical (sender + content + timestamp minute)
+      const contentKey = `${m.sender}_${m.content}_${m.timestamp?.slice(0, 16)}`;
+      if (!seen.has(m.id) && !seen.has(contentKey)) {
+        seen.add(m.id);
+        seen.add(contentKey);
+        unique.push(m);
+      }
+    }
+    return unique;
+  }, [userChatThread?.messages]);
 
   useEffect(() => {
     if (isChatOpen && messages.length > 1) {
@@ -362,10 +377,16 @@ export const FloatingLiveChat: React.FC = () => {
       : resolveSmartAssistantResponse(text, dynamicContext);
 
     const isGenericGreeting = botResponseText.startsWith('Got your message') || botResponseText.startsWith('আপনার বার্তাটি পেয়েছি');
-    const alreadyGreeted = messages.some(m => m.sender === 'bot' || m.sender === 'agent');
+    const hasAgentTalking = !!userChatThread?.assignedAgentId || messages.some(m => m.sender === 'agent');
+    const hasAnyGreeting = messages.some(m =>
+      m.sender === 'bot' ||
+      m.sender === 'agent' ||
+      m.content?.startsWith('Got your message') ||
+      m.content?.startsWith('আপনার বার্তাটি পেয়েছি')
+    );
 
-    // Only auto-reply if bot has a specific helpful answer OR if it's the very first greeting
-    if (botResponseText && (!isGenericGreeting || !alreadyGreeted)) {
+    // Suppress auto-greetings completely if an agent has claimed or already responded, or if greeting was already given
+    if (botResponseText && !hasAgentTalking && (!isGenericGreeting || !hasAnyGreeting)) {
       setIsTyping(true);
       setTimeout(() => {
         setIsTyping(false);

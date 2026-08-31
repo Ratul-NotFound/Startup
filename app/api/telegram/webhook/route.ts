@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import {
@@ -240,17 +240,30 @@ export async function POST(req: NextRequest) {
         const activeDoc = qSnap.docs[0];
         const threadId = activeDoc.id;
         const threadData = activeDoc.data() as CustomerChatThread;
-        const nowIso = new Date().toISOString();
+        const existingMessages = threadData.messages || [];
 
+        // 🛡️ DEDUPLICATION GUARD: Prevent any duplicate insertion if Telegram retries the same message_id
+        const expectedMsgId = `msg_tg_${msg.message_id}`;
+        const isDuplicate = existingMessages.some(m =>
+          m.id === expectedMsgId ||
+          (m.sender === 'agent' && m.content === text && Math.abs(Date.now() - new Date(m.timestamp).getTime()) < 45000)
+        );
+
+        if (isDuplicate) {
+          // Already processed — acknowledge Telegram immediately to stop retries
+          return NextResponse.json({ ok: true, duplicate: true });
+        }
+
+        const nowIso = new Date().toISOString();
         const newChatMessage: ChatMessage = {
-          id: `msg_tg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          id: expectedMsgId,
           sender: 'agent',
           senderName: agentName,
           content: text,
           timestamp: nowIso,
         };
 
-        const updatedMessages = [...(threadData.messages || []), newChatMessage];
+        const updatedMessages = [...existingMessages, newChatMessage];
 
         await setDoc(doc(db, 'chats', threadId), cleanObject({
           lastMessageText: text,
