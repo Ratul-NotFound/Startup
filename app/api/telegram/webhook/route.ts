@@ -1,13 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
+﻿import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import {
   TELEGRAM_CONFIG,
   getTelegramChatInlineKeyboard,
   escapeHtml,
 } from '@/lib/telegram';
 import { CustomerChatThread, ChatMessage } from '@/types';
-import { cleanFirestoreData } from '@/context/AppContext';
+
+function cleanObject(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) return obj.map(cleanObject);
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const key in obj) {
+      if (obj[key] !== undefined) {
+        cleaned[key] = cleanObject(obj[key]);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
+export async function GET() {
+  return NextResponse.json({ ok: true, status: 'Keyoon Telegram Webhook Active' });
+}
 
 export async function POST(req: NextRequest) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
@@ -17,7 +35,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const update = await req.json();
+    const rawText = await req.text();
+    if (!rawText || !rawText.trim()) {
+      return NextResponse.json({ ok: true, note: 'Empty payload received' });
+    }
+
+    const update = JSON.parse(rawText);
 
     // ─── 1. Handle Inline Button Clicks (callback_query) ────────────────
     if (update.callback_query) {
@@ -33,36 +56,39 @@ export async function POST(req: NextRequest) {
       if (data.startsWith('claim:')) {
         const threadId = data.replace('claim:', '');
         const threadRef = doc(db, 'chats', threadId);
-        const threadSnap = await getDoc(threadRef);
-
         let customerName = 'Customer';
         let messagesList: ChatMessage[] = [];
 
-        if (threadSnap.exists()) {
-          const tData = threadSnap.data() as CustomerChatThread;
-          customerName = tData.userName || tData.userEmail || 'Customer';
-          messagesList = tData.messages || [];
+        try {
+          const threadSnap = await getDoc(threadRef);
+          if (threadSnap.exists()) {
+            const tData = threadSnap.data() as CustomerChatThread;
+            customerName = tData.userName || tData.userEmail || 'Customer';
+            messagesList = tData.messages || [];
 
-          // Save assignment to Firestore
-          await setDoc(threadRef, cleanFirestoreData({
-            assignedAgentId: agentId,
-            assignedAgentName: agentName,
-            assignedAgentUsername: agentUsername,
-            claimedAt: new Date().toISOString(),
-            telegramGroupMessageId: cb.message?.message_id,
-          }), { merge: true });
+            // Save assignment to Firestore
+            await setDoc(threadRef, cleanObject({
+              assignedAgentId: agentId,
+              assignedAgentName: agentName,
+              assignedAgentUsername: agentUsername,
+              claimedAt: new Date().toISOString(),
+              telegramGroupMessageId: cb.message?.message_id,
+            }), { merge: true });
+          }
+        } catch (dbErr) {
+          console.warn('[Firestore Claim Error]:', dbErr);
         }
 
-        // 1. Answer Telegram callback popup
+        // 1. Answer Telegram callback popup immediately (Stops loading indicator)
         await fetch(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
           body: JSON.stringify({
             callback_query_id: callbackId,
-            text: `✅ You have claimed ${customerName}! Messages are now routed to your private chat.`,
+            text: `✅ You have claimed ${customerName}! Messages are now routed to your private DM.`,
             show_alert: true,
           }),
-        });
+        }).catch(() => {});
 
         // 2. Update Group Topic Message to show Claimed status
         if (cb.message?.chat?.id && cb.message?.message_id) {
@@ -83,7 +109,7 @@ export async function POST(req: NextRequest) {
               text: editedGroupText,
               parse_mode: 'HTML',
             }),
-          });
+          }).catch(() => {});
         }
 
         // 3. Send Direct Message to the Agent's personal Telegram chat with chat history
@@ -99,20 +125,18 @@ export async function POST(req: NextRequest) {
           `━━━━━━━━━━━━━━━━━━━━\n` +
           `✍️ <b>How to reply:</b> Just type and send your reply directly here in this chat. It will instantly appear in the customer's live chat window on the website!`;
 
-        try {
-          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-              chat_id: agentId,
-              text: dmText,
-              parse_mode: 'HTML',
-              reply_markup: getTelegramChatInlineKeyboard(threadId, true),
-            }),
-          });
-        } catch (dmErr) {
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({
+            chat_id: agentId,
+            text: dmText,
+            parse_mode: 'HTML',
+            reply_markup: getTelegramChatInlineKeyboard(threadId, true),
+          }),
+        }).catch((dmErr) => {
           console.warn('[Telegram DM Error]:', dmErr);
-        }
+        });
 
         return NextResponse.json({ ok: true });
       }
@@ -121,20 +145,23 @@ export async function POST(req: NextRequest) {
       if (data.startsWith('unclaim:')) {
         const threadId = data.replace('unclaim:', '');
         const threadRef = doc(db, 'chats', threadId);
-        const threadSnap = await getDoc(threadRef);
-
         let customerName = 'Customer';
-        if (threadSnap.exists()) {
-          const tData = threadSnap.data() as CustomerChatThread;
-          customerName = tData.userName || tData.userEmail || 'Customer';
 
-          // Clear assignment in Firestore
-          await setDoc(threadRef, {
-            assignedAgentId: null,
-            assignedAgentName: null,
-            assignedAgentUsername: null,
-            claimedAt: null,
-          }, { merge: true });
+        try {
+          const threadSnap = await getDoc(threadRef);
+          if (threadSnap.exists()) {
+            const tData = threadSnap.data() as CustomerChatThread;
+            customerName = tData.userName || tData.userEmail || 'Customer';
+
+            await setDoc(threadRef, {
+              assignedAgentId: null,
+              assignedAgentName: null,
+              assignedAgentUsername: null,
+              claimedAt: null,
+            }, { merge: true });
+          }
+        } catch (dbErr) {
+          console.warn('[Firestore Unclaim Error]:', dbErr);
         }
 
         // 1. Answer Telegram callback popup
@@ -145,20 +172,18 @@ export async function POST(req: NextRequest) {
             callback_query_id: callbackId,
             text: `🔓 Customer ${customerName} has been unclaimed.`,
           }),
-        });
+        }).catch(() => {});
 
         // 2. Notify the Agent in DM
-        try {
-          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-              chat_id: agentId,
-              text: `🔓 <b>Customer [${escapeHtml(customerName)}] is now unclaimed</b> and returned to the group pool.`,
-              parse_mode: 'HTML',
-            }),
-          });
-        } catch {}
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({
+            chat_id: agentId,
+            text: `🔓 <b>Customer [${escapeHtml(customerName)}] is now unclaimed</b> and returned to the group pool.`,
+            parse_mode: 'HTML',
+          }),
+        }).catch(() => {});
 
         // 3. Repost Claim prompt back to Group Topic #749
         const groupAlertText = `📢 <b>[CUSTOMER UNCLAIMED & AVAILABLE]</b>\n` +
@@ -166,19 +191,17 @@ export async function POST(req: NextRequest) {
           `👤 <b>Customer:</b> ${escapeHtml(customerName)}\n` +
           `⚠️ <i>This customer was released and is now available for anyone to claim:</i>`;
 
-        try {
-          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json; charset=utf-8' },
-            body: JSON.stringify({
-              chat_id: TELEGRAM_CONFIG.defaultGroupId,
-              message_thread_id: TELEGRAM_CONFIG.defaultTopicId,
-              text: groupAlertText,
-              parse_mode: 'HTML',
-              reply_markup: getTelegramChatInlineKeyboard(threadId, false),
-            }),
-          });
-        } catch {}
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json; charset=utf-8' },
+          body: JSON.stringify({
+            chat_id: TELEGRAM_CONFIG.defaultGroupId,
+            message_thread_id: TELEGRAM_CONFIG.defaultTopicId,
+            text: groupAlertText,
+            parse_mode: 'HTML',
+            reply_markup: getTelegramChatInlineKeyboard(threadId, false),
+          }),
+        }).catch(() => {});
 
         return NextResponse.json({ ok: true });
       }
@@ -200,7 +223,7 @@ export async function POST(req: NextRequest) {
             text: `👋 <b>Keyoon Live Support Bot Hub</b>\n\nWhen you click <b>[Claim Customer]</b> in the group topic, their messages will arrive here. Any message you type here will immediately send to the customer on the website live chat in real-time!`,
             parse_mode: 'HTML',
           }),
-        });
+        }).catch(() => {});
         return NextResponse.json({ ok: true });
       }
 
@@ -214,7 +237,6 @@ export async function POST(req: NextRequest) {
       const qSnap = await getDocs(q);
 
       if (!qSnap.empty) {
-        // Agent has an active claimed customer
         const activeDoc = qSnap.docs[0];
         const threadId = activeDoc.id;
         const threadData = activeDoc.data() as CustomerChatThread;
@@ -230,7 +252,7 @@ export async function POST(req: NextRequest) {
 
         const updatedMessages = [...(threadData.messages || []), newChatMessage];
 
-        await setDoc(doc(db, 'chats', threadId), cleanFirestoreData({
+        await setDoc(doc(db, 'chats', threadId), cleanObject({
           lastMessageText: text,
           lastMessageSender: 'agent',
           lastMessageTimestamp: nowIso,
@@ -250,9 +272,8 @@ export async function POST(req: NextRequest) {
             parse_mode: 'HTML',
             reply_to_message_id: msg.message_id,
           }),
-        });
+        }).catch(() => {});
       } else {
-        // Agent does not have an active claimed customer
         await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json; charset=utf-8' },
@@ -261,7 +282,7 @@ export async function POST(req: NextRequest) {
             text: `ℹ️ <i>You currently do not have any active claimed customer. Please check the <b>${TELEGRAM_CONFIG.groupName} &gt; ${TELEGRAM_CONFIG.topicName}</b> topic to claim incoming customer inquiries.</i>`,
             parse_mode: 'HTML',
           }),
-        });
+        }).catch(() => {});
       }
 
       return NextResponse.json({ ok: true });
