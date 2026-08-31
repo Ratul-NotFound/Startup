@@ -517,7 +517,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Unified Messenger Chat System State
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [userChatThread, setUserChatThread] = useState<CustomerChatThread | null>(null);
+  const [userChatThread, setUserChatThread] = useState<CustomerChatThread | null>(() => {
+    return readCache<CustomerChatThread>('keyoon_cached_chat_thread') || null;
+  });
   const [allChatThreads, setAllChatThreads] = useState<CustomerChatThread[]>([]);
   const [activeChatThreadId, setActiveChatThreadId] = useState<string | null>(null);
 
@@ -1714,14 +1716,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         unsubscribersRef.current.forEach(u => u());
         unsubscribersRef.current = [];
 
-        // Live User Chat Thread Listener
-        const unsubUserChat = onSnapshot(doc(db, 'chats', fbUser.uid), (docSnap) => {
+        // Live User Chat Thread Listener (Canonical email ID + UID direct doc + collection query)
+        const primaryChatDocId = userEmailLower || fbUser.uid;
+        const unsubUserChatDoc = onSnapshot(doc(db, 'chats', primaryChatDocId), (docSnap) => {
           if (docSnap.exists()) {
-            setUserChatThread({ ...docSnap.data(), id: docSnap.id } as CustomerChatThread);
+            const thread = { ...docSnap.data(), id: docSnap.id } as CustomerChatThread;
+            setUserChatThread(thread);
+            writeCache('keyoon_cached_chat_thread', thread);
           }
         }, (err) => {
           if (err?.code !== 'permission-denied') console.warn('[Firestore] User chat listener note:', err);
         });
+
+        let unsubUserChatQuery: (() => void) | undefined;
+        if (userEmailLower) {
+          const qChat = query(collection(db, 'chats'), where('userEmail', '==', userEmailLower));
+          unsubUserChatQuery = onSnapshot(qChat, (qSnap) => {
+            if (!qSnap.empty) {
+              const matched = qSnap.docs
+                .map(d => ({ ...d.data(), id: d.id } as CustomerChatThread))
+                .sort((a, b) => new Date(b.updatedAt || b.lastMessageTimestamp).getTime() - new Date(a.updatedAt || a.lastMessageTimestamp).getTime());
+              if (matched[0]) {
+                setUserChatThread(matched[0]);
+                writeCache('keyoon_cached_chat_thread', matched[0]);
+              }
+            }
+          }, (err) => {
+            if (err?.code !== 'permission-denied') console.warn('[Firestore] User chat query note:', err);
+          });
+        }
 
         unsubscribersRef.current.push(
           unsubUserOrdersUid,
@@ -1730,7 +1753,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unsubUserSubsEmail,
           unsubUserTicketsUid,
           unsubUserTicketsEmail,
-          unsubUserChat
+          unsubUserChatDoc,
+          ...(unsubUserChatQuery ? [unsubUserChatQuery] : [])
         );
 
         // If admin or superadmin, activate full real-time database listeners
@@ -1749,7 +1773,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setOrders([]);
         setSubscriptions([]);
         setTickets([]);
-        setUserChatThread(null);
+        setUserChatThread(readCache<CustomerChatThread>('keyoon_cached_chat_thread') || null);
         setAllChatThreads([]);
         setAllOrders([]);
         setAllUsers([]);
