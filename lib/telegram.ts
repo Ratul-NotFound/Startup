@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Keyoon Platform — Telegram Support Bot Integration
  * Group: START up terget-1$ (ID: -1003904938537)
  * Topic: Keyoon Support Team (message_thread_id: 749)
@@ -11,7 +11,6 @@ export const TELEGRAM_CONFIG = {
   groupName: 'START up terget-1$',
   topicName: 'Keyoon Support Team',
   botName: 'Keyoon Support Bot',
-  defaultBotToken: '8675209196:AAFM0TiB5-QbTz2ga8qpCUujaBoM3NDpJS0',
 };
 
 export interface TelegramChatAlertPayload {
@@ -23,6 +22,8 @@ export interface TelegramChatAlertPayload {
   threadId: string;
   orderContext?: string;
   activeSubscriptions?: string;
+  assignedAgentId?: string | number;
+  assignedAgentName?: string;
 }
 
 export interface TelegramOrderAlertPayload {
@@ -48,7 +49,7 @@ export interface TelegramWarrantyAlertPayload {
   ticketId?: string;
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   if (!text) return '';
   return text
     .replace(/&/g, '&amp;')
@@ -59,13 +60,28 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Format Customer Chat Message for Telegram Topic #749
+ * Format Customer Chat Message for Telegram
  */
-export function formatTelegramChatMessage(payload: TelegramChatAlertPayload): string {
+export function formatTelegramChatMessage(payload: TelegramChatAlertPayload, isDirectMessage = false): string {
   const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-  return `💬 <b>[LIVE CHAT MESSAGE]</b>\n` +
+  if (isDirectMessage) {
+    return `💬 <b>[DIRECT CUSTOMER MESSAGE]</b>\n` +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `👤 <b>Customer:</b> ${escapeHtml(payload.customerName)}\n` +
+      `📧 <b>Email:</b> <code>${escapeHtml(payload.customerEmail || 'Guest / Unverified')}</code>\n` +
+      `🕒 <b>Time:</b> ${date} at ${time}\n` +
+      (payload.orderContext ? `📦 <b>Latest Order:</b> ${escapeHtml(payload.orderContext)}\n` : '') +
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `📝 <b>Message:</b>\n` +
+      `<blockquote>${escapeHtml(payload.messageText || (payload.imageUrl ? '📷 [Screenshot Attachment]' : ''))}</blockquote>\n` +
+      (payload.imageUrl ? `📎 <b>Image Attachment Included:</b> Yes\n` : '') +
+      `\n` +
+      `✍️ <i>Simply reply to this message to send your response directly to the customer on the website live chat.</i>`;
+  }
+
+  return `💬 <b>[NEW CUSTOMER INQUIRY]</b>\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `👤 <b>Customer:</b> ${escapeHtml(payload.customerName)}\n` +
     `📧 <b>Email:</b> <code>${escapeHtml(payload.customerEmail || 'Guest / Unverified')}</code>\n` +
@@ -77,7 +93,44 @@ export function formatTelegramChatMessage(payload: TelegramChatAlertPayload): st
     `<blockquote>${escapeHtml(payload.messageText || (payload.imageUrl ? '📷 [Screenshot Attachment]' : ''))}</blockquote>\n` +
     (payload.imageUrl ? `📎 <b>Image Attachment Included:</b> Yes\n` : '') +
     `\n` +
-    `⚡ <a href="https://keyoon.com/admin">Open Admin Messenger Hub & Reply</a>`;
+    `👇 <i>Click below to claim this customer and handle all their future inquiries 1-on-1:</i>`;
+}
+
+/**
+ * Inline Keyboards for Telegram Bot
+ */
+export function getTelegramChatInlineKeyboard(threadId: string, isAssigned = false) {
+  if (isAssigned) {
+    return {
+      inline_keyboard: [
+        [
+          {
+            text: '🔓 Unclaim Customer (আনক্লেইম করুন)',
+            callback_data: `unclaim:${threadId}`,
+          },
+          {
+            text: '🌐 Open Web Hub',
+            url: 'https://keyoon.com/admin',
+          },
+        ],
+      ],
+    };
+  }
+
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: '🙋‍♂️ Claim Customer (দাবি করুন)',
+          callback_data: `claim:${threadId}`,
+        },
+        {
+          text: '🌐 Open Admin Hub',
+          url: 'https://keyoon.com/admin',
+        },
+      ],
+    ],
+  };
 }
 
 /**

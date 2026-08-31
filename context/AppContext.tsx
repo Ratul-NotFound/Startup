@@ -3253,6 +3253,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ? subscriptions.filter(s => s.status === 'active').map(s => s.productName).join(', ')
         : undefined;
 
+      const existingThread = userChatThread?.id === threadId ? userChatThread : allChatThreads.find(t => t.id === threadId);
+      const assignedAgentId = existingThread?.assignedAgentId;
+      const assignedAgentName = existingThread?.assignedAgentName;
+
       notifyTelegramChat({
         customerName: user.name || firebaseUser?.displayName || 'Guest Customer',
         customerEmail: user.email || firebaseUser?.email || undefined,
@@ -3262,6 +3266,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         threadId,
         orderContext: latestOrd,
         activeSubscriptions: activeSubs,
+        assignedAgentId,
+        assignedAgentName,
       });
     }
 

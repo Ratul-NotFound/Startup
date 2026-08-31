@@ -23,7 +23,32 @@ export function BotTab({
   handleDeleteQuickMessage,
 }: BotTabProps) {
   const [isTestingTg, setIsTestingTg] = useState(false);
+  const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
   const [tgTestStatus, setTgTestStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+
+  const handleRegisterWebhook = async () => {
+    setIsRegisteringWebhook(true);
+    setTgTestStatus(null);
+    try {
+      const res = await fetch('/api/telegram/set-webhook', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        setTgTestStatus({
+          success: true,
+          message: `✅ Webhook active! URL: ${data.webhookUrl} — Telegram button clicks & 1-on-1 agent replies are now connected!`,
+        });
+      } else {
+        setTgTestStatus({
+          success: false,
+          message: data.error || (data.telegramResult?.description ? `Telegram: ${data.telegramResult.description}` : 'Failed to register webhook.'),
+        });
+      }
+    } catch (err: any) {
+      setTgTestStatus({ success: false, message: err?.message || 'Network error' });
+    } finally {
+      setIsRegisteringWebhook(false);
+    }
+  };
 
   const handleTestTelegram = async () => {
     setIsTestingTg(true);
@@ -77,29 +102,45 @@ export function BotTab({
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1">
-                Real-time ops notifications routed exclusively to group <b>{TELEGRAM_CONFIG.groupName}</b> &gt; topic <b>{TELEGRAM_CONFIG.topicName}</b>.
+                Real-time ops notifications routed to group <b>{TELEGRAM_CONFIG.groupName}</b> &gt; topic <b>{TELEGRAM_CONFIG.topicName}</b>.
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleTestTelegram}
-            disabled={isTestingTg}
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50 shrink-0"
-          >
-            {isTestingTg ? (
-              <>
-                <Zap className="h-4 w-4 animate-spin text-white" />
-                <span>Sending Test Ping...</span>
-              </>
-            ) : (
-              <>
-                <Send className="h-4 w-4" />
-                <span>Send Test Alert to Topic #749</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handleRegisterWebhook}
+              disabled={isRegisteringWebhook}
+              className="px-3.5 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-white/10 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isRegisteringWebhook ? (
+                <Zap className="h-4 w-4 animate-spin text-cyan-400" />
+              ) : (
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+              )}
+              <span>Sync Webhook (2-Way Claim)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleTestTelegram}
+              disabled={isTestingTg}
+              className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+            >
+              {isTestingTg ? (
+                <>
+                  <Zap className="h-4 w-4 animate-spin text-white" />
+                  <span>Sending Test Ping...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  <span>Send Test Alert to Topic #749</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Telegram Configuration Specs */}

@@ -443,4 +443,9 @@ export interface CustomerChatThread {
   isAdminTyping?: boolean;
   lastUserActive?: string;
   lastAdminActive?: string;
+  assignedAgentId?: number | string;
+  assignedAgentName?: string;
+  assignedAgentUsername?: string;
+  claimedAt?: string;
+  telegramGroupMessageId?: number;
 }
