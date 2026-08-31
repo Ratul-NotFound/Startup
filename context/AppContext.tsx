@@ -1249,23 +1249,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           new Date(a.updatedAt || a.lastMessageTimestamp).getTime()
         );
       setAllChatThreads(threads);
-
-      // Instant cross-tab real-time sync for customer live chat window
-      if (typeof window !== 'undefined') {
-        const guestId = localStorage.getItem('keyoon_guest_chat_id');
-        const currentUid = auth.currentUser?.uid;
-        const currentEmail = auth.currentUser?.email?.toLowerCase().trim();
-
-        const active = threads.find(t =>
-          (currentUid && (t.id === currentUid || t.userId === currentUid)) ||
-          (currentEmail && t.userEmail?.toLowerCase().trim() === currentEmail) ||
-          (guestId && (t.id === guestId || t.userId === guestId))
-        );
-
-        if (active) {
-          setUserChatThread(active);
-        }
-      }
+      // NOTE: userChatThread is managed by the single canonical useEffect listener.
+      // Do NOT call setUserChatThread here to avoid racing with the dedicated listener.
     }, (err) => {
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Global chats listener note:', err);
     });
@@ -1716,35 +1701,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         unsubscribersRef.current.forEach(u => u());
         unsubscribersRef.current = [];
 
-        // Live User Chat Thread Listener (Canonical email ID + UID direct doc + collection query)
-        const primaryChatDocId = userEmailLower || fbUser.uid;
-        const unsubUserChatDoc = onSnapshot(doc(db, 'chats', primaryChatDocId), (docSnap) => {
-          if (docSnap.exists()) {
-            const thread = { ...docSnap.data(), id: docSnap.id } as CustomerChatThread;
-            setUserChatThread(thread);
-            writeCache('keyoon_cached_chat_thread', thread);
-          }
-        }, (err) => {
-          if (err?.code !== 'permission-denied') console.warn('[Firestore] User chat listener note:', err);
-        });
-
-        let unsubUserChatQuery: (() => void) | undefined;
-        if (userEmailLower) {
-          const qChat = query(collection(db, 'chats'), where('userEmail', '==', userEmailLower));
-          unsubUserChatQuery = onSnapshot(qChat, (qSnap) => {
-            if (!qSnap.empty) {
-              const matched = qSnap.docs
-                .map(d => ({ ...d.data(), id: d.id } as CustomerChatThread))
-                .sort((a, b) => new Date(b.updatedAt || b.lastMessageTimestamp).getTime() - new Date(a.updatedAt || a.lastMessageTimestamp).getTime());
-              if (matched[0]) {
-                setUserChatThread(matched[0]);
-                writeCache('keyoon_cached_chat_thread', matched[0]);
-              }
-            }
-          }, (err) => {
-            if (err?.code !== 'permission-denied') console.warn('[Firestore] User chat query note:', err);
-          });
-        }
+        // NOTE: Chat thread listener is handled by the single canonical useEffect at line ~3412
+        // to avoid multiple competing listeners racing to update userChatThread state.
 
         unsubscribersRef.current.push(
           unsubUserOrdersUid,
@@ -1753,8 +1711,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           unsubUserSubsEmail,
           unsubUserTicketsUid,
           unsubUserTicketsEmail,
-          unsubUserChatDoc,
-          ...(unsubUserChatQuery ? [unsubUserChatQuery] : [])
         );
 
         // If admin or superadmin, activate full real-time database listeners
@@ -1773,7 +1729,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setOrders([]);
         setSubscriptions([]);
         setTickets([]);
-        setUserChatThread(readCache<CustomerChatThread>('keyoon_cached_chat_thread') || null);
+        setUserChatThread(null);
+        try { localStorage.removeItem('keyoon_cached_chat_thread'); } catch {}
         setAllChatThreads([]);
         setAllOrders([]);
         setAllUsers([]);
@@ -3298,36 +3255,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
-    // Optimistic UI update for current customer thread
-    setUserChatThread(prev => {
-      if (prev && prev.id === threadId) {
-        return {
-          ...prev,
-          lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
-          lastMessageSender: msg.sender,
-          lastMessageTimestamp: nowIso,
-          updatedAt: nowIso,
-          messages: [...prev.messages, msg],
-          metadata: metadata || prev.metadata,
-        };
-      }
-      return prev || {
-        id: threadId,
-        userId: threadId,
-        userEmail: user.email || firebaseUser?.email || '',
-        userName: senderName,
-        userAvatar: user.avatar,
-        lastMessageText: content || (imageUrl ? 'Photo attachment' : ''),
-        lastMessageSender: msg.sender,
-        lastMessageTimestamp: nowIso,
-        updatedAt: nowIso,
-        createdAt: nowIso,
-        unreadCountAdmin: (isAdminSending || resolvedRole === 'bot') ? 0 : 1,
-        unreadCountUser: isAdminSending ? 1 : 0,
-        messages: [msg],
-        metadata,
-      };
-    });
+    // NOTE: Optimistic UI update for userChatThread has been intentionally removed.
+    // The single canonical onSnapshot listener (below) will update userChatThread within ~100ms.
+    // Doing an optimistic update here was racing with the listener and causing duplicate messages
+    // (optimistic adds msg locally, then listener fires with server data that also has the msg).
 
     // Optimistic UI update for admin thread inbox (auto-sort to top)
     setAllChatThreads(prev => {
@@ -3409,66 +3340,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Active real-time listener for customer's live chat thread (direct doc + email query listener)
+  // ═══ SINGLE CANONICAL LISTENER for customer's live chat thread ═══
+  // This is the ONLY place in the entire app that calls setUserChatThread from a Firestore listener.
+  // All other listeners have been removed to prevent race conditions and duplicate messages.
   useEffect(() => {
     const threadId = getEffectiveUserId();
     if (!threadId) return;
 
     const unsubDirect = onSnapshot(doc(db, 'chats', threadId), (docSnap) => {
       if (docSnap.exists()) {
-        setUserChatThread({ ...docSnap.data(), id: docSnap.id } as CustomerChatThread);
+        // Only react to server-confirmed writes, not local echoes
+        if (!docSnap.metadata.hasPendingWrites) {
+          const thread = { ...docSnap.data(), id: docSnap.id } as CustomerChatThread;
+          setUserChatThread(thread);
+          writeCache('keyoon_cached_chat_thread', thread);
+        }
       }
     }, (err) => {
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Customer chat sync note:', err);
     });
 
-    let unsubQuery: (() => void) | undefined;
-    const currentEmail = (user.email || firebaseUser?.email || '').toLowerCase().trim();
-
-    if (currentEmail) {
-      const q = query(collection(db, 'chats'), where('userEmail', '==', currentEmail));
-      unsubQuery = onSnapshot(q, (qSnap) => {
-        if (!qSnap.empty) {
-          const matched = qSnap.docs
-            .map(d => ({ ...d.data(), id: d.id } as CustomerChatThread))
-            .sort((a, b) => new Date(b.updatedAt || b.lastMessageTimestamp).getTime() - new Date(a.updatedAt || a.lastMessageTimestamp).getTime());
-          if (matched[0]) {
-            setUserChatThread(matched[0]);
-          }
-        }
-      }, (err) => {
-        if (err?.code !== 'permission-denied') console.warn('[Firestore] Customer email chat query note:', err);
-      });
-    }
-
     return () => {
       unsubDirect();
-      if (unsubQuery) unsubQuery();
     };
-  }, [getEffectiveUserId, user.email, firebaseUser?.email]);
+  }, [getEffectiveUserId]);
 
-  // Reactive cross-sync: Whenever allChatThreads updates from Firestore, update userChatThread immediately
-  useEffect(() => {
-    if (!allChatThreads || allChatThreads.length === 0) return;
-    const currentEffId = getEffectiveUserId();
-    const currentEmail = (user.email || firebaseUser?.email || '').toLowerCase().trim();
-    const currentUserId = user.id || firebaseUser?.uid;
-
-    const active = allChatThreads.find(t =>
-      (currentEffId && (t.id === currentEffId || t.userId === currentEffId)) ||
-      (currentUserId && (t.id === currentUserId || t.userId === currentUserId)) ||
-      (currentEmail && t.userEmail && t.userEmail.toLowerCase().trim() === currentEmail)
-    );
-
-    if (active) {
-      setUserChatThread(prev => {
-        if (!prev || prev.id !== active.id || prev.messages?.length !== active.messages?.length || prev.updatedAt !== active.updatedAt) {
-          return active;
-        }
-        return prev;
-      });
-    }
-  }, [allChatThreads, getEffectiveUserId, user.email, user.id, firebaseUser?.email, firebaseUser?.uid]);
+  // NOTE: Cross-sync from allChatThreads → userChatThread has been removed.
+  // userChatThread is now managed exclusively by the single canonical onSnapshot listener above.
 
   const markChatThreadRead = async (threadId: string, by: 'admin' | 'user') => {
     if (by === 'admin') {
