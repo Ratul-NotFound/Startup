@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Keyoon Platform — Telegram Support Bot Integration
  * Group: START up terget-1$ (ID: -1003904938537)
  * Topic: Keyoon Support Team (message_thread_id: 749)
@@ -11,6 +11,7 @@ export const TELEGRAM_CONFIG = {
   groupName: 'START up terget-1$',
   topicName: 'Keyoon Support Team',
   botName: 'Keyoon Support Bot',
+  defaultBotToken: '8675209196:AAFM0TiB5-QbTz2ga8qpCUujaBoM3NDpJS0',
 };
 
 export interface TelegramChatAlertPayload {

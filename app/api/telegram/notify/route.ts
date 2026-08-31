@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
   TELEGRAM_CONFIG,
   formatTelegramChatMessage,
@@ -14,7 +14,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { type, payload, botToken: overrideToken } = body;
 
-    const botToken = overrideToken || process.env.TELEGRAM_BOT_TOKEN || process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
+    const botToken = overrideToken ||
+      process.env.TELEGRAM_BOT_TOKEN ||
+      process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN ||
+      TELEGRAM_CONFIG.defaultBotToken;
 
     if (!botToken) {
       // Bot token not configured yet — return graceful warning instead of 500
