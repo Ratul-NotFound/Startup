@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, getDocs, collection, query, where, updateDoc } from 'firebase/firestore';
 import {
@@ -99,16 +99,20 @@ export async function POST(req: NextRequest) {
           `━━━━━━━━━━━━━━━━━━━━\n` +
           `✍️ <b>How to reply:</b> Just type and send your reply directly here in this chat. It will instantly appear in the customer's live chat window on the website!`;
 
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json; charset=utf-8' },
-          body: JSON.stringify({
-            chat_id: agentId,
-            text: dmText,
-            parse_mode: 'HTML',
-            reply_markup: getTelegramChatInlineKeyboard(threadId, true),
-          }),
-        });
+        try {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({
+              chat_id: agentId,
+              text: dmText,
+              parse_mode: 'HTML',
+              reply_markup: getTelegramChatInlineKeyboard(threadId, true),
+            }),
+          });
+        } catch (dmErr) {
+          console.warn('[Telegram DM Error]:', dmErr);
+        }
 
         return NextResponse.json({ ok: true });
       }
@@ -144,15 +148,17 @@ export async function POST(req: NextRequest) {
         });
 
         // 2. Notify the Agent in DM
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json; charset=utf-8' },
-          body: JSON.stringify({
-            chat_id: agentId,
-            text: `🔓 <b>Customer [${escapeHtml(customerName)}] is now unclaimed</b> and returned to the group pool.`,
-            parse_mode: 'HTML',
-          }),
-        });
+        try {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({
+              chat_id: agentId,
+              text: `🔓 <b>Customer [${escapeHtml(customerName)}] is now unclaimed</b> and returned to the group pool.`,
+              parse_mode: 'HTML',
+            }),
+          });
+        } catch {}
 
         // 3. Repost Claim prompt back to Group Topic #749
         const groupAlertText = `📢 <b>[CUSTOMER UNCLAIMED & AVAILABLE]</b>\n` +
@@ -160,17 +166,19 @@ export async function POST(req: NextRequest) {
           `👤 <b>Customer:</b> ${escapeHtml(customerName)}\n` +
           `⚠️ <i>This customer was released and is now available for anyone to claim:</i>`;
 
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json; charset=utf-8' },
-          body: JSON.stringify({
-            chat_id: TELEGRAM_CONFIG.defaultGroupId,
-            message_thread_id: TELEGRAM_CONFIG.defaultTopicId,
-            text: groupAlertText,
-            parse_mode: 'HTML',
-            reply_markup: getTelegramChatInlineKeyboard(threadId, false),
-          }),
-        });
+        try {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json; charset=utf-8' },
+            body: JSON.stringify({
+              chat_id: TELEGRAM_CONFIG.defaultGroupId,
+              message_thread_id: TELEGRAM_CONFIG.defaultTopicId,
+              text: groupAlertText,
+              parse_mode: 'HTML',
+              reply_markup: getTelegramChatInlineKeyboard(threadId, false),
+            }),
+          });
+        } catch {}
 
         return NextResponse.json({ ok: true });
       }

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN || process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN;
@@ -7,7 +7,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'TELEGRAM_BOT_TOKEN is not configured.' }, { status: 400 });
   }
 
-  const origin = req.nextUrl.origin;
+  const host = req.headers.get('x-forwarded-host') || req.headers.get('host') || req.nextUrl.host;
+  let origin = 'https://keyoon.com';
+
+  if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+    const proto = req.headers.get('x-forwarded-proto') || 'https';
+    origin = `${proto}://${host}`;
+  }
+
   const webhookUrl = `${origin}/api/telegram/webhook`;
 
   try {

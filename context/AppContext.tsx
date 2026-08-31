@@ -3199,6 +3199,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // ─── Unified Persistent Messenger Live Chat Hub ──────────────────────
   const getEffectiveUserId = useCallback(() => {
+    const emailClean = (user.email || firebaseUser?.email || '').toLowerCase().trim();
+    if (emailClean) return emailClean;
     if (firebaseUser?.uid) return firebaseUser.uid;
     if (typeof window !== 'undefined') {
       let guestId = localStorage.getItem('keyoon_guest_chat_id');
@@ -3209,7 +3211,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return guestId;
     }
     return 'guest_anon';
-  }, [firebaseUser?.uid]);
+  }, [user.email, firebaseUser?.email, firebaseUser?.uid]);
 
   const sendChatMessage = async (
     content: string,
@@ -3219,7 +3221,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     senderRole?: 'user' | 'agent' | 'bot' | 'system',
     customSenderName?: string
   ) => {
-    const threadId = targetThreadId || getEffectiveUserId();
+    const userEmailClean = (user.email || firebaseUser?.email || '').toLowerCase().trim();
+    const threadId = targetThreadId || userChatThread?.id || userEmailClean || getEffectiveUserId();
     const isAdminSending = !!targetThreadId && (isAdmin || isSuperAdmin);
     const nowIso = new Date().toISOString();
 
@@ -3382,12 +3385,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Active real-time listener for customer's live chat thread (works for both logged-in users and guests)
+  // Active real-time listener for customer's live chat thread (direct doc + email query listener)
   useEffect(() => {
     const threadId = getEffectiveUserId();
     if (!threadId) return;
 
-    const unsub = onSnapshot(doc(db, 'chats', threadId), (docSnap) => {
+    const unsubDirect = onSnapshot(doc(db, 'chats', threadId), (docSnap) => {
       if (docSnap.exists()) {
         setUserChatThread({ ...docSnap.data(), id: docSnap.id } as CustomerChatThread);
       }
@@ -3395,8 +3398,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (err?.code !== 'permission-denied') console.warn('[Firestore] Customer chat sync note:', err);
     });
 
-    return () => unsub();
-  }, [getEffectiveUserId]);
+    let unsubQuery: (() => void) | undefined;
+    const currentEmail = (user.email || firebaseUser?.email || '').toLowerCase().trim();
+
+    if (currentEmail) {
+      const q = query(collection(db, 'chats'), where('userEmail', '==', currentEmail));
+      unsubQuery = onSnapshot(q, (qSnap) => {
+        if (!qSnap.empty) {
+          const matched = qSnap.docs
+            .map(d => ({ ...d.data(), id: d.id } as CustomerChatThread))
+            .sort((a, b) => new Date(b.updatedAt || b.lastMessageTimestamp).getTime() - new Date(a.updatedAt || a.lastMessageTimestamp).getTime());
+          if (matched[0]) {
+            setUserChatThread(matched[0]);
+          }
+        }
+      }, (err) => {
+        if (err?.code !== 'permission-denied') console.warn('[Firestore] Customer email chat query note:', err);
+      });
+    }
+
+    return () => {
+      unsubDirect();
+      if (unsubQuery) unsubQuery();
+    };
+  }, [getEffectiveUserId, user.email, firebaseUser?.email]);
 
   // Reactive cross-sync: Whenever allChatThreads updates from Firestore, update userChatThread immediately
   useEffect(() => {
